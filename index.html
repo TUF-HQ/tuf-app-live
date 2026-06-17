@@ -347,6 +347,7 @@ details>summary::-webkit-details-marker{display:none}
     <div class="sb-item" data-page="social" onclick="nav('social',this)"><span class="ico">📊</span>Social Media</div>
     <div class="sb-item" data-page="calendar" onclick="nav('calendar',this)"><span class="ico">📆</span>Content Calendar & Strategy</div>
     <div class="sb-item" data-page="ideas" onclick="nav('ideas',this)"><span class="ico">✨</span>Content Ideas</div>
+    <div class="sb-item" data-page="postreview" onclick="nav('postreview',this)"><span class="ico">📝</span>Post Review <span class="sb-badge amb" id="sb-postreview" style="display:none">0</span></div>
     <div class="sb-item" data-page="podcast" onclick="nav('podcast',this)"><span class="ico">🎙</span>Podcast</div>
     <div class="sb-item" data-page="files" onclick="nav('files',this)"><span class="ico">📁</span>Marketing Materials</div>
     <div class="sb-item" data-page="testimonials" onclick="nav('testimonials',this)"><span class="ico">⭐</span>Testimonials</div>
@@ -492,6 +493,12 @@ details>summary::-webkit-details-marker{display:none}
         <div id="social-month-nav" style="margin-left:auto;display:flex;align-items:center;gap:6px"></div>
       </div>
       <div id="social-content"></div>
+    </div>
+
+    <!-- ═══ POST REVIEW ═══ -->
+    <div class="page" id="page-postreview">
+      <div class="grid-4" id="pr-stats" style="margin-bottom:14px"></div>
+      <div id="pr-render"></div>
     </div>
 
     <!-- ═══ CONTENT IDEAS ═══ -->
@@ -1151,6 +1158,7 @@ function initApp(user){
   renderCapSidebar();
   renderNotifBadge();
   updateTaskBadge();
+  renderPostReviewBadge();
   subscribeToChanges();
   // Danny lands on the Team Overview ("what everyone has on"); others stay on Morning Brief.
   if(CURRENT_USER==='Danny'){
@@ -1451,7 +1459,7 @@ const PAGE_TITLES = {
   boardroom:'Boardroom',social:'Social Media',ideas:'Content Ideas',kpis:'KPIs',aidump:'AI Tool (Dump)',buildreq:'Build Requests',clientanalysis:'Client Analysis',emaillist:'Email List',watemplates:'WhatsApp Templates',
   prospects:'Warm Prospects',testimonials:'Testimonials',
   onboarding:'Onboarding',sessions:'Session Planner',events:'Events',padel:'Padel Event',
-  calendar:'Content Calendar',podcast:'Podcast Pipeline',ip:'IP Register',files:'Files',
+  calendar:'Content Calendar',postreview:'Post Review',podcast:'Podcast Pipeline',ip:'IP Register',files:'Files',
   capmap:'Capability Map',goals:'Goals & OKRs',fourbox:'The 4 Box Model',budget:'Budget',
   roles:'Roles',reviews:'Weekly Review',kb:'Knowledge Base',notifs:'Notifications',
   csuite:'C-Suite',holidays:'Holidays',daily:'Daily Progress',
@@ -1483,7 +1491,7 @@ function renderPage(page){
     boardroom:renderBoardroom, social:renderSocial, ideas:renderIdeas, kpis:renderKPIs, aidump:renderAIDump, buildreq:renderBuildRequests, clientanalysis:renderClientAnalysis, emaillist:renderEmailList, watemplates:renderWATemplates,
     prospects:renderProspects, testimonials:renderTestimonials,
     onboarding:renderOnboarding, sessions:renderSessions, events:renderEvents, padel:renderPadel,
-    calendar:renderCalendar, podcast:renderPodcast, ip:renderIP, files:renderFiles,
+    calendar:renderCalendar, postreview:renderPostReview, podcast:renderPodcast, ip:renderIP, files:renderFiles,
     capmap:renderCapMap, goals:renderGoals, fourbox:renderFourBox, budget:renderBudget,
     roles:renderRoles, reviews:renderReviews, kb:renderKB, notifs:renderNotifs,
     csuite:renderCSuite, holidays:renderHolidays, daily:renderDaily, teamoverview:renderTeamOverview,
@@ -5273,6 +5281,139 @@ function saveBoardroomModel(){const items=document.getElementById('bm-items').va
 // ═══ CONTENT IDEAS ════════════════════════════════════════════════════════════
 const IDEA_STATUSES=['Idea','Shortlisted','In Production','Published','Archived'];
 let ideaFilter='All';
+// ═══ POST REVIEW (LinkedIn batch review → calendar) ══════════════════════════
+let prFilter='pending';
+function setPrFilter(f){ prFilter=f; renderPostReview(); }
+function renderPostReviewBadge(){
+  const n=(ls.get('tuf_review',[])||[]).filter(p=>p.status==='pending').length;
+  const b=document.getElementById('sb-postreview'); if(b){ b.textContent=n; b.style.display=n?'inline':'none'; }
+}
+function renderPostReview(){
+  const all=ls.get('tuf_review',[])||[];
+  const pending=all.filter(p=>p.status==='pending');
+  const approved=all.filter(p=>p.status==='approved');
+  const cut=all.filter(p=>p.status==='cut');
+  const sEl=document.getElementById('pr-stats');
+  if(sEl) sEl.innerHTML=`
+    <div class="stat"><div class="n">${pending.length}</div><div class="l">To review</div></div>
+    <div class="stat g"><div class="n">${approved.length}</div><div class="l">Approved</div></div>
+    <div class="stat r"><div class="n">${cut.length}</div><div class="l">Cut</div></div>
+    <div class="stat"><div class="n">${all.length}</div><div class="l">Total</div></div>`;
+  const ta=document.getElementById('topbar-actions'); if(ta) ta.innerHTML=`<button class="btn btn-k btn-sm" onclick="importReviewModal()">+ Import batch</button>`;
+  const el=document.getElementById('pr-render'); if(!el) return;
+  if(!all.length){
+    el.innerHTML=`<div class="empty"><div class="ico">📝</div>No posts to review yet.<br><br><button class="btn btn-k btn-sm" onclick="importReviewModal()">Import a batch</button><div style="font-size:11px;margin-top:10px">Paste a batch of LinkedIn drafts and review them here — approve, edit, or cut.</div></div>`;
+    return;
+  }
+  const list = prFilter==='approved'?approved : prFilter==='cut'?cut : pending;
+  const filters=`<div style="display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap">
+    ${[['pending','To review',pending.length],['approved','Approved',approved.length],['cut','Cut',cut.length]].map(([f,lbl,n])=>`<button class="btn btn-sm ${prFilter===f?'btn-k':'btn-ghost'}" onclick="setPrFilter('${f}')">${lbl} (${n})</button>`).join('')}</div>`;
+  const cards = list.length ? list.map(prCard).join('') : `<div class="empty">Nothing ${prFilter==='pending'?'to review':prFilter} right now.</div>`;
+  el.innerHTML = filters + cards;
+}
+function prCard(p){
+  const meta=[p.theme, p.cta?('CTA: '+p.cta):'', p.source].filter(Boolean);
+  if(p.status==='pending'){
+    return `<div class="card" id="pr-${p.id}" style="border-left:4px solid var(--blu)">
+      <input class="form-input" id="prt-${p.id}" value="${escHtml(p.title)}" style="font-weight:700;font-size:14px;margin-bottom:8px">
+      ${meta.length?`<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px">${meta.map(m=>`<span class="tag tag-b" style="font-size:10px">${escHtml(m)}</span>`).join('')}</div>`:''}
+      <textarea class="form-textarea" id="prb-${p.id}" style="min-height:180px;line-height:1.55">${escHtml(p.body)}</textarea>
+      <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;align-items:center">
+        <button class="btn btn-y btn-sm" onclick="approveReviewPost('${p.id}')">✓ Approve → Calendar</button>
+        <button class="btn btn-ghost btn-sm" onclick="saveReviewEdit('${p.id}')">Save edit</button>
+        <button class="btn btn-red btn-sm" style="margin-left:auto" onclick="cutReviewPost('${p.id}')">✗ Cut</button>
+      </div>
+    </div>`;
+  }
+  return `<div class="card" style="opacity:.9">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;flex-wrap:wrap">
+      <span class="tag ${p.status==='approved'?'tag-g':'tag-r'}" style="font-size:10px">${p.status==='approved'?'Approved':'Cut'}</span>
+      <span style="font-weight:700;font-size:13px;flex:1;min-width:120px">${escHtml(p.title)}</span>
+      <button class="btn btn-ghost btn-sm" onclick="reopenReviewPost('${p.id}')">Reopen</button>
+    </div>
+    <div style="font-size:11.5px;color:var(--mut);white-space:pre-wrap;line-height:1.5">${escHtml((p.body||'').slice(0,260))}${(p.body||'').length>260?'…':''}</div>
+  </div>`;
+}
+function saveReviewEdit(id, silent){
+  const list=ls.get('tuf_review',[]); const i=list.findIndex(x=>x.id===id); if(i<0) return;
+  const t=document.getElementById('prt-'+id), b=document.getElementById('prb-'+id);
+  if(t) list[i].title=t.value.trim(); if(b) list[i].body=b.value;
+  ls.set('tuf_review',list);
+  if(!silent){ addNotif('Edit saved: "'+(list[i].title||'')+'"'); renderPostReview(); }
+}
+function approveReviewPost(id){
+  saveReviewEdit(id, true);                       // capture any inline edits first
+  const list=ls.get('tuf_review',[]); const i=list.findIndex(x=>x.id===id); if(i<0) return;
+  const p=list[i];
+  const content=ls.get('tuf_content',[]);
+  content.push({id:uid(),title:p.title||'Untitled post',platform:'LinkedIn',date:'',owner:'Danny',status:'Drafted',notes:p.body||'',createdAt:new Date().toISOString()});
+  ls.set('tuf_content',content);
+  p.status='approved'; p.reviewedBy=CURRENT_USER; p.reviewedAt=new Date().toISOString();
+  ls.set('tuf_review',list);
+  addNotif('Approved → added to Content Calendar backlog: "'+(p.title||'')+'"');
+  renderPostReview(); renderPostReviewBadge();
+}
+function cutReviewPost(id){
+  saveReviewEdit(id, true);
+  const list=ls.get('tuf_review',[]); const i=list.findIndex(x=>x.id===id); if(i<0) return;
+  list[i].status='cut'; list[i].reviewedBy=CURRENT_USER; list[i].reviewedAt=new Date().toISOString();
+  ls.set('tuf_review',list); renderPostReview(); renderPostReviewBadge();
+}
+function reopenReviewPost(id){
+  const list=ls.get('tuf_review',[]); const i=list.findIndex(x=>x.id===id); if(i<0) return;
+  list[i].status='pending'; ls.set('tuf_review',list); prFilter='pending'; renderPostReview(); renderPostReviewBadge();
+}
+function importReviewModal(){
+  showModal('Import a batch of posts',`
+    <div style="font-size:12px;color:var(--mut);margin-bottom:10px;line-height:1.5">Paste the batch below. Numbered posts (<strong>1.</strong>, <strong>2.</strong> …) are split automatically — the title, the theme/CTA line, and the post text are picked up. If it isn't numbered, paste a single post and it comes in as one card.</div>
+    <textarea class="form-textarea" id="pr-import" style="min-height:240px" placeholder="Paste the LinkedIn batch here…"></textarea>
+  `,`<button class="btn btn-ghost" onclick="closeModal()">Cancel</button><button class="btn btn-k" onclick="doImportReview()">Import</button>`);
+}
+function doImportReview(){
+  const raw=document.getElementById('pr-import')?.value||'';
+  const posts=parseReviewBatch(raw);
+  if(!posts.length){ alert('Could not find any posts in that text. Make sure each post starts with a number like "1." — or paste a single post on its own.'); return; }
+  const list=ls.get('tuf_review',[]);
+  const now=new Date().toISOString();
+  posts.forEach(p=>list.unshift({id:uid(),num:p.num,title:p.title,theme:p.theme,cta:p.cta,source:p.source,body:p.body,status:'pending',addedBy:CURRENT_USER,addedAt:now}));
+  ls.set('tuf_review',list);
+  closeModal(); prFilter='pending'; renderPostReview(); renderPostReviewBadge();
+  addNotif(posts.length+' post'+(posts.length!==1?'s':'')+' imported for review');
+}
+function parseReviewBatch(text){
+  const lines=(text||'').replace(/\r/g,'').split('\n');
+  const starts=[];
+  lines.forEach((ln,idx)=>{ if(/^\s*\d+\.\s+\S/.test(ln)) starts.push(idx); });
+  if(!starts.length){
+    const ne=lines.map(l=>l.trim()).filter(Boolean);
+    if(!ne.length) return [];
+    return [{num:1,title:ne[0].slice(0,140),theme:'',cta:'',source:'',body:ne.slice(1).join('\n').trim()}];
+  }
+  const out=[];
+  starts.forEach((s,k)=>{
+    const end = k+1<starts.length ? starts[k+1] : lines.length;
+    const block=lines.slice(s,end);
+    const m=block[0].match(/^\s*(\d+)\.\s+(.*)$/);
+    const num=m?parseInt(m[1],10):k+1; const title=(m?m[2]:block[0]).trim();
+    let theme='',cta='',source='',metaFound=false; const bodyLines=[];
+    for(let j=1;j<block.length;j++){
+      const ln=block[j]; const t=ln.trim();
+      if(!t){ if(bodyLines.length) bodyLines.push(''); continue; }
+      if(/\[\s*\]/.test(t) && /Approve|Cut|Edit/i.test(t)) continue;   // skip checkbox line
+      if(!metaFound && !bodyLines.length && (/·/.test(t) || /CTA\s*:/i.test(t))){
+        const parts=t.split('·').map(x=>x.trim()).filter(Boolean);
+        parts.forEach(part=>{ const cm=part.match(/CTA\s*:\s*(.+)/i); if(cm) cta=cm[1].trim(); });
+        const nonCta=parts.filter(part=>!/CTA\s*:/i.test(part));
+        if(nonCta.length){ theme=nonCta[0]; if(nonCta.length>1) source=nonCta[nonCta.length-1]; }
+        metaFound=true; continue;
+      }
+      bodyLines.push(ln);
+    }
+    out.push({num,title,theme,cta,source,body:bodyLines.join('\n').trim()});
+  });
+  return out;
+}
+
 function renderIdeas(){
   const all=ls.get('tuf_ideas',[]);
   const filtered=ideaFilter==='All'?all:all.filter(i=>i.status===ideaFilter);
