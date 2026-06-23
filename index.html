@@ -1522,6 +1522,8 @@ function nav(page, el){
   document.getElementById('topbar-actions').innerHTML = '';
   renderPage(page);
 }
+// Navigate to a page and highlight its sidebar item (for clickable dashboard tiles etc.)
+function goPage(page){ nav(page, document.querySelector('[data-page='+page+']')); }
 function renderPage(page){
   const fns = {
     home:renderHome, tasks:renderTasks, transcript:renderTranscript,
@@ -2273,12 +2275,12 @@ function renderHome(){
   const s2 = daysUntil('2026-07-02');
   const padel = daysUntil('2026-06-25');
   document.getElementById('ns-strip').innerHTML = `
-    <div class="ns-box key"><div class="ns-l">Boardroom Members</div><div class="ns-n" style="color:var(--grn)">${bCount}/20</div><div class="ns-t">Target: 20 × £1,000/mo</div><div class="ns-bar"><div class="ns-fill" style="width:${Math.min(100,(bCount/20)*100)}%"></div></div></div>
-    <div class="ns-box"><div class="ns-l">Boardroom MRR</div><div class="ns-n" style="color:var(--grn)">£${boardroomMRR.toLocaleString()}</div><div class="ns-t">Target: £20,000</div><div class="ns-bar"><div class="ns-fill warn" style="width:${Math.min(100,(boardroomMRR/20000)*100)}%"></div></div></div>
-    <div class="ns-box"><div class="ns-l">Private Client MRR</div><div class="ns-n" style="color:var(--blu)">£${privateMRR.toLocaleString()}</div><div class="ns-t">${existingClients.length} client${existingClients.length!==1?'s':''}</div></div>
-    <div class="ns-box key" style="border-color:var(--blu)"><div class="ns-l">Total MRR</div><div class="ns-n" style="color:var(--blu)">£${totalMRR.toLocaleString()}</div><div class="ns-t">Boardroom + Private</div><div class="ns-bar"><div class="ns-fill" style="width:${Math.min(100,(totalMRR/20000)*100)}%;background:var(--blu)"></div></div></div>
-    <div class="ns-box"><div class="ns-l">Days to Padel</div><div class="ns-n" style="color:${padel<=7?'var(--red)':'var(--amb)'}">${padel>0?padel:'PAST'}</div><div class="ns-t">25 June 2026</div></div>
-    <div class="ns-box"><div class="ns-l">Days to S2</div><div class="ns-n" style="color:${s2<=7?'var(--red)':'var(--amb)'}">${s2>0?s2:'TODAY'}</div><div class="ns-t">2 July 2026</div></div>
+    <div class="ns-box key" onclick="goPage('boardroom')" title="Open Boardroom"><div class="ns-l">Boardroom Members</div><div class="ns-n" style="color:var(--grn)">${bCount}/20</div><div class="ns-t">Target: 20 × £1,000/mo</div><div class="ns-bar"><div class="ns-fill" style="width:${Math.min(100,(bCount/20)*100)}%"></div></div></div>
+    <div class="ns-box" onclick="goPage('boardroom')" title="Open Boardroom"><div class="ns-l">Boardroom MRR</div><div class="ns-n" style="color:var(--grn)">£${boardroomMRR.toLocaleString()}</div><div class="ns-t">Target: £20,000</div><div class="ns-bar"><div class="ns-fill warn" style="width:${Math.min(100,(boardroomMRR/20000)*100)}%"></div></div></div>
+    <div class="ns-box" onclick="goPage('members')" title="Open Existing Clients"><div class="ns-l">Private Client MRR</div><div class="ns-n" style="color:var(--blu)">£${privateMRR.toLocaleString()}</div><div class="ns-t">${existingClients.length} client${existingClients.length!==1?'s':''}</div></div>
+    <div class="ns-box key" style="border-color:var(--blu)" onclick="goPage('kpis')" title="Open KPIs"><div class="ns-l">Total MRR</div><div class="ns-n" style="color:var(--blu)">£${totalMRR.toLocaleString()}</div><div class="ns-t">Boardroom + Private</div><div class="ns-bar"><div class="ns-fill" style="width:${Math.min(100,(totalMRR/20000)*100)}%;background:var(--blu)"></div></div></div>
+    <div class="ns-box" onclick="goPage('padel')" title="Open Padel Event"><div class="ns-l">Days to Padel</div><div class="ns-n" style="color:${padel<=7?'var(--red)':'var(--amb)'}">${padel>0?padel:'PAST'}</div><div class="ns-t">25 June 2026</div></div>
+    <div class="ns-box" onclick="goPage('sessions')" title="Open Session Planning"><div class="ns-l">Days to S2</div><div class="ns-n" style="color:${s2<=7?'var(--red)':'var(--amb)'}">${s2>0?s2:'TODAY'}</div><div class="ns-t">2 July 2026</div></div>
   `;
   // Priorities
   const pis = [];
