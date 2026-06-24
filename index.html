@@ -367,6 +367,7 @@ details>summary::-webkit-details-marker{display:none}
     </div>
 
     <div class="sb-section">Overview</div>
+    <div class="sb-item" data-page="myday" onclick="nav('myday',this)"><span class="ico">☀️</span>My Day</div>
     <div class="sb-item active" data-page="home" onclick="nav('home',this)"><span class="ico">🌅</span>Morning Brief</div>
     <div class="sb-item" data-page="teamoverview" onclick="nav('teamoverview',this)"><span class="ico">🧑‍🤝‍🧑</span>Team Overview</div>
     <div class="sb-item" data-page="tasks" onclick="nav('tasks',this)"><span class="ico">✅</span>Tasks <span class="sb-badge" id="sb-tasks" style="background:var(--amb);display:none">0</span></div>
@@ -441,6 +442,7 @@ details>summary::-webkit-details-marker{display:none}
     </div>
 
     <!-- ═══ HOME / MORNING BRIEF ═══ -->
+    <div class="page" id="page-myday"><div id="myday-render"></div></div>
     <div class="page active" id="page-home">
       <div class="ns-row" id="ns-strip"></div>
       <div id="daily-control" style="margin-bottom:14px"></div>
@@ -1265,8 +1267,10 @@ function showUserSel(){
 
 // ═══ INIT ════════════════════════════════════════════════════════════════════
 let CURRENT_USER = '';
+let CURRENT_EMAIL = ''; // stable per-user id used to scope the private My Day store (local only)
 function initApp(user){
   CURRENT_USER = user;
+  CURRENT_EMAIL = (ls.get('tuf_team_emails',{})[user]||'').toLowerCase();
   document.getElementById('app').classList.add('show');
   const _hqf=document.getElementById('hq-fab'); if(_hqf) _hqf.style.display='flex';
   const dot = document.getElementById('sb-dot');
@@ -1293,10 +1297,13 @@ function initApp(user){
   updateTaskBadge();
   renderPostReviewBadge();
   subscribeToChanges();
-  // Danny lands on the Team Overview ("what everyone has on"); others stay on Morning Brief.
+  // Danny lands on the Team Overview ("what everyone has on"); everyone else lands on their My Day.
   if(CURRENT_USER==='Danny'){
     const el=document.querySelector('[data-page=teamoverview]');
     if(el) nav('teamoverview', el);
+  } else {
+    const el=document.querySelector('[data-page=myday]');
+    if(el) nav('myday', el);
   }
 }
 
@@ -1587,6 +1594,7 @@ function seedDefaultData(){
 
 // ═══ NAVIGATION ══════════════════════════════════════════════════════════════
 const PAGE_TITLES = {
+  myday:'My Day',
   home:'Morning Brief',teamoverview:'Team Overview',tasks:'Tasks',transcript:'Meeting Notes → Tasks',
   members:'Existing Clients',pipeline:'Sales Pipeline',
   boardroom:'Boardroom',social:'Social Media',ideas:'Content Ideas',kpis:'KPIs',aidump:'AI Tool (Dump)',buildreq:'Build Requests',clientanalysis:'Client Analysis',emaillist:'Email List',watemplates:'WhatsApp Templates',
@@ -1631,7 +1639,7 @@ function renderPage(page){
     calendar:renderCalendar, postreview:renderPostReview, podcast:renderPodcast, ip:renderIP, files:renderFiles,
     capmap:renderCapMap, goals:renderGoals, fourbox:renderFourBox, budget:renderBudget,
     roles:renderRoles, reviews:renderReviews, kb:renderKB, notifs:renderNotifs,
-    csuite:renderCSuite, holidays:renderHolidays, daily:renderDaily, teamoverview:renderTeamOverview,
+    csuite:renderCSuite, holidays:renderHolidays, daily:renderDaily, teamoverview:renderTeamOverview, myday:renderMyDay,
   };
   if(fns[page]) fns[page]();
 }
@@ -1640,6 +1648,94 @@ function renderPage(page){
 function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,6);}
 function daysUntil(d){const t=new Date(d+'T00:00:00');const n=new Date();n.setHours(0,0,0,0);return Math.round((t-n)/86400000);}
 function fmtDate(d){return new Date(d+'T00:00:00').toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'});}
+
+// ═══ MY DAY (per-user, PRIVATE) ══════════════════════════════════════════════
+// Stored in localStorage ONLY, keyed to the logged-in user, and DELIBERATELY never
+// synced to Supabase (no syncSB/ls.set). Nothing enters the shared tuf_state, so no
+// other team member's account can read it. See SUPABASE_SETUP.md: RLS gates by company
+// domain only, not per user, so shared keys would be visible to all teammates.
+function mdKey(){ return 'tuf_myday_'+(CURRENT_EMAIL||CURRENT_USER||'anon'); }
+function mdGet(){ let o=null; try{ const v=localStorage.getItem(mdKey()); o=v?JSON.parse(v):null; }catch(_){ o=null; } o=(o&&typeof o==='object')?o:{}; return { focus:o.focus||'', goals:Array.isArray(o.goals)?o.goals:[], tasks:Array.isArray(o.tasks)?o.tasks:[], updatedAt:o.updatedAt||null }; }
+function mdSet(o){ o.updatedAt=new Date().toISOString(); localStorage.setItem(mdKey(),JSON.stringify(o)); } // local only — no syncSB by design
+const MYDAY_NUDGES=[
+  'Pick the one move that makes everything else easier, then do it first.',
+  'Small team, big leverage. Protect your focus and ship something real today.',
+  'Progress beats perfection. Get one bold thing done before lunch.',
+  'You set the pace here. Decide what done looks like, then go and get it.',
+  'Founders move. Turn today\'s plan into one decisive action now.',
+  'Say no to the noise. The work that matters is usually the hard part.',
+  'Momentum compounds. One honest win today sets up tomorrow.',
+  'Be the calm in the room. Clear head, clear priority, clear action.',
+];
+function mdNudge(){ const n=new Date(); const start=new Date(n.getFullYear(),0,0); const day=Math.floor((n-start)/86400000); return MYDAY_NUDGES[day%MYDAY_NUDGES.length]; }
+function mdGreeting(){ const h=new Date().getHours(); return h<12?'Good morning':h<18?'Good afternoon':'Good evening'; }
+let mdFocusDirty=false;
+function mdListCard(kind,title,items,doneCount){
+  const rows=items.length?items.map(it=>`<div class="chk-row ${it.done?'done':''}">
+      <div class="chk-box" onclick="mdToggle('${kind}','${it.id}')">${it.done?'✓':''}</div>
+      <span class="chk-text" style="flex:1;cursor:pointer" onclick="mdToggle('${kind}','${it.id}')">${escHtml(it.text)}</span>
+      <button class="btn btn-ghost btn-sm" style="padding:2px 7px;font-size:10px" onclick="mdEdit('${kind}','${it.id}')">edit</button>
+      <button class="btn btn-ghost btn-sm" style="padding:2px 7px;font-size:10px" onclick="mdDelete('${kind}','${it.id}')">✕</button>
+    </div>`).join(''):'<div class="empty" style="padding:14px"><div class="ico">✶</div>Nothing yet. Add the first one.</div>';
+  return `<div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+      <div class="card-title" style="margin:0">${title}</div>
+      <span style="font-size:11px;color:var(--mut)">${doneCount}/${items.length} done</span>
+    </div>
+    ${rows}
+    <div style="display:flex;gap:6px;margin-top:10px">
+      <input id="md-add-${kind}" class="form-input" placeholder="Add a ${kind==='goals'?'goal':'task'}…" style="flex:1;font-size:13px" onkeydown="if(event.key==='Enter')mdAdd('${kind}')">
+      <button class="btn btn-k btn-sm" onclick="mdAdd('${kind}')">Add</button>
+    </div>
+    ${doneCount?`<button class="btn btn-ghost btn-sm" style="margin-top:8px" onclick="mdClearDone('${kind}')">Clear completed</button>`:''}
+  </div>`;
+}
+function renderMyDay(){
+  const el=document.getElementById('myday-render'); if(!el) return;
+  const d=mdGet();
+  const today=new Date().toISOString().slice(0,10);
+  const first=CURRENT_USER||'there';
+  const ev=(ls.get('tuf_events',[])||[]).filter(e=>e&&e.date).map(e=>({...e,du:daysUntil(e.date)})).filter(e=>e.du>=0&&e.du<=7).sort((a,b)=>a.date.localeCompare(b.date));
+  const goalsDone=d.goals.filter(g=>g.done).length, tasksDone=d.tasks.filter(t=>t.done).length;
+  el.innerHTML=`
+    <div class="card" style="margin-bottom:14px;border-left:4px solid var(--y)">
+      <div style="font-family:'Montserrat',sans-serif;font-weight:800;font-size:20px">${mdGreeting()}, ${escHtml(first)}</div>
+      <div style="font-size:12px;color:var(--mut);margin-top:2px">${escHtml(fmtDate(today))}</div>
+      <div style="font-size:13px;color:var(--txt);margin-top:10px;font-style:italic">${escHtml(mdNudge())}</div>
+    </div>
+    <div class="card" style="margin-bottom:14px">
+      <div class="card-title">Daily Focus</div>
+      <div style="font-size:11px;color:var(--mut);margin-bottom:8px">The one thing that matters most today.</div>
+      <input id="md-focus" class="form-input" value="${escHtml(d.focus||'')}" placeholder="Name the single most important thing…" oninput="mdFocusDirty=true" onchange="mdSaveFocus()" style="font-size:14px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px">
+        <span id="md-focus-note" style="font-size:11px;color:var(--grn)"></span>
+        <button class="btn btn-k btn-sm" onclick="mdSaveFocus()">Save focus</button>
+      </div>
+    </div>
+    <div class="grid-2">
+      ${mdListCard('goals','Goals for today',d.goals,goalsDone)}
+      ${mdListCard('tasks','Tasks',d.tasks,tasksDone)}
+    </div>
+    <div class="card" style="margin-top:14px">
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+        <div class="card-title" style="margin:0">Today and upcoming events</div>
+        <button class="btn btn-ghost btn-sm" onclick="nav('events',document.querySelector('[data-page=events]'))">Manage events</button>
+      </div>
+      <div style="font-size:11px;color:var(--mut);margin:4px 0 10px">Shared team events for today and the next 7 days.</div>
+      ${ev.length?ev.map(e=>`<div class="chk-row" style="cursor:default">
+          <div style="width:8px;height:8px;border-radius:50%;background:var(--y);flex-shrink:0"></div>
+          <div style="flex:1"><div style="font-size:13px;font-weight:600">${escHtml(e.name||'Event')}</div><div style="font-size:11px;color:var(--mut)">${escHtml(fmtDate(e.date))}${e.type?' · '+escHtml(e.type):''}${(e.location&&e.location!=='TBC')?' · '+escHtml(e.location):''}</div></div>
+          <span class="tag ${e.du===0?'tag-r':e.du<=2?'tag-a':'tag-g'}" style="font-size:10px">${e.du===0?'Today':e.du===1?'Tomorrow':'in '+e.du+' days'}</span>
+        </div>`).join(''):'<div class="empty" style="padding:18px"><div class="ico">📅</div>Nothing in the next 7 days.</div>'}
+    </div>
+  `;
+}
+function mdSaveFocus(){ const inp=document.getElementById('md-focus'); if(!inp)return; const d=mdGet(); d.focus=inp.value.trim(); mdSet(d); mdFocusDirty=false; const n=document.getElementById('md-focus-note'); if(n){ n.textContent='Saved'; setTimeout(()=>{ const x=document.getElementById('md-focus-note'); if(x)x.textContent=''; },1500); } }
+function mdAdd(kind){ const inp=document.getElementById('md-add-'+kind); if(!inp)return; const v=(inp.value||'').trim(); if(!v)return; const d=mdGet(); d[kind].push({id:uid(),text:v,done:false}); mdSet(d); renderMyDay(); }
+function mdToggle(kind,id){ const d=mdGet(); const it=d[kind].find(x=>x.id===id); if(!it)return; it.done=!it.done; mdSet(d); renderMyDay(); }
+function mdEdit(kind,id){ const d=mdGet(); const it=d[kind].find(x=>x.id===id); if(!it)return; const v=prompt('Edit:',it.text); if(v===null)return; const t=v.trim(); if(!t)return; it.text=t; mdSet(d); renderMyDay(); }
+function mdDelete(kind,id){ const d=mdGet(); d[kind]=d[kind].filter(x=>x.id!==id); mdSet(d); renderMyDay(); }
+function mdClearDone(kind){ if(!confirm('Clear completed items from this list?'))return; const d=mdGet(); d[kind]=d[kind].filter(x=>!x.done); mdSet(d); renderMyDay(); }
 function fmtShort(d){return new Date(d+'T00:00:00').toLocaleDateString('en-GB',{day:'numeric',month:'short'});}
 function weekKey(){const d=new Date();const m=new Date(d);m.setDate(d.getDate()-d.getDay()+1);return m.toISOString().slice(0,10);}
 function escHtml(s){return(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
