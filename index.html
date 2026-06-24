@@ -1893,10 +1893,28 @@ async function claudeCall(payload){
   const { data, error } = await sb.functions.invoke('claude-proxy', { body: payload });
   if(error){
     let msg = error.message || 'AI request failed';
-    try{ if(error.context && typeof error.context.text==='function'){ const j=JSON.parse(await error.context.text()); msg=(j.error&&(j.error.message||j.error))||msg; } }catch(_){}
-    throw new Error(msg);
+    let status=0, retryAfter=0, body=null;
+    try{
+      const ctx=error.context;
+      if(ctx){
+        status = ctx.status||0;
+        const ra = ctx.headers && ctx.headers.get && ctx.headers.get('retry-after');
+        if(ra) retryAfter = parseFloat(ra)||0;
+        if(typeof ctx.text==='function'){ const t=await ctx.text(); try{ body=JSON.parse(t); msg=(body.error&&(body.error.message||body.error))||msg; }catch(_){ if(t) msg=t; } }
+      }
+    }catch(_){}
+    const err=new Error(msg);
+    err.status=status; err.retryAfter=retryAfter;
+    err.isRateLimit = status===429 || (body&&body.error&&body.error.type==='rate_limit_error') || /rate.?limit|\b429\b|overloaded|\b529\b/i.test(msg);
+    throw err;
   }
-  if(data && data.error) throw new Error(data.error.message || String(data.error));
+  if(data && data.error){
+    const m = data.error.message || String(data.error);
+    const err=new Error(m);
+    err.isRateLimit = (data.error.type==='rate_limit_error') || /rate.?limit|\b429\b|overloaded|\b529\b/i.test(m);
+    err.retryAfter = data.error.retryAfter||0;
+    throw err;
+  }
   return data;
 }
 
@@ -4573,6 +4591,23 @@ function saveIndivGoalQ(person){const goals=ls.get('tuf_goals',{});if(!goals.ind
 // ═══ AI-GUIDED OKR SESSION ═══════════════════════════════════════════════════
 const OKR_SYSTEM_PROMPT=(document.getElementById('okr-sys')?.textContent||'').trim();
 const OKR_MODEL='claude-sonnet-4-6';
+const OKR_MAX_TOKENS=1500;   // realistic ceiling for one facilitator turn
+const OKR_MIN_GAP=2000;      // minimum ms between sends
+let okrLastSendAt=0;
+function okrSleep(ms){ return new Promise(r=>setTimeout(r,ms)); }
+// On a rate limit (429), wait (retry-after if provided, else a sane default) and retry once.
+async function okrCall(payload){
+  try{ return await claudeCall(payload); }
+  catch(e){
+    if(e && e.isRateLimit){
+      const waitMs=Math.min(60000, Math.max(2000, e.retryAfter ? Math.ceil(e.retryAfter*1000) : 8000));
+      const st=document.getElementById('okr-status'); if(st) st.textContent='Busy for a moment, holding…';
+      await okrSleep(waitMs);
+      return await claudeCall(payload);
+    }
+    throw e;
+  }
+}
 const OKR_PHASES=[['frame','Frame'],['diverge','Diverge'],['converge','Converge'],['sharpen','Sharpen'],['key_results','Key results'],['stress_test','Stress test'],['owners','Owners'],['synthesise','Synthesise']];
 const OKR_TEAM=['Danny','Joe','Jasper','James','Chloe'];
 let okrSession=null; // in-memory mirror of tuf_okr_session
@@ -4640,13 +4675,26 @@ function okrSend(){ const ta=document.getElementById('okr-input'); const v=(ta.v
 async function okrTurn(userText){
   if(!okrSession)return;
   const btn=document.getElementById('okr-send'), status=document.getElementById('okr-status');
-  const stateJson=JSON.stringify(okrSession.state||{objectives:[]});
-  const content=userText+'\n\nCurrent agreed set (authoritative — the team may have hand-edited this; treat it as the source of truth, keep ids stable):\n```json\n'+stateJson+'\n```';
-  okrSession.messages.push({role:'user',content}); okrPersist();
   if(btn){ btn.disabled=true; btn.textContent='Thinking…'; }
   if(status) status.textContent='Facilitator is thinking…';
+  // Minimum gap between sends, to stay under the rate limit.
+  const wait=OKR_MIN_GAP-(Date.now()-okrLastSendAt);
+  if(wait>0) await okrSleep(wait);
+  // Send ONLY the cached system prompt + one compact user message. The structured
+  // state is the source of truth, so we do not resend the full chat transcript.
+  const stateJson=JSON.stringify(okrSession.state||{objectives:[]});
+  const content='Current phase: '+(okrSession.phase||'frame')
+    +'\nCurrent OKR set (authoritative — the team may have hand-edited this; treat it as the source of truth, keep ids stable):\n```json\n'+stateJson+'\n```'
+    +'\nLatest answer from the room: '+userText;
+  okrSession.messages.push({role:'user',content:userText}); okrPersist(); // stored for resume/record only, not resent
   try{
-    const data=await claudeCall({ model:OKR_MODEL, max_tokens:2000, system:OKR_SYSTEM_PROMPT, messages:okrSession.messages.slice(-16) });
+    okrLastSendAt=Date.now();
+    const data=await okrCall({
+      model:OKR_MODEL,
+      max_tokens:OKR_MAX_TOKENS,
+      system:[{ type:'text', text:OKR_SYSTEM_PROMPT, cache_control:{ type:'ephemeral' } }],
+      messages:[{ role:'user', content }]
+    });
     const text=data.content?.[0]?.text||'';
     okrSession.messages.push({role:'assistant',content:text});
     const { message, state }=okrParseTurn(text);
@@ -4656,7 +4704,7 @@ async function okrTurn(userText){
     okrRenderPhases(okrSession.phase); okrRenderBuild(); okrPersist();
     if(status) status.textContent='';
   }catch(e){
-    okrSession.messages.pop(); okrPersist(); // drop the unanswered turn so history stays alternating
+    okrSession.messages.pop(); okrPersist();
     const ta=document.getElementById('okr-input'); if(ta && !ta.value) ta.value=userText;
     if(status) status.textContent='Error: '+e.message+' — press Send to try again.';
   }finally{
