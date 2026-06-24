@@ -1696,7 +1696,10 @@ function renderMyDay(){
   const today=new Date().toISOString().slice(0,10);
   const first=CURRENT_USER||'there';
   const ev=(ls.get('tuf_events',[])||[]).filter(e=>e&&e.date).map(e=>({...e,du:daysUntil(e.date)})).filter(e=>e.du>=0&&e.du<=7).sort((a,b)=>a.date.localeCompare(b.date));
-  const goalsDone=d.goals.filter(g=>g.done).length, tasksDone=d.tasks.filter(t=>t.done).length;
+  const goalsDone=d.goals.filter(g=>g.done).length;
+  // Tasks come from the shared team task board (real dates + owners), filtered to this person's open items.
+  const myTasks=(ls.get('tuf_tasks',[])||[]).filter(t=>t.owner===CURRENT_USER && t.status!=='Done').sort((a,b)=>{ if(!a.dueDate&&!b.dueDate)return 0; if(!a.dueDate)return 1; if(!b.dueDate)return -1; return a.dueDate.localeCompare(b.dueDate); });
+  const tOverdue=myTasks.filter(t=>t.dueDate&&t.dueDate<today).length;
   el.innerHTML=`
     <div class="card" style="margin-bottom:14px;border-left:4px solid var(--y)">
       <div style="font-family:'Montserrat',sans-serif;font-weight:800;font-size:20px">${mdGreeting()}, ${escHtml(first)}</div>
@@ -1712,9 +1715,14 @@ function renderMyDay(){
         <button class="btn btn-k btn-sm" onclick="mdSaveFocus()">Save focus</button>
       </div>
     </div>
-    <div class="grid-2">
-      ${mdListCard('goals','Goals for today',d.goals,goalsDone)}
-      ${mdListCard('tasks','Tasks',d.tasks,tasksDone)}
+    ${mdListCard('goals','Goals for today',d.goals,goalsDone)}
+    <div class="card" style="margin-top:14px">
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:6px">
+        <div class="card-title" style="margin:0">My tasks ${tOverdue?`<span class="tag tag-r" style="font-size:10px">${tOverdue} overdue</span>`:''}</div>
+        <button class="btn btn-ghost btn-sm" onclick="nav('tasks',document.querySelector('[data-page=tasks]'))">Open task board</button>
+      </div>
+      <div style="font-size:11px;color:var(--mut);margin-bottom:10px">Your open items from the team task board. Tap the box to advance status.</div>
+      ${myTasks.length?`<div style="border-radius:8px;overflow:hidden;border:1px solid var(--bdr);border-top:none">${renderTaskRows(myTasks,today)}</div>`:'<div class="empty" style="padding:18px"><div class="ico">✅</div>No open tasks assigned to you.</div>'}
     </div>
     <div class="card" style="margin-top:14px">
       <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
@@ -2361,6 +2369,7 @@ function cycleTaskStatus(id){
   syncBoardroomFromTask(id);
   renderTasks();
   renderBriefTasks();
+  const mp=document.getElementById('page-myday'); if(mp&&mp.classList.contains('active')) renderMyDay();
 }
 
 function addTaskModal(){
