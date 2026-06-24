@@ -555,6 +555,7 @@ details>summary::-webkit-details-marker{display:none}
     <div class="page" id="page-boardroom">
       <div class="grid-4" id="boardroom-stats" style="margin-bottom:16px"></div>
       <div id="boardroom-checklist" style="margin-bottom:18px"></div>
+      <div id="boardroom-templates" style="margin-bottom:18px"></div>
       <div class="grid-2">
         <div>
           <div class="sec-hdr">Service Model</div>
@@ -6470,7 +6471,70 @@ function updateNewsletter(id){
 function deleteNewsletter(id){if(!confirm('Delete?'))return;ls.set('tuf_newsletters',ls.get('tuf_newsletters',[]).filter(x=>x.id!==id));closeModal();renderEmailList();}
 
 // ═══ BOARDROOM PRODUCT PAGE ═════════════════════════════════════════════════
+// ═══ BOARDROOM MESSAGE TEMPLATES (editable; shared) ═══
+const BOARDROOM_TEMPLATES_DEFAULT=[
+  {title:'Welcome to the Boardroom', body:'Hi [Name],\n\nWelcome to The Ultimate Founder Boardroom. We are glad to have you in the room.\n\nYour first session is [date]. I will send the joining details and a short prep note beforehand. In the meantime, add yourself to the Boardroom WhatsApp group here: [link].\n\nAny questions, just reply to this message.\n\nThe TUF Team'},
+  {title:'Session reminder', body:'Hi [Name],\n\nA quick reminder that the next Boardroom Day is [date] at [venue]. Doors open at [time].\n\nCome ready to work on [focus]. Bring your numbers and one challenge you want help with.\n\nSee you there,\nThe TUF Team'},
+  {title:'Payment link', body:'Hi [Name],\n\nGreat to have you joining the Boardroom. Here is the secure link to set up your membership at £1,000 per month: [link].\n\nOnce that is done you are fully in and I will send your welcome pack.\n\nThe TUF Team'},
+  {title:'Post session follow up', body:'Hi [Name],\n\nGreat to have you in the room today. Your three commitments before the next session were:\n1. [commitment]\n2. [commitment]\n3. [commitment]\n\nI will check in midway. Reply here if anything gets in the way.\n\nThe TUF Team'},
+  {title:'WhatsApp group invite', body:'Hi [Name],\n\nHere is your invite to the Boardroom WhatsApp group: [link].\n\nThis is where the day to day conversation happens between sessions. Introduce yourself when you join, and keep it business focused.\n\nThe TUF Team'},
+];
+function brTemplates(){
+  let list=ls.get('tuf_boardroom_templates',null);
+  if(!Array.isArray(list)){ list=BOARDROOM_TEMPLATES_DEFAULT.map(t=>({id:uid(),title:t.title,body:t.body})); ls.set('tuf_boardroom_templates',list); }
+  return list;
+}
+function renderBoardroomTemplates(){
+  const el=document.getElementById('boardroom-templates'); if(!el) return;
+  const list=brTemplates();
+  el.innerHTML=`
+    <div class="sec-hdr" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+      <span>Message Templates</span>
+      <button class="btn btn-k btn-sm" onclick="brTplAdd()">+ Add template</button>
+    </div>
+    ${list.length?`<div class="grid-2">${list.map(brTplCard).join('')}</div>`:'<div class="empty">No templates yet. Add the first one.</div>'}`;
+}
+function brTplCard(t){
+  return `<div class="card" style="margin-bottom:0">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:8px">
+      <div class="card-title" style="margin:0">${escHtml(t.title||'Untitled')}</div>
+      <div style="display:flex;gap:5px;flex-shrink:0">
+        <button class="btn btn-ghost btn-sm" onclick="brTplCopy('${t.id}',this)">Copy</button>
+        <button class="btn btn-ghost btn-sm" onclick="brTplEdit('${t.id}')">Edit</button>
+        <button class="btn btn-ghost btn-sm" onclick="brTplDelete('${t.id}')">✕</button>
+      </div>
+    </div>
+    <div style="white-space:pre-wrap;font-size:12px;line-height:1.55;color:var(--txt);background:var(--bg);border:1px solid var(--bdr-2);border-radius:var(--r-sm);padding:11px 13px;max-height:240px;overflow:auto">${escHtml(t.body||'')}</div>
+  </div>`;
+}
+function brTplAdd(){ brTplModal(null); }
+function brTplEdit(id){ brTplModal(id); }
+function brTplModal(id){
+  const t=(id?brTemplates().find(x=>x.id===id):null)||{};
+  showModal(id?'Edit template':'New template',
+    `<div class="form-row"><label class="form-label">Title</label><input class="form-input" id="bt-title" value="${escHtml(t.title||'')}" placeholder="e.g. Welcome to the Boardroom"></div>
+     <div class="form-row"><label class="form-label">Message ${micBtnHtml('bt-body')}</label><textarea class="form-textarea" id="bt-body" style="min-height:200px;line-height:1.5" placeholder="Write the message. Use [Name], [date], [link] as placeholders to fill in.">${escHtml(t.body||'')}</textarea></div>`,
+    `${id?`<button class="btn btn-red btn-sm" onclick="brTplDelete('${id}')">Delete</button>`:''}<button class="btn btn-ghost" onclick="closeModal()">Cancel</button><button class="btn btn-k" onclick="brTplSave('${id||''}')">Save</button>`);
+}
+function brTplSave(id){
+  const title=(document.getElementById('bt-title').value||'').trim(); if(!title){ alert('Add a title.'); return; }
+  const body=document.getElementById('bt-body').value;
+  const list=brTemplates();
+  if(id){ const t=list.find(x=>x.id===id); if(t){ t.title=title; t.body=body; } }
+  else { list.push({id:uid(),title,body}); }
+  ls.set('tuf_boardroom_templates',list); closeModal(); renderBoardroomTemplates();
+}
+function brTplDelete(id){ if(!confirm('Delete this template?'))return; ls.set('tuf_boardroom_templates',brTemplates().filter(x=>x.id!==id)); closeModal(); renderBoardroomTemplates(); }
+function brTplCopy(id,btn){
+  const t=brTemplates().find(x=>x.id===id); if(!t)return;
+  const done=()=>{ if(btn){ const o=btn.textContent; btn.textContent='Copied ✓'; setTimeout(()=>{ if(btn) btn.textContent=o; },1400); } };
+  const fallback=()=>{ const ta=document.createElement('textarea'); ta.value=t.body||''; ta.style.position='fixed'; ta.style.opacity='0'; document.body.appendChild(ta); ta.select(); try{document.execCommand('copy');}catch(_){} document.body.removeChild(ta); };
+  if(navigator.clipboard){ navigator.clipboard.writeText(t.body||'').then(done).catch(()=>{ fallback(); done(); }); }
+  else { fallback(); done(); }
+}
+
 function renderBoardroom(){
+  renderBoardroomTemplates();
   const allMembers=ls.get('tuf_members',[]).filter(m=>m.status==='active');
   const bMembers=allMembers.filter(m=>!m.type||m.type==='boardroom');
   const privClients=allMembers.filter(m=>m.type==='existing_client');
