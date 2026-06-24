@@ -354,7 +354,7 @@ details>summary::-webkit-details-marker{display:none}
 #page-content .chub-muted{color:#8a8a8a;font-size:11px}
 #page-content .chub-dot{display:inline-block;width:9px;height:9px;border-radius:50%;flex-shrink:0}
 #page-content .chub-row{display:flex;align-items:center;gap:8px}
-#page-content a.chub-link{color:var(--y);text-decoration:none}
+#page-content a.chub-link{color:var(--y);text-decoration:none;cursor:pointer}
 @media(max-width:768px){#page-content{margin:-12px;padding:12px}#page-content .chub-statbar{grid-template-columns:1fr 1fr}#page-content .chub-grid7{grid-template-columns:1fr}}
 </style>
 </head>
@@ -4026,6 +4026,7 @@ function chubPeople(){return ls.get('tuf_content_people',DEFAULT_PEOPLE);}
 function chubPlatforms(){return ls.get('tuf_content_platforms',DEFAULT_PLATFORMS);}
 function chubOwnerColor(o){return CHUB_OWNER_COLORS[o]||'#888';}
 function postPlatforms(p){ return (p&&p.platforms&&p.platforms.length)?p.platforms:(p&&p.platform?[p.platform]:[]); }
+function chubSafeUrl(u){ u=(u||'').trim(); return /^https?:\/\//i.test(u)?u:''; } // only allow http(s) links as hrefs
 function chubWeekStart(d){ const x=new Date(d); const day=(x.getDay()+6)%7; x.setDate(x.getDate()-day); x.setHours(0,0,0,0); return x; }
 function chubYMD(d){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); } // local date, timezone safe
 function chubToday(){ return chubYMD(new Date()); }
@@ -4093,7 +4094,7 @@ function chubPostRow(p){
         </div>
       </div>
       <div style="display:flex;gap:5px;flex-shrink:0" onclick="event.stopPropagation()">
-        ${p.status!=='Posted'?`<button class="chub-btn sm" onclick="chubMarkPublished('${p.id}')">Mark published</button>`:(p.link?`<a class="chub-link" href="${escHtml(p.link)}" target="_blank" rel="noopener" style="font-size:11px">View</a>`:'')}
+        ${p.status!=='Posted'?`<button class="chub-btn sm" onclick="chubMarkPublished('${p.id}')">Mark published</button>`:(chubSafeUrl(p.link)?`<a class="chub-link" href="${escHtml(chubSafeUrl(p.link))}" target="_blank" rel="noopener" style="font-size:11px">View</a>`:'')}
         <button class="chub-btn ghost sm" onclick="chubDuplicate('${p.id}')">Duplicate</button>
       </div>
     </div>
@@ -4175,7 +4176,7 @@ function chubBacklog(posts){
 
 function chubFilteredPosts(posts){
   const since=new Date(); since.setDate(since.getDate()-chubPillarWindow); const sStr=chubYMD(since);
-  return posts.filter(p=>{ if(chubPillarWindow!==9999){ if(!p.date||p.date<sStr) return false; } if(chubPillarPlatform!=='all' && !postPlatforms(p).includes(chubPillarPlatform)) return false; if(chubPillarPerson!=='all' && p.owner!==chubPillarPerson) return false; return true; });
+  return posts.filter(p=>{ if(!p.date) return false; if(chubPillarWindow!==9999 && p.date<sStr) return false; if(chubPillarPlatform!=='all' && !postPlatforms(p).includes(chubPillarPlatform)) return false; if(chubPillarPerson!=='all' && p.owner!==chubPillarPerson) return false; return true; });
 }
 function chubPillarsBody(posts){
   const wins=[[30,'Last 30 days'],[90,'Last 90 days'],[9999,'All time']];
