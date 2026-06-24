@@ -317,6 +317,45 @@ details>summary::-webkit-details-marker{display:none}
 .okr-mini:hover{border-color:var(--y);color:var(--y)}
 .okr-conf-hi{color:var(--amb);font-size:11px}
 .okr-conf-lo{color:var(--red);font-size:11px}
+/* CONTENT HUB (dark mission control). All rules scoped to #page-content so nothing leaks. */
+#page-content{background:#0A0A0A;color:#fff;min-height:100%;font-family:Arial,Helvetica,sans-serif;margin:-24px -28px;padding:24px 28px}
+#page-content .chub-h{font-family:Georgia,'Times New Roman',serif}
+#page-content .chub-title{font-family:Georgia,serif;font-size:22px;font-weight:700;margin:0 0 2px}
+#page-content .chub-sub{color:#8a8a8a;font-size:12px;margin-bottom:16px}
+#page-content .chub-statbar{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:18px}
+#page-content .chub-stat{background:#141414;border:1px solid #262626;border-radius:14px;padding:14px 16px}
+#page-content .chub-stat .n{font-family:Georgia,serif;font-size:30px;font-weight:700;line-height:1;color:#fff}
+#page-content .chub-stat .n.warn{color:#FF5252}#page-content .chub-stat .n.ok{color:#4CAF50}#page-content .chub-stat .n.acc{color:var(--y)}
+#page-content .chub-stat .l{font-size:10px;text-transform:uppercase;letter-spacing:.7px;color:#8a8a8a;margin-top:6px}
+#page-content .chub-tabs{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:16px;border-bottom:1px solid #262626}
+#page-content .chub-tab{padding:9px 15px;font-size:13px;font-weight:700;color:#9a9a9a;cursor:pointer;border-radius:9px 9px 0 0}
+#page-content .chub-tab.on{color:#0A0A0A;background:var(--y)}
+#page-content .chub-tab:hover:not(.on){color:#fff}
+#page-content .chub-card{background:#141414;border:1px solid #262626;border-radius:14px;padding:16px 18px;margin-bottom:14px}
+#page-content .chub-card-title{font-family:Georgia,serif;font-size:16px;font-weight:700;margin-bottom:10px;color:#fff}
+#page-content .chub-post{background:#1a1a1a;border:1px solid #2a2a2a;border-left:4px solid #888;border-radius:10px;padding:10px 12px;margin-bottom:8px;cursor:pointer;transition:border-color .15s}
+#page-content .chub-post:hover{border-color:#555}
+#page-content .chub-post.overdue{box-shadow:inset 3px 0 0 #FF5252}
+#page-content .chub-badge{display:inline-block;font-size:9px;font-weight:700;padding:2px 7px;border-radius:20px;background:#262626;color:#cfcfcf;margin-right:4px}
+#page-content .chub-badge.li{background:#0a3d5c;color:#7fc4f0}
+#page-content .chub-badge.ig{background:#4a1530;color:#f48fb1}
+#page-content .chub-badge.yt{background:#4a1212;color:#ff8a80}
+#page-content .chub-pill{display:inline-block;font-size:9px;font-weight:700;padding:2px 8px;border-radius:20px;border:1px solid var(--y);color:var(--y)}
+#page-content .chub-type{display:inline-block;font-size:9px;padding:2px 8px;border-radius:20px;background:#222;color:#aaa}
+#page-content .chub-btn{background:var(--y);color:#0A0A0A;border:none;border-radius:9px;padding:8px 14px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit}
+#page-content .chub-btn.ghost{background:transparent;color:#fff;border:1px solid #3a3a3a}
+#page-content .chub-btn.sm{padding:5px 10px;font-size:11px}
+#page-content .chub-bar{height:8px;background:#222;border-radius:6px;overflow:hidden}
+#page-content .chub-bar>div{height:100%;background:var(--y);transition:width .3s}
+#page-content .chub-grid7{display:grid;grid-template-columns:repeat(7,1fr);gap:8px}
+#page-content .chub-day{background:#141414;border:1px solid #242424;border-radius:10px;padding:8px;min-height:96px}
+#page-content .chub-day.today{border-color:var(--y)}
+#page-content .chub-day .dh{font-size:10px;color:#8a8a8a;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px}
+#page-content .chub-muted{color:#8a8a8a;font-size:11px}
+#page-content .chub-dot{display:inline-block;width:9px;height:9px;border-radius:50%;flex-shrink:0}
+#page-content .chub-row{display:flex;align-items:center;gap:8px}
+#page-content a.chub-link{color:var(--y);text-decoration:none}
+@media(max-width:768px){#page-content{margin:-12px;padding:12px}#page-content .chub-statbar{grid-template-columns:1fr 1fr}#page-content .chub-grid7{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
@@ -390,9 +429,8 @@ details>summary::-webkit-details-marker{display:none}
     <div class="sb-item" data-page="ip" onclick="nav('ip',this)"><span class="ico">💡</span>IP Register</div>
 
     <div class="sb-section">Marketing</div>
+    <div class="sb-item" data-page="content" onclick="nav('content',this)"><span class="ico">🎬</span>Content</div>
     <div class="sb-item" data-page="social" onclick="nav('social',this)"><span class="ico">📊</span>Social Media</div>
-    <div class="sb-item" data-page="calendar" onclick="nav('calendar',this)"><span class="ico">📆</span>Content Calendar & Strategy</div>
-    <div class="sb-item" data-page="ideas" onclick="nav('ideas',this)"><span class="ico">✨</span>Content Ideas</div>
     <div class="sb-item" data-page="postreview" onclick="nav('postreview',this)"><span class="ico">📝</span>Post Review <span class="sb-badge amb" id="sb-postreview" style="display:none">0</span></div>
     <div class="sb-item" data-page="podcast" onclick="nav('podcast',this)"><span class="ico">🎙</span>Podcast</div>
     <div class="sb-item" data-page="files" onclick="nav('files',this)"><span class="ico">📁</span>Marketing Materials</div>
@@ -535,6 +573,7 @@ details>summary::-webkit-details-marker{display:none}
     </div>
 
     <!-- ═══ SOCIAL MEDIA ═══ -->
+    <div class="page" id="page-content"><div id="content-hub"></div></div>
     <div class="page" id="page-social">
       <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;align-items:center">
         <div id="social-tabs" style="display:flex;gap:6px"></div>
@@ -1598,7 +1637,7 @@ const PAGE_TITLES = {
   myday:'My Day',
   home:'Morning Brief',teamoverview:'Team Overview',tasks:'Tasks',transcript:'Meeting Notes → Tasks',
   members:'Existing Clients',pipeline:'Sales Pipeline',
-  boardroom:'Boardroom',social:'Social Media',ideas:'Content Ideas',kpis:'KPIs',aidump:'AI Tool (Dump)',buildreq:'Build Requests',clientanalysis:'Client Analysis',emaillist:'Email List',watemplates:'WhatsApp Templates',
+  boardroom:'Boardroom',content:'Content',social:'Social Media',ideas:'Content Ideas',kpis:'KPIs',aidump:'AI Tool (Dump)',buildreq:'Build Requests',clientanalysis:'Client Analysis',emaillist:'Email List',watemplates:'WhatsApp Templates',
   prospects:'Warm Prospects',testimonials:'Testimonials',
   onboarding:'Onboarding',sessions:'Session Planner',events:'Events',padel:'Padel Event',
   calendar:'Content Calendar',postreview:'Post Review',podcast:'Podcast Pipeline',ip:'IP Register',files:'Files',
@@ -1634,7 +1673,7 @@ function renderPage(page){
   const fns = {
     home:renderHome, tasks:renderTasks, transcript:renderTranscript,
     members:renderMembers, pipeline:renderPipeline,
-    boardroom:renderBoardroom, social:renderSocial, ideas:renderIdeas, kpis:renderKPIs, aidump:renderAIDump, buildreq:renderBuildRequests, clientanalysis:renderClientAnalysis, emaillist:renderEmailList, watemplates:renderWATemplates,
+    boardroom:renderBoardroom, content:renderContentHub, social:renderSocial, ideas:renderIdeas, kpis:renderKPIs, aidump:renderAIDump, buildreq:renderBuildRequests, clientanalysis:renderClientAnalysis, emaillist:renderEmailList, watemplates:renderWATemplates,
     prospects:renderProspects, testimonials:renderTestimonials,
     onboarding:renderOnboarding, sessions:renderSessions, events:renderEvents, padel:renderPadel,
     calendar:renderCalendar, postreview:renderPostReview, podcast:renderPodcast, ip:renderIP, files:renderFiles,
@@ -3971,6 +4010,297 @@ function editPostModal(id){const p=ls.get('tuf_content',[]).find(x=>x.id===id);i
 `,`<button class="btn btn-red btn-sm" onclick="deletePost('${id}')">Delete</button><button class="btn btn-ghost" onclick="closeModal()">Cancel</button><button class="btn btn-k" onclick="updatePost('${id}')">Save</button>`);}
 function updatePost(id){const list=ls.get('tuf_content',[]);const i=list.findIndex(x=>x.id===id);if(i<0)return;list[i]={...list[i],title:document.getElementById('ep2-title').value.trim(),platform:document.getElementById('ep2-platform').value,date:document.getElementById('ep2-date').value||'',owner:document.getElementById('ep2-owner').value,status:document.getElementById('ep2-status').value,notes:document.getElementById('ep2-notes').value.trim()};ls.set('tuf_content',list);closeModal();renderCalendar();}
 function deletePost(id){if(!confirm('Delete this post?'))return;ls.set('tuf_content',ls.get('tuf_content',[]).filter(x=>x.id!==id));closeModal();renderCalendar();}
+
+// ═══ CONTENT HUB (dark mission control) ══════════════════════════════════════
+// Editable admin lists (mirror tuf_boardroom_model pattern). Defaults below.
+const DEFAULT_PILLARS=['Founder Mindset','Business Growth','Behind the Scenes','Client Wins','Events and Community'];
+const DEFAULT_TYPES=['Insight post','Personal story','Event highlight','Client win','Behind the scenes','Question or challenge','Video','Reel','Repurposed clip'];
+const DEFAULT_PEOPLE=['Danny','Jasper','Joe','James','TUF Brand'];
+const DEFAULT_PLATFORMS=['LinkedIn','Instagram','YouTube'];
+const BANK_STATUSES=['Idea','In Production','Ready to Schedule'];
+const CHUB_OWNER_COLORS={Danny:'#FBF000',Jasper:'#4FC3F7',Joe:'#81C784',James:'#CE93D8','TUF Brand':'#FF8A65'};
+const CHUB_PILLAR_COLORS=['#FBF000','#4FC3F7','#81C784','#CE93D8','#FF8A65'];
+function chubPillars(){return ls.get('tuf_content_pillars',DEFAULT_PILLARS);}
+function chubTypes(){return ls.get('tuf_content_types',DEFAULT_TYPES);}
+function chubPeople(){return ls.get('tuf_content_people',DEFAULT_PEOPLE);}
+function chubPlatforms(){return ls.get('tuf_content_platforms',DEFAULT_PLATFORMS);}
+function chubOwnerColor(o){return CHUB_OWNER_COLORS[o]||'#888';}
+function postPlatforms(p){ return (p&&p.platforms&&p.platforms.length)?p.platforms:(p&&p.platform?[p.platform]:[]); }
+function chubWeekStart(d){ const x=new Date(d); const day=(x.getDay()+6)%7; x.setDate(x.getDate()-day); x.setHours(0,0,0,0); return x; }
+function chubYMD(d){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); } // local date, timezone safe
+function chubToday(){ return chubYMD(new Date()); }
+let chubTab='today', chubWeekOffset=0, chubMonthOffset=0, chubChart=null;
+let chubPillarWindow=30, chubPillarPlatform='all', chubPillarPerson='all';
+function setChubTab(t){ chubTab=t; renderContentHub(); }
+function chubCalNav(d){ if(calView==='month') chubMonthOffset+=d; else chubWeekOffset+=d; renderContentHub(); }
+
+function renderContentHub(){
+  const el=document.getElementById('content-hub'); if(!el)return;
+  const posts=ls.get('tuf_content',[])||[];
+  document.getElementById('topbar-actions').innerHTML=`<button class="btn btn-k btn-sm" onclick="chubAddPost()">+ Add post</button>`;
+  const tabs=[['today','Today'],['calendar','Calendar'],['pillars','Pillars'],['bank','Content Bank'],['social','Social stats']];
+  const body = chubTab==='calendar'?chubCalendarBody(posts):chubTab==='pillars'?chubPillarsBody(posts):chubTab==='bank'?chubBankBody():chubTab==='social'?chubSocialBody():chubTodayBody(posts);
+  el.innerHTML=`
+    <div class="chub-title chub-h">Content command centre</div>
+    <div class="chub-sub">Every post moves TUF closer to 20 Boardroom members. Owned by Jasper.</div>
+    ${chubStatBar(posts)}
+    <div class="chub-tabs">${tabs.map(([k,l])=>`<div class="chub-tab ${chubTab===k?'on':''}" onclick="setChubTab('${k}')">${l}</div>`).join('')}</div>
+    <div>${body}</div>
+    <div class="chub-muted" style="margin-top:20px">Edit lists: <a class="chub-link" onclick="chubEditList('pillars')">Pillars</a> · <a class="chub-link" onclick="chubEditList('types')">Content types</a> · <a class="chub-link" onclick="chubEditList('people')">People</a> · <a class="chub-link" onclick="chubEditList('platforms')">Platforms</a></div>`;
+  if(chubTab==='pillars') chubRenderDonut(posts);
+}
+
+function chubStatBar(posts){
+  const ws=chubWeekStart(new Date()); const we=new Date(ws); we.setDate(we.getDate()+7);
+  const wsStr=chubYMD(ws), weStr=chubYMD(we);
+  const inWeek=posts.filter(p=>p.date && p.date>=wsStr && p.date<weStr);
+  const pubWeek=inWeek.filter(p=>p.status==='Posted').length;
+  const consistency=Math.min(100,Math.round((pubWeek/5)*100));
+  const bal=chubPillarBalance(posts,30);
+  const todayStr=chubToday();
+  const next=posts.filter(p=>p.date && p.status!=='Posted' && p.date>=todayStr).sort((a,b)=>a.date.localeCompare(b.date))[0];
+  return `<div class="chub-statbar">
+    <div class="chub-stat"><div class="n ${inWeek.length>=5?'ok':''}">${inWeek.length}</div><div class="l">Posts this week</div></div>
+    <div class="chub-stat"><div class="n ${consistency>=100?'ok':consistency<60?'warn':'acc'}">${consistency}%</div><div class="l">Consistency vs 5 a week</div></div>
+    <div class="chub-stat"><div class="n ${bal.starved?'warn':'ok'}" style="font-size:18px;font-family:Arial">${escHtml(bal.label)}</div><div class="l">Pillar balance (30 days)</div></div>
+    <div class="chub-stat"><div class="n acc" style="font-size:15px;font-family:Arial">${next?escHtml((next.title||'').slice(0,24)):'Nothing queued'}</div><div class="l">Next scheduled</div></div>
+  </div>`;
+}
+function chubPillarBalance(posts,days){
+  const since=new Date(); since.setDate(since.getDate()-days); const sStr=chubYMD(since);
+  const rel=posts.filter(p=>p.date && p.date>=sStr); const pillars=chubPillars(); const total=rel.length;
+  if(!total) return {starved:false,label:'No data'};
+  let worst=pillars[0], worstShare=999;
+  pillars.forEach(pl=>{ const share=rel.filter(p=>p.pillar===pl).length/total*100; if(share<worstShare){worstShare=share;worst=pl;} });
+  return worstShare<10 ? {starved:true,label:worst} : {starved:false,label:'Balanced'};
+}
+
+function chubPostRow(p){
+  const today=chubToday();
+  const overdue=p.date&&p.date<today&&p.status!=='Posted';
+  const col=chubOwnerColor(p.owner); const plats=postPlatforms(p);
+  const stDisp=p.status==='Posted'?'Published':(p.status||'Idea');
+  return `<div class="chub-post ${overdue?'overdue':''}" style="border-left-color:${col}" onclick="chubEditPost('${p.id}')">
+    <div class="chub-row" style="justify-content:space-between;gap:8px">
+      <div style="flex:1;min-width:0">
+        <div style="font-weight:700;font-size:13px;margin-bottom:4px">${escHtml(p.title||'Untitled')}</div>
+        <div class="chub-row" style="flex-wrap:wrap;gap:4px">
+          <span class="chub-dot" style="background:${col}"></span><span class="chub-muted">${escHtml(p.owner||'')}</span>
+          ${plats.map(pl=>`<span class="chub-badge ${PLATFORM_CLS(pl)}">${escHtml(pl)}</span>`).join('')}
+          ${p.pillar?`<span class="chub-pill">${escHtml(p.pillar)}</span>`:''}
+          ${p.type?`<span class="chub-type">${escHtml(p.type)}</span>`:''}
+          <span class="chub-muted">${p.date?escHtml(fmtShort(p.date)):'backlog'}${p.time?' '+escHtml(p.time):''} · ${stDisp}</span>
+        </div>
+      </div>
+      <div style="display:flex;gap:5px;flex-shrink:0" onclick="event.stopPropagation()">
+        ${p.status!=='Posted'?`<button class="chub-btn sm" onclick="chubMarkPublished('${p.id}')">Mark published</button>`:(p.link?`<a class="chub-link" href="${escHtml(p.link)}" target="_blank" rel="noopener" style="font-size:11px">View</a>`:'')}
+        <button class="chub-btn ghost sm" onclick="chubDuplicate('${p.id}')">Duplicate</button>
+      </div>
+    </div>
+  </div>`;
+}
+function chubMiniCard(p){
+  const col=chubOwnerColor(p.owner); const today=chubToday();
+  const overdue=p.date&&p.date<today&&p.status!=='Posted';
+  return `<div onclick="chubEditPost('${p.id}')" style="background:#1f1f1f;border-left:3px solid ${overdue?'#FF5252':col};border-radius:6px;padding:5px 6px;margin-bottom:4px;cursor:pointer">
+    <div style="font-size:10px;font-weight:600;line-height:1.3;color:#fff">${escHtml((p.title||'').slice(0,42))}</div>
+    <div style="margin-top:2px">${postPlatforms(p).map(pl=>`<span class="chub-badge ${PLATFORM_CLS(pl)}" style="font-size:8px;padding:1px 5px">${escHtml(pl.slice(0,2))}</span>`).join('')}${p.status==='Posted'?'<span style="color:#4CAF50;font-size:9px"> done</span>':''}</div>
+  </div>`;
+}
+
+function chubTodayBody(posts){
+  const today=chubToday();
+  const todays=posts.filter(p=>p.date===today && p.status!=='Posted');
+  const overdue=posts.filter(p=>p.date && p.date<today && p.status!=='Posted').sort((a,b)=>a.date.localeCompare(b.date));
+  const ws=chubWeekStart(new Date()); const we=new Date(ws);we.setDate(we.getDate()+7);
+  const wsStr=chubYMD(ws),weStr=chubYMD(we);
+  const pubWeek=posts.filter(p=>p.date&&p.date>=wsStr&&p.date<weStr&&p.status==='Posted').length;
+  const greet = CURRENT_USER==='Jasper'?"Jasper, you own today's output":"Today's posting plan";
+  return `<div class="chub-card">
+      <div class="chub-card-title">${escHtml(greet)}</div>
+      <div class="chub-muted" style="margin-bottom:10px">${todays.length} scheduled today · ${overdue.length} overdue · ${pubWeek} of 5 published this week</div>
+      <div class="chub-bar" style="margin-bottom:14px"><div style="width:${Math.min(100,pubWeek/5*100)}%"></div></div>
+      ${todays.length?todays.map(chubPostRow).join(''):'<div class="chub-muted">No posts scheduled for today. Add one to keep the streak going.</div>'}
+    </div>
+    ${overdue.length?`<div class="chub-card"><div class="chub-card-title" style="color:#FF5252">Overdue and unpublished</div>${overdue.map(chubPostRow).join('')}</div>`:''}`;
+}
+
+function chubCalendarBody(posts){
+  const toggle=`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px">
+    <div style="display:flex;gap:6px">
+      <button class="chub-btn ${calView==='week'?'':'ghost'} sm" onclick="calView='week';renderContentHub()">Week</button>
+      <button class="chub-btn ${calView==='month'?'':'ghost'} sm" onclick="calView='month';renderContentHub()">Month</button>
+    </div>
+    <div style="display:flex;gap:6px;align-items:center">
+      <button class="chub-btn ghost sm" onclick="chubCalNav(-1)">Back</button>
+      <button class="chub-btn ghost sm" onclick="chubWeekOffset=0;chubMonthOffset=0;renderContentHub()">Today</button>
+      <button class="chub-btn ghost sm" onclick="chubCalNav(1)">Next</button>
+      <button class="chub-btn sm" onclick="chubAddPost()">+ Add post</button>
+    </div></div>`;
+  return toggle + (calView==='month'?chubMonthGrid(posts):chubWeekGrid(posts)) + chubBacklog(posts);
+}
+function chubWeekGrid(posts){
+  const ws=chubWeekStart(new Date()); ws.setDate(ws.getDate()+chubWeekOffset*7);
+  const today=chubToday();
+  const days=[...Array(7)].map((_,i)=>{ const d=new Date(ws); d.setDate(d.getDate()+i); return chubYMD(d); });
+  return `<div class="chub-muted" style="margin-bottom:8px">${fmtShort(days[0])} to ${fmtShort(days[6])}</div><div class="chub-grid7">${days.map(ds=>{
+    const dayPosts=posts.filter(p=>p.date===ds); const dt=new Date(ds+'T00:00:00');
+    return `<div class="chub-day ${ds===today?'today':''}">
+      <div class="dh">${dt.toLocaleDateString('en-GB',{weekday:'short',day:'numeric'})}</div>
+      ${dayPosts.map(chubMiniCard).join('')}
+      <div onclick="chubAddPost('${ds}')" style="font-size:10px;color:#666;cursor:pointer;margin-top:4px">+ add</div>
+    </div>`;
+  }).join('')}</div>`;
+}
+function chubMonthGrid(posts){
+  const base=new Date(); base.setDate(1); base.setMonth(base.getMonth()+chubMonthOffset);
+  const y=base.getFullYear(), m=base.getMonth();
+  const startDay=(new Date(y,m,1).getDay()+6)%7; const dim=new Date(y,m+1,0).getDate();
+  const today=chubToday();
+  const cells=[]; for(let i=0;i<startDay;i++) cells.push(null); for(let d=1;d<=dim;d++) cells.push(d);
+  const dows=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+  return `<div class="chub-muted" style="margin-bottom:8px">${base.toLocaleDateString('en-GB',{month:'long',year:'numeric'})}</div>
+    <div class="chub-grid7" style="margin-bottom:4px">${dows.map(d=>`<div class="chub-muted" style="text-align:center;font-size:9px">${d}</div>`).join('')}</div>
+    <div class="chub-grid7">${cells.map(d=>{
+      if(!d) return '<div></div>';
+      const ds=`${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+      const dayPosts=posts.filter(p=>p.date===ds);
+      return `<div class="chub-day ${ds===today?'today':''}" style="min-height:72px"><div class="dh">${d}</div>${dayPosts.slice(0,3).map(chubMiniCard).join('')}${dayPosts.length>3?`<div class="chub-muted" style="font-size:9px">plus ${dayPosts.length-3} more</div>`:''}<div onclick="chubAddPost('${ds}')" style="font-size:11px;color:#555;cursor:pointer">+</div></div>`;
+    }).join('')}</div>`;
+}
+function chubBacklog(posts){
+  const bl=posts.filter(p=>!p.date); if(!bl.length) return '';
+  return `<div class="chub-card" style="margin-top:14px"><div class="chub-card-title">Backlog (no date set)</div>${bl.map(chubPostRow).join('')}</div>`;
+}
+
+function chubFilteredPosts(posts){
+  const since=new Date(); since.setDate(since.getDate()-chubPillarWindow); const sStr=chubYMD(since);
+  return posts.filter(p=>{ if(chubPillarWindow!==9999){ if(!p.date||p.date<sStr) return false; } if(chubPillarPlatform!=='all' && !postPlatforms(p).includes(chubPillarPlatform)) return false; if(chubPillarPerson!=='all' && p.owner!==chubPillarPerson) return false; return true; });
+}
+function chubPillarsBody(posts){
+  const wins=[[30,'Last 30 days'],[90,'Last 90 days'],[9999,'All time']];
+  const plats=['all',...chubPlatforms()]; const people=['all',...chubPeople()];
+  const rel=chubFilteredPosts(posts); const pillars=chubPillars(); const total=rel.length;
+  const rows=pillars.map((pl,i)=>{ const c=rel.filter(p=>p.pillar===pl).length; const share=total?Math.round(c/total*100):0; const off=Math.abs(share-20)>10;
+    return `<div style="margin-bottom:10px"><div class="chub-row" style="justify-content:space-between;margin-bottom:3px"><span style="font-size:12px;font-weight:600">${escHtml(pl)}</span><span class="chub-muted">${c} · ${share}% ${off?'<span style="color:#FF5252">off target</span>':'<span style="color:#4CAF50">ok</span>'}</span></div><div class="chub-bar"><div style="width:${share}%;background:${CHUB_PILLAR_COLORS[i%5]}"></div></div></div>`;
+  }).join('');
+  return `<div class="chub-card">
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px">
+      <select class="chub-input" style="width:auto" onchange="chubPillarWindow=+this.value;renderContentHub()">${wins.map(([v,l])=>`<option value="${v}" ${chubPillarWindow===v?'selected':''}>${l}</option>`).join('')}</select>
+      <select class="chub-input" style="width:auto" onchange="chubPillarPlatform=this.value;renderContentHub()">${plats.map(p=>`<option ${chubPillarPlatform===p?'selected':''} value="${escHtml(p)}">${p==='all'?'All platforms':escHtml(p)}</option>`).join('')}</select>
+      <select class="chub-input" style="width:auto" onchange="chubPillarPerson=this.value;renderContentHub()">${people.map(p=>`<option ${chubPillarPerson===p?'selected':''} value="${escHtml(p)}">${p==='all'?'All people':escHtml(p)}</option>`).join('')}</select>
+    </div>
+    <div class="chub-row" style="gap:24px;flex-wrap:wrap;align-items:flex-start">
+      <div style="width:210px;height:210px;flex-shrink:0">${total?'<canvas id="chub-donut"></canvas>':'<div class="chub-muted">No posts yet</div>'}</div>
+      <div style="flex:1;min-width:240px">${total?rows:'<div class="chub-muted">No posts in this window yet. Target is 20% per pillar.</div>'}</div>
+    </div>
+    <div class="chub-muted" style="margin-top:12px">Target is 20% per pillar. Anything more than 10 points off target is flagged.</div>
+  </div>`;
+}
+function chubRenderDonut(posts){
+  const ctx=document.getElementById('chub-donut'); if(!ctx||typeof Chart==='undefined')return;
+  const rel=chubFilteredPosts(posts); const pillars=chubPillars();
+  const data=pillars.map(pl=>rel.filter(p=>p.pillar===pl).length);
+  if(chubChart){ try{chubChart.destroy();}catch(_){} chubChart=null; }
+  if(!rel.length) return;
+  chubChart=new Chart(ctx,{type:'doughnut',data:{labels:pillars,datasets:[{data,backgroundColor:pillars.map((_,i)=>CHUB_PILLAR_COLORS[i%5]),borderColor:'#0A0A0A',borderWidth:2}]},options:{responsive:true,maintainAspectRatio:false,cutout:'60%',plugins:{legend:{display:false}}}});
+}
+
+function chubBankBody(){
+  const bank=ls.get('tuf_ideas',[])||[];
+  const rows=bank.length?bank.map(b=>{
+    const plats=postPlatforms(b);
+    return `<div class="chub-post" style="border-left-color:var(--y);cursor:default">
+      <div class="chub-row" style="justify-content:space-between;flex-wrap:wrap;gap:8px">
+        <div style="flex:1;min-width:0">
+          <div style="font-weight:700;font-size:13px">${escHtml(b.title||'Untitled')}</div>
+          <div class="chub-row" style="flex-wrap:wrap;gap:4px;margin-top:4px">
+            ${b.pillar?`<span class="chub-pill">${escHtml(b.pillar)}</span>`:''}${b.type?`<span class="chub-type">${escHtml(b.type)}</span>`:''}${plats.map(pl=>`<span class="chub-badge ${PLATFORM_CLS(pl)}">${escHtml(pl)}</span>`).join('')}<span class="chub-muted">${escHtml(b.status||'Idea')}</span>
+          </div>
+        </div>
+        <div style="display:flex;gap:5px;flex-shrink:0;align-items:center">
+          ${b.scheduledPostId?'<span class="chub-muted" style="color:#4CAF50">On calendar</span>':`<button class="chub-btn sm" onclick="chubBankSchedule('${b.id}')">Schedule</button>`}
+          <button class="chub-btn ghost sm" onclick="chubBankEdit('${b.id}')">Edit</button>
+        </div>
+      </div>
+    </div>`;
+  }).join(''):'<div class="chub-muted">No ideas in the bank yet. Add one to start building a backlog.</div>';
+  return `<div class="chub-card"><div class="chub-row" style="justify-content:space-between;margin-bottom:10px"><div class="chub-card-title" style="margin:0">Content bank</div><button class="chub-btn sm" onclick="chubBankAdd()">+ Add idea</button></div>${rows}</div>`;
+}
+function chubBankAdd(){ chubBankModal(null); }
+function chubBankEdit(id){ chubBankModal(id); }
+function chubBankModal(id){
+  const bank=ls.get('tuf_ideas',[])||[]; const b=(id?bank.find(x=>x.id===id):null)||{}; const plats=chubPlatforms(),pills=chubPillars(),types=chubTypes(); const sel=postPlatforms(b);
+  showModal(id?'Edit idea':'Add idea',`
+    <div class="form-row"><label class="form-label">Title</label><input class="form-input" id="bk-title" value="${escHtml(b.title||'')}"></div>
+    <div class="form-row"><label class="form-label">Platforms</label><div style="display:flex;gap:10px;flex-wrap:wrap">${plats.map(pl=>`<label style="font-size:12px;display:flex;gap:5px;align-items:center"><input type="checkbox" class="bk-plat" value="${escHtml(pl)}" ${sel.includes(pl)?'checked':''}> ${escHtml(pl)}</label>`).join('')}</div></div>
+    <div class="grid-2">
+      <div class="form-row"><label class="form-label">Pillar</label><select class="form-select" id="bk-pillar">${pills.map(x=>`<option${x===b.pillar?' selected':''}>${escHtml(x)}</option>`).join('')}</select></div>
+      <div class="form-row"><label class="form-label">Type</label><select class="form-select" id="bk-type">${types.map(x=>`<option${x===b.type?' selected':''}>${escHtml(x)}</option>`).join('')}</select></div>
+    </div>
+    <div class="form-row"><label class="form-label">Status</label><select class="form-select" id="bk-status">${BANK_STATUSES.map(s=>`<option${s===b.status?' selected':''}>${s}</option>`).join('')}</select></div>
+    <div class="form-row"><label class="form-label">Notes</label><textarea class="form-textarea" id="bk-notes" style="min-height:80px">${escHtml(b.desc||b.notes||'')}</textarea></div>
+  `,`${id?`<button class="btn btn-red btn-sm" onclick="chubBankDelete('${id}')">Delete</button>`:''}<button class="btn btn-ghost" onclick="closeModal()">Cancel</button><button class="btn btn-k" onclick="chubBankSave('${id||''}')">Save</button>`);
+}
+function chubBankReadForm(){ const platforms=[...document.querySelectorAll('.bk-plat:checked')].map(c=>c.value); return {title:document.getElementById('bk-title').value.trim(),platforms,platform:platforms[0]||'',pillar:document.getElementById('bk-pillar').value,type:document.getElementById('bk-type').value,status:document.getElementById('bk-status').value,desc:document.getElementById('bk-notes').value.trim()}; }
+function chubBankSave(id){ const f=chubBankReadForm(); if(!f.title){alert('Add a title.');return;} const bank=ls.get('tuf_ideas',[])||[]; if(id){ const i=bank.findIndex(x=>x.id===id); if(i>=0) bank[i]={...bank[i],...f}; } else { bank.push({id:uid(),...f,addedBy:CURRENT_USER,createdAt:new Date().toISOString()}); } ls.set('tuf_ideas',bank); closeModal(); renderContentHub(); }
+function chubBankDelete(id){ if(!confirm('Delete this idea?'))return; ls.set('tuf_ideas',(ls.get('tuf_ideas',[])||[]).filter(x=>x.id!==id)); closeModal(); renderContentHub(); }
+function chubBankSchedule(id){
+  const bank=ls.get('tuf_ideas',[])||[]; const b=bank.find(x=>x.id===id); if(!b)return;
+  const pid=uid(); const plats=postPlatforms(b); const list=ls.get('tuf_content',[])||[];
+  list.push({id:pid,title:b.title||'Untitled',platforms:plats,platform:plats[0]||'',pillar:b.pillar||'',type:b.type||'',date:'',time:'',owner:CURRENT_USER||'Jasper',status:'Idea',link:'',notes:b.desc||b.notes||'',createdAt:new Date().toISOString()});
+  ls.set('tuf_content',list);
+  b.scheduledPostId=pid; b.status='Ready to Schedule'; ls.set('tuf_ideas',bank);
+  chubTab='calendar'; renderContentHub();
+  alert('Added to the calendar backlog. Open the post to set its date.');
+}
+
+function chubSocialBody(){
+  const social=ls.get('tuf_social',{})||{}; const months=Object.keys(social).sort(); const latest=months[months.length-1];
+  return `<div class="chub-card">
+    <div class="chub-card-title">Social analytics</div>
+    <div class="chub-muted" style="margin-bottom:14px">Your monthly platform metrics (followers, reach, engagement) live in the Social Media tracker, fully preserved. ${latest?'Latest month on record: '+escHtml(latest)+'.':'No months logged yet.'}</div>
+    <button class="chub-btn" onclick="nav('social',document.querySelector('[data-page=social]'))">Open full social analytics</button>
+  </div>`;
+}
+
+// ── Post add/edit (uses the global light modal + form classes) ──
+function chubPostFormHtml(p){
+  const plats=chubPlatforms(), pills=chubPillars(), types=chubTypes(), people=chubPeople(); const sel=postPlatforms(p||{});
+  const stDisp=(p&&p.status==='Posted')?'Published':((p&&p.status)||'Idea');
+  return `
+    <div class="form-row"><label class="form-label">Title or short description</label><input class="form-input" id="cp-title" value="${escHtml((p&&p.title)||'')}" placeholder="The hook or headline"></div>
+    <div class="form-row"><label class="form-label">Platforms</label><div style="display:flex;gap:12px;flex-wrap:wrap">${plats.map(pl=>`<label style="font-size:12px;display:flex;gap:5px;align-items:center"><input type="checkbox" class="cp-plat" value="${escHtml(pl)}" ${sel.includes(pl)?'checked':''}> ${escHtml(pl)}</label>`).join('')}</div></div>
+    <div class="grid-2">
+      <div class="form-row"><label class="form-label">Pillar</label><select class="form-select" id="cp-pillar">${pills.map(x=>`<option${p&&x===p.pillar?' selected':''}>${escHtml(x)}</option>`).join('')}</select></div>
+      <div class="form-row"><label class="form-label">Content type</label><select class="form-select" id="cp-type">${types.map(x=>`<option${p&&x===p.type?' selected':''}>${escHtml(x)}</option>`).join('')}</select></div>
+    </div>
+    <div class="grid-2">
+      <div class="form-row"><label class="form-label">Date <span style="font-weight:400;text-transform:none;color:var(--mut)">(blank = backlog)</span></label><input class="form-input" type="date" id="cp-date" value="${(p&&p.date)||''}"></div>
+      <div class="form-row"><label class="form-label">Time</label><input class="form-input" type="time" id="cp-time" value="${(p&&p.time)||''}"></div>
+    </div>
+    <div class="grid-2">
+      <div class="form-row"><label class="form-label">Assigned to</label><select class="form-select" id="cp-owner">${people.map(o=>`<option${o===((p&&p.owner)||CURRENT_USER)?' selected':''}>${escHtml(o)}</option>`).join('')}</select></div>
+      <div class="form-row"><label class="form-label">Status</label><select class="form-select" id="cp-status">${CONTENT_STATUSES.map(s=>{const lab=s==='Posted'?'Published':s;return `<option${lab===stDisp?' selected':''}>${lab}</option>`;}).join('')}</select></div>
+    </div>
+    <div class="form-row"><label class="form-label">Live link (once published)</label><input class="form-input" id="cp-link" value="${escHtml((p&&p.link)||'')}" placeholder="https://"></div>
+    <div class="form-row"><label class="form-label">Notes or draft copy</label><textarea class="form-textarea" id="cp-notes" style="min-height:80px">${escHtml((p&&p.notes)||'')}</textarea></div>`;
+}
+function chubReadForm(){ const platforms=[...document.querySelectorAll('.cp-plat:checked')].map(c=>c.value); const stDisp=document.getElementById('cp-status').value; return {title:document.getElementById('cp-title').value.trim(),platforms,platform:platforms[0]||'',pillar:document.getElementById('cp-pillar').value,type:document.getElementById('cp-type').value,date:document.getElementById('cp-date').value||'',time:document.getElementById('cp-time').value||'',owner:document.getElementById('cp-owner').value,status:stDisp==='Published'?'Posted':stDisp,link:document.getElementById('cp-link').value.trim(),notes:document.getElementById('cp-notes').value.trim()}; }
+function chubAddPost(prefill){ const p=(typeof prefill==='string')?{date:prefill}:{}; showModal('Add content post',chubPostFormHtml(p),`<button class="btn btn-ghost" onclick="closeModal()">Cancel</button><button class="btn btn-k" onclick="chubSavePost()">Save</button>`); }
+function chubSavePost(){ const f=chubReadForm(); if(!f.title){alert('Add a title.');return;} const list=ls.get('tuf_content',[])||[]; list.push({id:uid(),...f,createdAt:new Date().toISOString()}); ls.set('tuf_content',list); closeModal(); renderContentHub(); }
+function chubEditPost(id){ const p=(ls.get('tuf_content',[])||[]).find(x=>x.id===id); if(!p)return; showModal('Edit post',chubPostFormHtml(p),`<button class="btn btn-red btn-sm" onclick="chubDeletePost('${id}')">Delete</button><button class="btn btn-ghost" onclick="closeModal()">Cancel</button><button class="btn btn-k" onclick="chubUpdatePost('${id}')">Save</button>`); }
+function chubUpdatePost(id){ const f=chubReadForm(); if(!f.title){alert('Add a title.');return;} const list=ls.get('tuf_content',[])||[]; const i=list.findIndex(x=>x.id===id); if(i<0)return; list[i]={...list[i],...f}; ls.set('tuf_content',list); closeModal(); renderContentHub(); }
+function chubDeletePost(id){ if(!confirm('Delete this post?'))return; ls.set('tuf_content',(ls.get('tuf_content',[])||[]).filter(x=>x.id!==id)); closeModal(); renderContentHub(); }
+function chubDuplicate(id){ const list=ls.get('tuf_content',[])||[]; const p=list.find(x=>x.id===id); if(!p)return; list.push({...p,id:uid(),status:'Idea',date:'',link:'',repurposedFrom:id,title:(p.title||'Untitled')+' (repurpose)',createdAt:new Date().toISOString()}); ls.set('tuf_content',list); renderContentHub(); }
+function chubMarkPublished(id){ const list=ls.get('tuf_content',[])||[]; const p=list.find(x=>x.id===id); if(!p)return; p.status='Posted'; const link=prompt('Paste the live post link (optional):', p.link||''); if(link!==null) p.link=link.trim(); ls.set('tuf_content',list); renderContentHub(); }
+
+function chubEditList(kind){
+  const map={pillars:['tuf_content_pillars',DEFAULT_PILLARS,'pillars'],types:['tuf_content_types',DEFAULT_TYPES,'content types'],people:['tuf_content_people',DEFAULT_PEOPLE,'people'],platforms:['tuf_content_platforms',DEFAULT_PLATFORMS,'platforms']};
+  const cfg=map[kind]; if(!cfg)return; const cur=ls.get(cfg[0],cfg[1]);
+  showModal('Edit '+cfg[2],`<div class="form-row"><label class="form-label">${cfg[2]} (one per line)</label><textarea class="form-textarea" id="cl-items" style="min-height:160px">${escHtml(cur.join('\n'))}</textarea></div>`,`<button class="btn btn-ghost" onclick="closeModal()">Cancel</button><button class="btn btn-k" onclick="chubSaveList('${cfg[0]}')">Save</button>`);
+}
+function chubSaveList(key){ const items=document.getElementById('cl-items').value.split('\n').map(s=>s.trim()).filter(Boolean); if(items.length) ls.set(key,items); closeModal(); renderContentHub(); }
 
 // ═══ PODCAST PIPELINE ════════════════════════════════════════════════════════
 // ═══ PODCAST PRODUCTION CHECKLIST ════════════════════════════════════════════
