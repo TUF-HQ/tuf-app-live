@@ -686,6 +686,7 @@ details>summary::-webkit-details-marker{display:none}
     <!-- ═══ PODCAST ═══ -->
     <div class="page" id="page-podcast">
       <div class="grid-4" id="pod-stats" style="margin-bottom:14px"></div>
+      <div id="pod-checklist" style="margin-bottom:14px"></div>
       <div id="podcast-list"></div>
     </div>
 
@@ -3900,6 +3901,87 @@ function updatePost(id){const list=ls.get('tuf_content',[]);const i=list.findInd
 function deletePost(id){if(!confirm('Delete this post?'))return;ls.set('tuf_content',ls.get('tuf_content',[]).filter(x=>x.id!==id));closeModal();renderCalendar();}
 
 // ═══ PODCAST PIPELINE ════════════════════════════════════════════════════════
+// ═══ PODCAST PRODUCTION CHECKLIST ════════════════════════════════════════════
+// Evergreen and repeatable per episode. Edit these defaults freely: they seed the
+// shared store on first use. The list is also editable in the app.
+const PODCAST_CHECKLIST_DEFAULT = {
+  before: [
+    'Guest confirmed and date locked',
+    'Guest briefed on format and timing',
+    'Guest researched and questions drafted',
+    'Intro and outro talking points ready',
+    'Promo and design assets briefed to Joe',
+    'Studio booked',
+    'Croo confirmed',
+  ],
+  after: [
+    'Edit reviewed and approved',
+    'Title, description and show notes written',
+    'Social clips cut (LinkedIn and shorts)',
+    'Publish scheduled',
+    'Guest sent the published link and share assets',
+    'Added to the content calendar and repurposed',
+  ],
+};
+function podChkSeed(){ return { before:PODCAST_CHECKLIST_DEFAULT.before.map(t=>({id:uid(),text:t})), after:PODCAST_CHECKLIST_DEFAULT.after.map(t=>({id:uid(),text:t})), done:{}, updatedBy:'', updatedAt:'' }; }
+function podChkGet(){
+  let c=ls.get('tuf_podcast_checklist',null);
+  if(!c||!Array.isArray(c.before)||!Array.isArray(c.after)){ c=podChkSeed(); ls.set('tuf_podcast_checklist',c); }
+  if(!c.done||typeof c.done!=='object') c.done={};
+  return c;
+}
+function podChkSet(c){ c.updatedBy=CURRENT_USER||''; c.updatedAt=new Date().toISOString(); ls.set('tuf_podcast_checklist',c); renderPodcastChecklist(); }
+function podChkBar(done,total){ const pct=total?Math.round((done/total)*100):0; return `<div style="height:8px;background:var(--bg);border-radius:4px;overflow:hidden;margin-top:6px"><div style="height:100%;width:${pct}%;background:var(--grn);transition:width .2s"></div></div>`; }
+function podChkGroup(c,key,title){
+  const items=c[key]||[]; const done=items.filter(it=>c.done[it.id]).length;
+  return `<div style="margin-bottom:4px">
+    <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:2px">
+      <div style="font-family:'Montserrat',sans-serif;font-weight:700;font-size:13px">${title}</div>
+      <span style="font-size:11px;color:var(--mut)">${done}/${items.length}</span>
+    </div>
+    ${podChkBar(done,items.length)}
+  </div>
+  ${items.map(it=>`<div class="chk-row ${c.done[it.id]?'done':''}">
+      <div class="chk-box" onclick="podChkToggle('${it.id}')">${c.done[it.id]?'✓':''}</div>
+      <span class="chk-text" style="flex:1;cursor:pointer" onclick="podChkToggle('${it.id}')">${escHtml(it.text)}</span>
+      <button class="btn btn-ghost btn-sm" style="padding:2px 7px;font-size:10px" onclick="podChkEditItem('${key}','${it.id}')">edit</button>
+      <button class="btn btn-ghost btn-sm" style="padding:2px 7px;font-size:10px" onclick="podChkDeleteItem('${key}','${it.id}')">✕</button>
+    </div>`).join('')}
+  <div style="display:flex;gap:6px;margin:8px 0 4px">
+    <input id="pod-add-${key}" class="form-input" placeholder="Add an item…" style="flex:1;font-size:12px" onkeydown="if(event.key==='Enter')podChkAddItem('${key}')">
+    <button class="btn btn-ghost btn-sm" onclick="podChkAddItem('${key}')">Add</button>
+  </div>`;
+}
+function renderPodcastChecklist(){
+  const el=document.getElementById('pod-checklist'); if(!el) return;
+  const c=podChkGet();
+  const all=[...(c.before||[]),...(c.after||[])];
+  const totalDone=all.filter(it=>c.done[it.id]).length;
+  const stamp=c.updatedBy?`Last updated by ${escHtml(c.updatedBy)} at ${new Date(c.updatedAt).toLocaleString('en-GB',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})}`:'Not started yet';
+  el.innerHTML=`<div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+      <div class="card-title" style="margin:0">Episode production checklist</div>
+      <span style="font-size:13px;font-weight:700;color:${(totalDone===all.length&&all.length)?'var(--grn)':'var(--txt)'}">${totalDone}/${all.length} done</span>
+    </div>
+    ${podChkBar(totalDone,all.length)}
+    <div style="font-size:11px;color:var(--mut);margin:8px 0 14px">${stamp}</div>
+    <div class="grid-2">
+      <div>${podChkGroup(c,'before','Before recording')}</div>
+      <div>${podChkGroup(c,'after','After recording')}</div>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;border-top:1px solid var(--bdr);padding-top:12px">
+      <button class="btn btn-k btn-sm" onclick="podChkReset()">Reset for next episode</button>
+      <button class="btn btn-ghost btn-sm" onclick="podChkRestoreDefault()">Restore default list</button>
+    </div>
+  </div>`;
+}
+function podChkToggle(id){ const c=podChkGet(); if(c.done[id]) delete c.done[id]; else c.done[id]=true; podChkSet(c); }
+function podChkAddItem(key){ const inp=document.getElementById('pod-add-'+key); if(!inp) return; const v=(inp.value||'').trim(); if(!v) return; const c=podChkGet(); (c[key]=c[key]||[]).push({id:uid(),text:v}); podChkSet(c); }
+function podChkEditItem(key,id){ const c=podChkGet(); const it=(c[key]||[]).find(x=>x.id===id); if(!it) return; const v=prompt('Edit item:',it.text); if(v===null) return; const t=v.trim(); if(!t) return; it.text=t; podChkSet(c); }
+function podChkDeleteItem(key,id){ if(!confirm('Delete this item from the checklist?')) return; const c=podChkGet(); c[key]=(c[key]||[]).filter(x=>x.id!==id); delete c.done[id]; podChkSet(c); }
+function podChkReset(){ if(!confirm('Reset the checklist for the next episode? This clears all ticks but keeps the items.')) return; const c=podChkGet(); c.done={}; podChkSet(c); }
+function podChkRestoreDefault(){ if(!confirm('Restore the default checklist? This replaces the current items and clears all ticks.')) return; podChkSet(podChkSeed()); }
+
 function renderPodcast(){
   const list=ls.get('tuf_podcast',[]);
   const confirmed=list.filter(g=>g.status==='Confirmed'||g.status==='Recorded'||g.status==='Published').length;
@@ -3922,6 +4004,7 @@ function renderPodcast(){
       </tbody></table>`
     : '<div class="empty">No podcast guests yet. Target: 20+ in the pipeline.</div>';
   document.getElementById('topbar-actions').innerHTML=`<button class="btn btn-k btn-sm" onclick="addGuestModal()">+ Add Guest</button>`;
+  renderPodcastChecklist();
 }
 function updatePodStatus(id,val){const list=ls.get('tuf_podcast',[]);const i=list.findIndex(x=>x.id===id);if(i<0)return;list[i].status=val;ls.set('tuf_podcast',list);if(val==='Confirmed')addNotif(`Podcast guest confirmed: ${list[i].name}`);renderPodcast();}
 function addGuestModal(){showModal('Add Podcast Guest',`
