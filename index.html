@@ -3244,52 +3244,53 @@ function elEventsPanel(events){
     </div>
   </details>`;
 }
-function elRow(l){
-  const sc=parseInt(l.score)||0; const notePrev=(l.notes||'').trim();
+function elRow(a){
+  const sc=parseInt(a.score)||0; const notePrev=(a.notes||'').trim();
   return `<tr>
-    <td><div style="font-weight:700">${escHtml(l.name)}</div>${notePrev?`<div style="font-size:10px;color:var(--mut);font-weight:400;max-width:170px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escHtml(notePrev)}</div>`:''}</td>
-    <td style="font-size:11px">${escHtml(l.co||'')}</td>
-    <td><span class="tag tag-b" style="font-size:9px">${escHtml(l.event||'')}</span></td>
-    <td style="font-size:10px">${l.email?`<a href="mailto:${escHtml(l.email)}" style="color:var(--blu);display:block">${escHtml(l.email)}</a>`:''}${l.phone?`<a href="tel:${escHtml(l.phone)}" style="color:var(--grn);display:block">${escHtml(l.phone)}</a>`:''}</td>
-    <td style="font-size:10px;font-weight:700">${escHtml(l.assignedTo||'—')}</td>
-    <td><span style="font-weight:800;color:${elScoreColor(l.score)}">${l.score!==''&&l.score!=null?sc+'/10':'—'}</span></td>
-    <td><select style="font-size:10px;border:1px solid var(--bdr);border-radius:4px;padding:2px 4px;background:var(--w)" onchange="updateELStatus('${l.id}',this.value)">${EL_STATUSES.map(s=>`<option${s===l.status?' selected':''}>${s}</option>`).join('')}</select></td>
-    <td style="font-size:11px;color:var(--mut)">${l.lastContact?fmtShort(l.lastContact):''}</td>
+    <td><div style="font-weight:700">${escHtml(a.name)}</div>${notePrev?`<div style="font-size:10px;color:var(--mut);font-weight:400;max-width:170px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escHtml(notePrev)}</div>`:''}</td>
+    <td style="font-size:11px">${escHtml(a.co||'')}</td>
+    <td style="font-size:10px">${a.email?`<a href="mailto:${escHtml(a.email)}" style="color:var(--blu);display:block">${escHtml(a.email)}</a>`:''}${a.phone?`<a href="tel:${escHtml(a.phone)}" style="color:var(--grn);display:block">${escHtml(a.phone)}</a>`:''}</td>
+    <td><span class="tag tag-b" style="font-size:9px">${escHtml(a.event||'')}</span></td>
+    <td style="font-size:11px;color:var(--mut)">${a.eventDate?fmtShort(a.eventDate):'—'}</td>
+    <td style="font-size:10px;font-weight:700">${escHtml(a.owner||'—')}</td>
+    <td><span style="font-weight:800;color:${elScoreColor(a.score)}">${(a.score!==''&&a.score!=null)?sc+'/10':'—'}</span></td>
     <td><div style="display:flex;gap:4px;flex-wrap:wrap;justify-content:flex-end">
-      <button class="btn btn-ghost btn-sm" onclick="elToggleNotes('${l.id}')" title="Notes">Notes</button>
-      <button class="btn btn-ghost btn-sm" onclick="editELModal('${l.id}')">Edit</button>
-      ${l.status!=='Converted'?`<button class="btn btn-k btn-sm" onclick="convertELtoPipeline('${l.id}')" title="Move to Sales Pipeline">→ Pipeline</button>`:''}
+      <button class="btn btn-ghost btn-sm" onclick="elToggleNotes('${a.id}')" title="Notes">Notes</button>
+      <button class="btn btn-ghost btn-sm" onclick="editELModal('${a.id}')">Edit</button>
+      ${a.promotedToProspectId?'<span class="tag tag-g" style="font-size:9px">In pipeline</span>':`<button class="btn btn-ghost btn-sm" onclick="convertELtoPipeline('${a.id}')" title="Send to Sales Pipeline">→ Pipeline</button>`}
     </div></td>
   </tr>
-  <tr id="elnotes-${l.id}" style="display:none"><td colspan="9" style="background:var(--bg)">
-    <div style="font-size:10px;font-weight:700;color:var(--mut);text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px">Notes for ${escHtml(l.name)} ${micBtnHtml('eln-'+l.id)}</div>
-    <textarea class="form-textarea" id="eln-${l.id}" style="min-height:70px;font-size:12px">${escHtml(l.notes||'')}</textarea>
-    <div style="margin-top:6px"><button class="btn btn-k btn-sm" onclick="elSaveNotes('${l.id}')">Save notes</button></div>
+  <tr id="elnotes-${a.id}" style="display:none"><td colspan="8" style="background:var(--bg)">
+    <div style="font-size:10px;font-weight:700;color:var(--mut);text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px">Notes for ${escHtml(a.name)} ${micBtnHtml('eln-'+a.id)}</div>
+    <textarea class="form-textarea" id="eln-${a.id}" style="min-height:70px;font-size:12px">${escHtml(a.notes||'')}</textarea>
+    <div style="margin-top:6px"><button class="btn btn-k btn-sm" onclick="elSaveNotes('${a.id}')">Save notes</button></div>
   </td></tr>`;
 }
 function elToggleNotes(id){ const r=document.getElementById('elnotes-'+id); if(r) r.style.display=(r.style.display==='none'?'table-row':'none'); }
-function elSaveNotes(id){ const ta=document.getElementById('eln-'+id); if(!ta)return; const l=ls.get('tuf_event_leads',[]); const i=l.findIndex(x=>x.id===id); if(i<0)return; l[i].notes=ta.value; l[i].lastContact=new Date().toISOString().slice(0,10); ls.set('tuf_event_leads',l); renderEventCRM(); }
+function elSaveNotes(id){ const ta=document.getElementById('eln-'+id); if(!ta)return; const a=ls.get('tuf_event_attendees',[]); const i=a.findIndex(x=>x.id===id); if(i<0)return; a[i].notes=ta.value; ls.set('tuf_event_attendees',a); renderEventCRM(); }
+function elEventNameOpts(){ const fromEv=(ls.get('tuf_events',[])||[]).map(e=>e.name); const fromAtt=(ls.get('tuf_event_attendees',[])||[]).map(a=>a.event); return [...new Set([...fromEv,...fromAtt].filter(Boolean))]; }
+function elFillEventDate(nameId,dateId){ const n=((document.getElementById(nameId)||{}).value||'').trim().toLowerCase(); const ev=(ls.get('tuf_events',[])||[]).find(e=>(e.name||'').toLowerCase()===n); const di=document.getElementById(dateId); if(ev&&ev.date&&di&&!di.value) di.value=ev.date; }
 function renderEventCRM(){
   const el=document.getElementById('events-list'); if(!el) return;
-  const all=ls.get('tuf_event_leads',[])||[];
+  const all=ls.get('tuf_event_attendees',[])||[];
   const events=ls.get('tuf_events',[])||[];
-  const eventNames=[...new Set(all.map(l=>l.event).filter(Boolean))];
-  let leads=all.slice();
-  if(elFilterEvent!=='all') leads=leads.filter(l=>l.event===elFilterEvent);
-  if(elFilterOwner!=='all') leads=leads.filter(l=>l.assignedTo===elFilterOwner);
-  if(elFilterMin>0) leads=leads.filter(l=>(parseInt(l.score)||0)>=elFilterMin);
-  leads.sort((a,b)=>(parseInt(b.score)||0)-(parseInt(a.score)||0));
-  const hot=all.filter(l=>(parseInt(l.score)||0)>=8).length;
-  const inConv=all.filter(l=>l.status==='Contacted'||l.status==='Conversation'||l.status==='Meeting Booked').length;
-  const conv=all.filter(l=>l.status==='Converted').length;
+  const eventNames=[...new Set(all.map(a=>a.event).filter(Boolean))];
+  let rows=all.slice();
+  if(elFilterEvent!=='all') rows=rows.filter(a=>a.event===elFilterEvent);
+  if(elFilterOwner!=='all') rows=rows.filter(a=>a.owner===elFilterOwner);
+  if(elFilterMin>0) rows=rows.filter(a=>(parseInt(a.score)||0)>=elFilterMin);
+  rows.sort((a,b)=>(parseInt(b.score)||0)-(parseInt(a.score)||0));
+  const hot=all.filter(a=>(parseInt(a.score)||0)>=8).length;
+  const scores=all.map(a=>parseInt(a.score)||0).filter(n=>n>0);
+  const avg=scores.length?(scores.reduce((s,n)=>s+n,0)/scores.length).toFixed(1):'—';
   document.getElementById('topbar-actions').innerHTML=`<button class="btn btn-k btn-sm" onclick="addELModal()">+ Add attendee</button>`;
   el.innerHTML=`
     ${elEventsPanel(events)}
     <div class="grid-4" style="margin-bottom:14px">
       <div class="stat"><div class="n">${all.length}</div><div class="l">Attendees</div></div>
       <div class="stat g"><div class="n">${hot}</div><div class="l">Hot (8 plus)</div></div>
-      <div class="stat a"><div class="n">${inConv}</div><div class="l">In conversation</div></div>
-      <div class="stat"><div class="n">${conv}</div><div class="l">Converted</div></div>
+      <div class="stat"><div class="n">${eventNames.length}</div><div class="l">Events covered</div></div>
+      <div class="stat y"><div class="n">${avg}</div><div class="l">Avg likelihood</div></div>
     </div>
     <div class="sec-hdr">Event Attendees</div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
@@ -3297,55 +3298,51 @@ function renderEventCRM(){
       <select class="form-select" style="width:auto" onchange="elFilterOwner=this.value;renderEventCRM()"><option value="all"${elFilterOwner==='all'?' selected':''}>All owners</option>${['Danny','Joe','Jasper','James'].map(o=>`<option${o===elFilterOwner?' selected':''}>${o}</option>`).join('')}</select>
       <select class="form-select" style="width:auto" onchange="elFilterMin=+this.value;renderEventCRM()"><option value="0"${elFilterMin===0?' selected':''}>Any likelihood</option><option value="8"${elFilterMin===8?' selected':''}>Hot (8 plus)</option><option value="5"${elFilterMin===5?' selected':''}>Warm (5 plus)</option></select>
     </div>
-    ${leads.length?`<table class="tbl">
-      <thead><tr><th>Name</th><th>Business</th><th>Event</th><th>Contact</th><th>Owner</th><th>Likelihood</th><th>Status</th><th>Last contact</th><th></th></tr></thead>
-      <tbody>${leads.map(elRow).join('')}</tbody>
-    </table>`:'<div class="empty"><div class="ico">🎟️</div>No attendees yet. Add the people who came to your events.</div>'}`;
+    ${rows.length?`<table class="tbl">
+      <thead><tr><th>Name</th><th>Business</th><th>Contact</th><th>Event</th><th>Event date</th><th>Owner</th><th>Likelihood</th><th></th></tr></thead>
+      <tbody>${rows.map(elRow).join('')}</tbody>
+    </table>`:'<div class="empty"><div class="ico">🎟️</div>No attendees yet. Add the people who have attended an event.</div>'}`;
 }
 
-function updateELStatus(id,val){const l=ls.get('tuf_event_leads',[]);const i=l.findIndex(x=>x.id===id);if(i<0)return;l[i].status=val;l[i].lastContact=new Date().toISOString().slice(0,10);ls.set('tuf_event_leads',l);if(val==='Converted')addNotif(`Event lead converted: ${l[i].name}`);renderEventCRM();}
 function addELModal(){
-  const events=ls.get('tuf_events',[]).map(e=>e.name);
-  const opts=[...EL_SOURCES,...events].filter((v,i,a)=>a.indexOf(v)===i);
+  const evNames=elEventNameOpts();
   showModal('Add attendee',`
+    <datalist id="el-evnames">${evNames.map(n=>`<option value="${escHtml(n)}">`).join('')}</datalist>
     <div class="grid-2"><div class="form-row"><label class="form-label">Name</label><input class="form-input" id="nel-name"></div><div class="form-row"><label class="form-label">Business</label><input class="form-input" id="nel-co"></div></div>
     <div class="grid-2"><div class="form-row"><label class="form-label">Email</label><input class="form-input" type="email" id="nel-email"></div><div class="form-row"><label class="form-label">Phone</label><input class="form-input" type="tel" id="nel-phone"></div></div>
-    <div class="grid-2"><div class="form-row"><label class="form-label">Event attended</label><select class="form-select" id="nel-event">${opts.map(e=>`<option>${escHtml(e)}</option>`).join('')}</select></div><div class="form-row"><label class="form-label">Owner</label><select class="form-select" id="nel-owner">${['Danny','Joe','Jasper','James'].map(o=>`<option${o===CURRENT_USER?' selected':''}>${o}</option>`).join('')}</select></div></div>
-    <div class="grid-2"><div class="form-row"><label class="form-label">Boardroom likelihood (1 to 10)</label><input class="form-input" type="number" min="1" max="10" id="nel-score" placeholder="e.g. 7"></div><div class="form-row"><label class="form-label">Attendance</label><select class="form-select" id="nel-att"><option>Invited</option><option>Confirmed</option><option selected>Attended</option><option>Declined</option></select></div></div>
-    <div class="form-row"><label class="form-label">Notes from the event ${micBtnHtml('nel-notes')}</label><textarea class="form-textarea" id="nel-notes" style="min-height:60px" placeholder="What did you talk about? Any signals?"></textarea></div>
+    <div class="grid-2"><div class="form-row"><label class="form-label">Event attended</label><input class="form-input" id="nel-event" list="el-evnames" placeholder="e.g. Padel Event" onchange="elFillEventDate('nel-event','nel-evdate')"></div><div class="form-row"><label class="form-label">Date of event</label><input class="form-input" type="date" id="nel-evdate"></div></div>
+    <div class="grid-2"><div class="form-row"><label class="form-label">Boardroom likelihood (1 to 10)</label><input class="form-input" type="number" min="1" max="10" id="nel-score" placeholder="e.g. 7"></div><div class="form-row"><label class="form-label">Owner</label><select class="form-select" id="nel-owner">${['Danny','Joe','Jasper','James'].map(o=>`<option${o===CURRENT_USER?' selected':''}>${o}</option>`).join('')}</select></div></div>
+    <div class="form-row"><label class="form-label">Notes ${micBtnHtml('nel-notes')}</label><textarea class="form-textarea" id="nel-notes" style="min-height:60px" placeholder="What did you talk about? Any signals?"></textarea></div>
   `,`<button class="btn btn-ghost" onclick="closeModal()">Cancel</button><button class="btn btn-k" onclick="saveEL()">Add attendee</button>`);
 }
 function saveEL(){
   const name=document.getElementById('nel-name').value.trim();if(!name)return;
-  const l=ls.get('tuf_event_leads',[]);
-  l.push({id:uid(),name,co:document.getElementById('nel-co').value.trim(),email:document.getElementById('nel-email').value.trim(),phone:document.getElementById('nel-phone').value.trim(),event:document.getElementById('nel-event').value,assignedTo:document.getElementById('nel-owner').value,score:elClampScore(document.getElementById('nel-score').value),attendance:document.getElementById('nel-att').value,notes:document.getElementById('nel-notes').value.trim(),status:'New Lead',lastContact:new Date().toISOString().slice(0,10),addedDate:new Date().toISOString().slice(0,10)});
-  ls.set('tuf_event_leads',l);closeModal();renderEventCRM();addNotif(`New event attendee: ${name}`);
+  const a=ls.get('tuf_event_attendees',[]);
+  a.push({id:uid(),name,co:document.getElementById('nel-co').value.trim(),email:document.getElementById('nel-email').value.trim(),phone:document.getElementById('nel-phone').value.trim(),event:document.getElementById('nel-event').value.trim(),eventDate:document.getElementById('nel-evdate').value||'',score:elClampScore(document.getElementById('nel-score').value),owner:document.getElementById('nel-owner').value,notes:document.getElementById('nel-notes').value.trim(),addedDate:new Date().toISOString().slice(0,10)});
+  ls.set('tuf_event_attendees',a);closeModal();renderEventCRM();addNotif(`Event attendee added: ${name}`);
 }
 function editELModal(id){
-  const lead=ls.get('tuf_event_leads',[]).find(x=>x.id===id);if(!lead)return;
-  const events=ls.get('tuf_events',[]).map(e=>e.name);
-  let opts=[...EL_SOURCES,...events].filter((v,i,a)=>a.indexOf(v)===i);
-  if(lead.event && opts.indexOf(lead.event)<0) opts.unshift(lead.event);
+  const a=ls.get('tuf_event_attendees',[]).find(x=>x.id===id);if(!a)return;
+  const evNames=elEventNameOpts();
   showModal('Edit attendee',`
-    <div class="grid-2"><div class="form-row"><label class="form-label">Name</label><input class="form-input" id="eel-name" value="${escHtml(lead.name||'')}"></div><div class="form-row"><label class="form-label">Business</label><input class="form-input" id="eel-co" value="${escHtml(lead.co||'')}"></div></div>
-    <div class="grid-2"><div class="form-row"><label class="form-label">Email</label><input class="form-input" type="email" id="eel-email" value="${escHtml(lead.email||'')}"></div><div class="form-row"><label class="form-label">Phone</label><input class="form-input" type="tel" id="eel-phone" value="${escHtml(lead.phone||'')}"></div></div>
-    <div class="grid-2"><div class="form-row"><label class="form-label">Event attended</label><select class="form-select" id="eel-event">${opts.map(e=>`<option${e===lead.event?' selected':''}>${escHtml(e)}</option>`).join('')}</select></div><div class="form-row"><label class="form-label">Owner</label><select class="form-select" id="eel-owner">${['Danny','Joe','Jasper','James'].map(o=>`<option${o===lead.assignedTo?' selected':''}>${o}</option>`).join('')}</select></div></div>
-    <div class="grid-2"><div class="form-row"><label class="form-label">Boardroom likelihood (1 to 10)</label><input class="form-input" type="number" min="1" max="10" id="eel-score" value="${(lead.score!==''&&lead.score!=null)?escHtml(String(lead.score)):''}"></div><div class="form-row"><label class="form-label">Attendance</label><select class="form-select" id="eel-att">${['Invited','Confirmed','Attended','Declined'].map(a=>`<option${a===lead.attendance?' selected':''}>${a}</option>`).join('')}</select></div></div>
-    <div class="form-row"><label class="form-label">Status</label><select class="form-select" id="eel-status">${EL_STATUSES.map(s=>`<option${s===lead.status?' selected':''}>${s}</option>`).join('')}</select></div>
-    <div class="form-row"><label class="form-label">Notes ${micBtnHtml('eel-notes')}</label><textarea class="form-textarea" id="eel-notes" style="min-height:80px">${escHtml(lead.notes||'')}</textarea></div>
+    <datalist id="el-evnames">${evNames.map(n=>`<option value="${escHtml(n)}">`).join('')}</datalist>
+    <div class="grid-2"><div class="form-row"><label class="form-label">Name</label><input class="form-input" id="eel-name" value="${escHtml(a.name||'')}"></div><div class="form-row"><label class="form-label">Business</label><input class="form-input" id="eel-co" value="${escHtml(a.co||'')}"></div></div>
+    <div class="grid-2"><div class="form-row"><label class="form-label">Email</label><input class="form-input" type="email" id="eel-email" value="${escHtml(a.email||'')}"></div><div class="form-row"><label class="form-label">Phone</label><input class="form-input" type="tel" id="eel-phone" value="${escHtml(a.phone||'')}"></div></div>
+    <div class="grid-2"><div class="form-row"><label class="form-label">Event attended</label><input class="form-input" id="eel-event" list="el-evnames" value="${escHtml(a.event||'')}" onchange="elFillEventDate('eel-event','eel-evdate')"></div><div class="form-row"><label class="form-label">Date of event</label><input class="form-input" type="date" id="eel-evdate" value="${a.eventDate||''}"></div></div>
+    <div class="grid-2"><div class="form-row"><label class="form-label">Boardroom likelihood (1 to 10)</label><input class="form-input" type="number" min="1" max="10" id="eel-score" value="${(a.score!==''&&a.score!=null)?escHtml(String(a.score)):''}"></div><div class="form-row"><label class="form-label">Owner</label><select class="form-select" id="eel-owner">${['Danny','Joe','Jasper','James'].map(o=>`<option${o===a.owner?' selected':''}>${o}</option>`).join('')}</select></div></div>
+    <div class="form-row"><label class="form-label">Notes ${micBtnHtml('eel-notes')}</label><textarea class="form-textarea" id="eel-notes" style="min-height:80px">${escHtml(a.notes||'')}</textarea></div>
   `,`<button class="btn btn-red btn-sm" onclick="deleteEL('${id}')">Delete</button><button class="btn btn-ghost" onclick="closeModal()">Cancel</button><button class="btn btn-k" onclick="updateEL('${id}')">Save</button>`);
 }
-function updateEL(id){const l=ls.get('tuf_event_leads',[]);const i=l.findIndex(x=>x.id===id);if(i<0)return;l[i]={...l[i],name:document.getElementById('eel-name').value.trim()||l[i].name,co:document.getElementById('eel-co').value.trim(),email:document.getElementById('eel-email').value.trim(),phone:document.getElementById('eel-phone').value.trim(),event:document.getElementById('eel-event').value,assignedTo:document.getElementById('eel-owner').value,score:elClampScore(document.getElementById('eel-score').value),attendance:document.getElementById('eel-att').value,status:document.getElementById('eel-status').value,notes:document.getElementById('eel-notes').value.trim()};ls.set('tuf_event_leads',l);closeModal();renderEventCRM();}
-function deleteEL(id){if(!confirm('Delete?'))return;ls.set('tuf_event_leads',ls.get('tuf_event_leads',[]).filter(x=>x.id!==id));closeModal();renderEventCRM();}
+function updateEL(id){const a=ls.get('tuf_event_attendees',[]);const i=a.findIndex(x=>x.id===id);if(i<0)return;a[i]={...a[i],name:document.getElementById('eel-name').value.trim()||a[i].name,co:document.getElementById('eel-co').value.trim(),email:document.getElementById('eel-email').value.trim(),phone:document.getElementById('eel-phone').value.trim(),event:document.getElementById('eel-event').value.trim(),eventDate:document.getElementById('eel-evdate').value||'',score:elClampScore(document.getElementById('eel-score').value),owner:document.getElementById('eel-owner').value,notes:document.getElementById('eel-notes').value.trim()};ls.set('tuf_event_attendees',a);closeModal();renderEventCRM();}
+function deleteEL(id){if(!confirm('Remove this attendee?'))return;ls.set('tuf_event_attendees',ls.get('tuf_event_attendees',[]).filter(x=>x.id!==id));closeModal();renderEventCRM();}
 function convertELtoPipeline(id){
-  const leads=ls.get('tuf_event_leads',[]);const lead=leads.find(x=>x.id===id);if(!lead)return;
-  if(!confirm(`Move ${lead.name} to the Sales Pipeline as a Prospect?`))return;
-  const prospects=ls.get('tuf_prospects',[]);
-  const newId=uid();
-  prospects.push({id:newId,name:lead.name,co:lead.co||'',email:lead.email||'',phone:lead.phone||'',stage:'Prospect',temp:'Warm',notes:`Event lead from ${lead.event}. ${lead.notes||''}`.trim(),nextAction:'Follow up call',lastContact:new Date().toISOString().slice(0,10),sourceEvent:lead.event||'',fromLeadId:id});
+  const list=ls.get('tuf_event_attendees',[]);const a=list.find(x=>x.id===id);if(!a)return;
+  if(!confirm(`Send ${a.name} to the Sales Pipeline as a prospect?`))return;
+  const prospects=ls.get('tuf_prospects',[]);const newId=uid();
+  prospects.push({id:newId,name:a.name,co:a.co||'',email:a.email||'',phone:a.phone||'',stage:'Prospect',temp:'Warm',notes:`Attended ${a.event||'an event'}${a.eventDate?' on '+a.eventDate:''}. ${a.notes||''}`.trim(),nextAction:'Follow up call',lastContact:new Date().toISOString().slice(0,10),sourceEvent:a.event||'',fromLeadId:id});
   ls.set('tuf_prospects',prospects);
-  const i=leads.findIndex(x=>x.id===id);leads[i].status='Converted';leads[i].promotedToProspectId=newId;ls.set('tuf_event_leads',leads);
-  addNotif(`${lead.name} moved from Event Leads to Sales Pipeline`);
+  const i=list.findIndex(x=>x.id===id);list[i].promotedToProspectId=newId;ls.set('tuf_event_attendees',list);
+  addNotif(`${a.name} sent to the Sales Pipeline`);
   renderEventCRM();
 }
 
