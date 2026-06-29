@@ -939,10 +939,12 @@ function syncSB(k, v) {
     .then(() => {}).catch(e => console.warn('Sync error:', e));
 }
 
+let sbLoadOK = false; // true only after a confirmed read of tuf_state (or local-only mode). Guards seeding so a failed load never overwrites server data.
 async function loadFromSupabase() {
-  if (!sb) return;
+  if (!sb) { sbLoadOK = true; return; } // no server to clobber — safe to seed locally
   try {
-    const { data } = await sb.from('tuf_state').select('key, value');
+    const { data, error } = await sb.from('tuf_state').select('key, value');
+    if (error) throw error;
     if (data && data.length > 0) {
       data.forEach(row => {
         try {
@@ -955,9 +957,23 @@ async function loadFromSupabase() {
         localStorage.setItem(row.key, row.value);
       });
     }
+    sbLoadOK = true;
   } catch(e) {
+    sbLoadOK = false;
     console.warn('Could not load from Supabase:', e);
   }
+}
+// Seed default tasks EXACTLY ONCE, ever. Never regenerate the shared list (that wiped completions),
+// and never seed over the server when the load failed (offline/flaky).
+function tasksSeeded(){ return localStorage.getItem('tuf_tasks_seeded')==='1'; }
+function markTasksSeeded(){ localStorage.setItem('tuf_tasks_seeded','1'); }
+function seedTasksOnce(){
+  if(tasksSeeded()) return;
+  const cur=ls.get('tuf_tasks',[]);
+  if(cur && cur.length>0){ markTasksSeeded(); return; } // existing data — mark seeded, never rebuild
+  if(!sbLoadOK) return;                                  // load failed — do NOT seed/overwrite the server
+  ls.set('tuf_tasks', buildDefaultTasks());
+  markTasksSeeded();
 }
 
 function subscribeToChanges() {
@@ -974,6 +990,16 @@ function subscribeToChanges() {
       }
     })
     .subscribe();
+  // Self-heal: a tab left open overnight (or whose realtime dropped) refreshes from the server
+  // when refocused, so it can never save a stale task list over teammates' completions.
+  if(!window._tufVisHook){
+    window._tufVisHook=true;
+    document.addEventListener('visibilitychange',()=>{
+      if(document.visibilityState==='visible' && sb){
+        loadFromSupabase().then(()=>{ const a=document.querySelector('.page.active'); if(a) renderPage(a.id.replace('page-','')); });
+      }
+    });
+  }
 }
 
 const ls = {
@@ -1342,12 +1368,8 @@ function initApp(user){
   const merged = {...TEAM_EMAIL_DEFAULTS,...storedEmails};
   Object.keys(merged).forEach(k=>{ if(!TASK_PEOPLE.includes(k)) delete merged[k]; });
   ls.set('tuf_team_emails', merged);
-  // Force-load tasks if still empty after seed
-  if(!ls.get('tuf_tasks')||ls.get('tuf_tasks').length===0){
-    const t=buildDefaultTasks();
-    localStorage.setItem('tuf_tasks',JSON.stringify(t));
-    if(sb) sb.from('tuf_state').upsert({key:'tuf_tasks',value:JSON.stringify(t)},{onConflict:'key'}).then(()=>{}).catch(()=>{});
-  }
+  // Seed default tasks once, only when the server load succeeded and there are genuinely none.
+  seedTasksOnce();
   renderHome();
   renderCapSidebar();
   renderNotifBadge();
@@ -1585,8 +1607,8 @@ function seedDefaultData(){
     });
   }
 
-  // Seed tasks if empty
-  if(!ls.get('tuf_tasks')||ls.get('tuf_tasks').length===0){
+  // Seed tasks once (only when not seeded, server load OK, and genuinely empty — never re-seed over completions)
+  if(!tasksSeeded() && sbLoadOK && (!ls.get('tuf_tasks')||ls.get('tuf_tasks').length===0)){
     ls.set('tuf_tasks',[
       // ── DANNY ──
       {id:uid(),title:'Define and document the sales process framework (1-page, close sequence)',owner:'Danny',priority:'High',dueDate:'2026-06-13',status:'To Do',notes:'Key failure point: gave client 24hrs to deliberate. Payment link must go before they leave the meeting.',createdBy:'James',createdAt:new Date().toISOString(),completedAt:null},
@@ -2279,11 +2301,7 @@ function setBriefScope(s){ briefScope=s; renderBriefTasks(); }
 function renderBriefTasks(){
   const today = new Date().toISOString().slice(0,10);
   let tasks = ls.get('tuf_tasks',[]);
-  if(!tasks||tasks.length===0){
-    tasks=buildDefaultTasks();
-    localStorage.setItem('tuf_tasks',JSON.stringify(tasks));
-    if(sb) sb.from('tuf_state').upsert({key:'tuf_tasks',value:JSON.stringify(tasks)},{onConflict:'key'}).then(()=>{}).catch(()=>{});
-  }
+  // Defaults are seeded once at login (seedTasksOnce); never auto-rebuild here.
   tasks = tasks.map(t=>({...t, section: inferTaskSection(t)}));
   const wk=weekKey(); const we=new Date(wk+'T00:00:00'); we.setDate(we.getDate()+6); const weStr=we.toISOString().slice(0,10);
   let list = tasks.filter(t => t.status !== 'Done');
@@ -2412,12 +2430,7 @@ function inferTaskSection(task){
 function renderTasks(){
   const today=new Date().toISOString().slice(0,10);
   let all=ls.get('tuf_tasks',[]);
-  // Auto-load defaults immediately if empty — no button needed
-  if(!all||all.length===0){
-    all=buildDefaultTasks();
-    localStorage.setItem('tuf_tasks',JSON.stringify(all));
-    if(sb) sb.from('tuf_state').upsert({key:'tuf_tasks',value:JSON.stringify(all)},{onConflict:'key'}).then(()=>{}).catch(()=>{});
-  }
+  // Note: defaults are seeded once at login (seedTasksOnce). Never auto-rebuild here — that wiped completions.
   const done=all.filter(a=>a.status==='Done').length;
   const prog=all.filter(a=>a.status==='In Progress').length;
   const pend=all.filter(a=>a.status==='To Do').length;
