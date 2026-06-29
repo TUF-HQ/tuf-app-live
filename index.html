@@ -976,6 +976,30 @@ function seedTasksOnce(){
   markTasksSeeded();
 }
 
+// ── Conflict-safe task writes ───────────────────────────────────────────────
+// The task list is one shared row. Writing the whole array from stale local data
+// reverts teammates' changes. commitTasks() re-pulls the FRESHEST array from the
+// server first, applies just this change, then saves — so a write can never clobber.
+async function commitTasks(mutator){
+  let arr = ls.get('tuf_tasks',[]);
+  if(sb){
+    try{
+      const { data, error } = await sb.from('tuf_state').select('value').eq('key','tuf_tasks').limit(1);
+      if(error) throw error;
+      const v = data && data[0] && data[0].value;
+      if(typeof v==='string'){ const parsed=JSON.parse(v); if(Array.isArray(parsed)) arr=parsed; }
+    }catch(e){ arr = ls.get('tuf_tasks',[]); } // offline/error: fall back to local
+  }
+  mutator(arr);                 // mutate in place (find+set / push / splice)
+  ls.set('tuf_tasks', arr);     // local + sync, now built on fresh server data
+  return arr;
+}
+// Optimistic local-only patch (instant UI, NO sync) — the authoritative merge follows via commitTasks.
+function patchLocalTask(id, patch){
+  const a=ls.get('tuf_tasks',[]); const i=a.findIndex(t=>t.id===id); if(i<0) return;
+  Object.assign(a[i], patch); localStorage.setItem('tuf_tasks', JSON.stringify(a));
+}
+
 function subscribeToChanges() {
   if (!sb) return;
   sb.channel('tuf_realtime')
@@ -2371,16 +2395,16 @@ function renderBriefPosting(){
   el.innerHTML = plannedNudge + overdue.map(p=>row(p,'OVERDUE','var(--red)')).join('') + todays.map(p=>row(p,'TODAY','var(--amb)')).join('');
 }
 function markPosted(id){ const list=ls.get('tuf_content',[]); const i=list.findIndex(x=>x.id===id); if(i<0)return; list[i].status='Posted'; ls.set('tuf_content',list); addNotif(`Marked posted: "${list[i].title}"`); renderBriefPosting(); }
-function quickCompleteTask(id){
-  const tasks = ls.get('tuf_tasks',[]);
-  const i = tasks.findIndex(t=>t.id===id);
-  if(i<0) return;
-  tasks[i].status = tasks[i].status==='Done'?'To Do':'Done';
-  tasks[i].completedAt = tasks[i].status==='Done'?new Date().toISOString():null;
-  ls.set('tuf_tasks', tasks);
-  syncBoardroomFromTask(id);
+async function quickCompleteTask(id){
+  const cur = ls.get('tuf_tasks',[]).find(t=>t.id===id);
+  if(!cur) return;
+  const ns = cur.status==='Done'?'To Do':'Done';
+  const patch = { status: ns, completedAt: ns==='Done'?new Date().toISOString():null };
+  patchLocalTask(id, patch);            // instant UI
   renderBriefTasks();
   updateTaskBadge();
+  await commitTasks(arr=>{ const i=arr.findIndex(t=>t.id===id); if(i>=0) Object.assign(arr[i], patch); });
+  syncBoardroomFromTask(id);
 }
 
 function updateTaskBadge(){
@@ -2545,17 +2569,17 @@ function setTaskPersonFilter(f){taskPersonFilter=f;renderTasks();}
 function setTaskStatusFilter(f){taskStatusFilter=f;renderTasks();}
 
 
-function cycleTaskStatus(id){
-  const tasks = ls.get('tuf_tasks',[]);
-  const i = tasks.findIndex(t=>t.id===id); if(i<0)return;
+async function cycleTaskStatus(id){
+  const cur = ls.get('tuf_tasks',[]).find(t=>t.id===id); if(!cur) return;
   const next = {'To Do':'In Progress','In Progress':'Done','Done':'To Do'};
-  tasks[i].status = next[tasks[i].status]||'To Do';
-  tasks[i].completedAt = tasks[i].status==='Done'?new Date().toISOString():null;
-  ls.set('tuf_tasks',tasks);
-  syncBoardroomFromTask(id);
+  const ns = next[cur.status]||'To Do';
+  const patch = { status: ns, completedAt: ns==='Done'?new Date().toISOString():null };
+  patchLocalTask(id, patch);            // instant UI
   renderTasks();
   renderBriefTasks();
   const mp=document.getElementById('page-myday'); if(mp&&mp.classList.contains('active')) renderMyDay();
+  await commitTasks(arr=>{ const i=arr.findIndex(t=>t.id===id); if(i>=0) Object.assign(arr[i], patch); });
+  syncBoardroomFromTask(id);
 }
 
 function addTaskModal(){
@@ -2582,11 +2606,10 @@ function addTaskModal(){
   document.getElementById('nt-title').focus();
 }
 
-function saveTask(){
+async function saveTask(){
   const title = document.getElementById('nt-title').value.trim();
   if(!title) return;
-  const tasks = ls.get('tuf_tasks',[]);
-  tasks.push({
+  const newTask = {
     id:uid(), title,
     owner:document.getElementById('nt-owner').value,
     priority:document.getElementById('nt-priority').value,
@@ -2597,12 +2620,11 @@ function saveTask(){
     createdBy:CURRENT_USER,
     createdAt:new Date().toISOString(),
     completedAt:null,
-  });
-  ls.set('tuf_tasks',tasks);
-  const newTask = tasks[tasks.length-1];
+  };
+  closeModal();
+  await commitTasks(arr=>{ arr.push(newTask); });
   addNotif(`Task added: "${title}" → ${newTask.owner}`);
   sendTaskEmail(newTask,'assigned').catch(e=>addNotif('⚠️ Email failed: '+e.message));
-  closeModal();
   renderTasks();
   renderBriefTasks();
 }
@@ -2630,11 +2652,8 @@ function editTaskModal(id){
   `,`<button class="btn btn-red btn-sm" onclick="deleteTask('${id}')">Delete</button><button class="btn btn-ghost" onclick="closeModal()">Cancel</button><button class="btn btn-k" onclick="updateTask('${id}')">Save</button>`);
 }
 
-function updateTask(id){
-  const tasks = ls.get('tuf_tasks',[]);
-  const i = tasks.findIndex(x=>x.id===id); if(i<0)return;
-  const wasDone = tasks[i].status==='Done';
-  tasks[i] = {...tasks[i],
+async function updateTask(id){
+  const patch = {
     title:document.getElementById('et-title').value.trim(),
     owner:document.getElementById('et-owner').value,
     priority:document.getElementById('et-priority').value,
@@ -2642,19 +2661,26 @@ function updateTask(id){
     status:document.getElementById('et-status').value,
     linkedTo:document.getElementById('et-linked')?.value||'',
     notes:document.getElementById('et-notes').value.trim(),
-    completedAt:document.getElementById('et-status').value==='Done'?(tasks[i].completedAt||new Date().toISOString()):null,
   };
-  ls.set('tuf_tasks',tasks);
+  closeModal();
+  let became=false;
+  await commitTasks(arr=>{
+    const i=arr.findIndex(x=>x.id===id); if(i<0) return;
+    const wasDone = arr[i].status==='Done';
+    arr[i] = {...arr[i], ...patch, completedAt: patch.status==='Done'?(arr[i].completedAt||new Date().toISOString()):null};
+    if(!wasDone && arr[i].status==='Done') became=true;
+  });
   syncBoardroomFromTask(id);
-  if(!wasDone && tasks[i].status==='Done'){ addNotif(`Task done: "${tasks[i].title}"`); sendTaskCompleteEmail(tasks[i]).catch(()=>{}); }
-  closeModal(); renderTasks(); renderBriefTasks();
+  if(became){ const t=ls.get('tuf_tasks',[]).find(x=>x.id===id); if(t){ addNotif(`Task done: "${t.title}"`); sendTaskCompleteEmail(t).catch(()=>{}); } }
+  renderTasks(); renderBriefTasks();
 }
 
-function deleteTask(id){
+async function deleteTask(id){
   if(!confirm('Delete this task?'))return;
-  ls.set('tuf_tasks',ls.get('tuf_tasks',[]).filter(x=>x.id!==id));
+  closeModal();
+  await commitTasks(arr=>{ const i=arr.findIndex(x=>x.id===id); if(i>=0) arr.splice(i,1); });
   removeBoardroomItemForTask(id);
-  closeModal(); renderTasks(); renderBriefTasks();
+  renderTasks(); renderBriefTasks();
 }
 
 // ═══ HOME / MORNING BRIEF ═══════════════════════════════════════════════════
@@ -6695,16 +6721,25 @@ function renderBoardroomChecklist(){
 }
 // Create/update the task linked (by shared id) to a checklist item.
 function brLinkedTask(item, createIfMissing){
-  const tasks=ls.get('tuf_tasks',[]); const i=tasks.findIndex(t=>t.id===item.id);
-  if(i<0){
-    if(!createIfMissing) return;
-    tasks.push({id:item.id,title:item.text,owner:item.owner||'Team',priority:'Medium',dueDate:item.date||'',status:item.done?'Done':'To Do',completedAt:item.done?new Date().toISOString():null,section:'boardroom',notes:'From Boardroom event checklist',createdBy:(typeof CURRENT_USER!=='undefined'?CURRENT_USER:''),createdAt:new Date().toISOString()});
-  } else {
-    tasks[i]={...tasks[i],title:item.text,owner:item.owner||tasks[i].owner,dueDate:item.date||'',status:item.done?'Done':(tasks[i].status==='Done'?'To Do':tasks[i].status),completedAt:item.done?(tasks[i].completedAt||new Date().toISOString()):null};
-  }
-  ls.set('tuf_tasks',tasks); updateTaskBadge();
+  const apply=(tasks)=>{
+    const i=tasks.findIndex(t=>t.id===item.id);
+    if(i<0){
+      if(!createIfMissing) return;
+      tasks.push({id:item.id,title:item.text,owner:item.owner||'Team',priority:'Medium',dueDate:item.date||'',status:item.done?'Done':'To Do',completedAt:item.done?new Date().toISOString():null,section:'boardroom',notes:'From Boardroom event checklist',createdBy:(typeof CURRENT_USER!=='undefined'?CURRENT_USER:''),createdAt:new Date().toISOString()});
+    } else {
+      tasks[i]={...tasks[i],title:item.text,owner:item.owner||tasks[i].owner,dueDate:item.date||'',status:item.done?'Done':(tasks[i].status==='Done'?'To Do':tasks[i].status),completedAt:item.done?(tasks[i].completedAt||new Date().toISOString()):null};
+    }
+  };
+  const local=ls.get('tuf_tasks',[]); apply(local); localStorage.setItem('tuf_tasks',JSON.stringify(local)); // optimistic
+  commitTasks(apply); // authoritative merge onto fresh server data
+  updateTaskBadge();
 }
-function brRemoveLinkedTasks(ids){ const set=new Set(ids); ls.set('tuf_tasks',ls.get('tuf_tasks',[]).filter(t=>!set.has(t.id))); updateTaskBadge(); }
+function brRemoveLinkedTasks(ids){
+  const set=new Set(ids);
+  const drop=(arr)=>{ for(let i=arr.length-1;i>=0;i--){ if(set.has(arr[i].id)) arr.splice(i,1); } };
+  const local=ls.get('tuf_tasks',[]); drop(local); localStorage.setItem('tuf_tasks',JSON.stringify(local));
+  commitTasks(drop); updateTaskBadge();
+}
 function addBoardroomTask(){
   const t=(document.getElementById('br-new-text')?.value||'').trim(); if(!t) return;
   const owner=document.getElementById('br-new-owner')?.value||'';
@@ -7429,9 +7464,9 @@ function hqConfirm(pid){
   const a=HQ_PENDING[pid]; if(!a) return;
   let msg='';
   if(a.type==='create_task'){
-    const tasks=ls.get('tuf_tasks',[]);
     const t={id:uid(),title:a.title||'Untitled task',owner:(TASK_PEOPLE.includes(a.owner)?a.owner:CURRENT_USER),priority:(['High','Medium','Low'].includes(a.priority)?a.priority:'Medium'),dueDate:a.dueDate||null,status:'To Do',notes:a.notes||'',createdBy:CURRENT_USER,createdAt:new Date().toISOString(),completedAt:null};
-    tasks.push(t); ls.set('tuf_tasks',tasks);
+    const _local=ls.get('tuf_tasks',[]); _local.push(t); localStorage.setItem('tuf_tasks',JSON.stringify(_local)); // optimistic
+    commitTasks(arr=>{ if(!arr.find(x=>x.id===t.id)) arr.push(t); }); // authoritative merge
     addNotif(`Task added via Ask HQ: "${t.title}" → ${t.owner}`);
     try{renderTasks();}catch(e){} try{renderBriefTasks();}catch(e){} try{updateTaskBadge();}catch(e){}
     msg=`Task created and assigned to ${escHtml(t.owner)}. No email was sent.`;
