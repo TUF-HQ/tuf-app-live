@@ -430,6 +430,7 @@ details>summary::-webkit-details-marker{display:none}
     <div class="sb-sub" data-page="members" data-filter="attendees" onclick="navMembers('attendees',this)">Event Attendees</div>
     <div class="sb-sub" data-page="members" data-filter="boardroom" onclick="navMembers('boardroom',this)">Boardroom Members</div>
     <div class="sb-sub" data-page="members" data-filter="private" onclick="navMembers('private',this)">Private Clients</div>
+    <div class="sb-item" data-page="inbound" onclick="nav('inbound',this)"><span class="ico">📥</span>Inbound <span class="sb-badge amb" id="sb-inbound" style="display:none">0</span></div>
     <div class="sb-item" data-page="pipeline" onclick="nav('pipeline',this)"><span class="ico">💰</span>Sales Pipeline</div>
     <div class="sb-item" data-page="onboarding" onclick="nav('onboarding',this)"><span class="ico">📋</span>Onboarding</div>
     <div class="sb-item" data-page="clientanalysis" onclick="nav('clientanalysis',this)"><span class="ico">🔍</span>Client Analysis</div>
@@ -687,6 +688,11 @@ details>summary::-webkit-details-marker{display:none}
     <div class="page" id="page-pipeline">
       <div style="display:flex;gap:6px;margin-bottom:14px" id="pipeline-tabs"></div>
       <div id="pipeline-tab-content"></div>
+    </div>
+
+    <!-- ═══ INBOUND (website signups) ═══ -->
+    <div class="page" id="page-inbound">
+      <div id="inbound-content"></div>
     </div>
 
     <!-- ═══ WARM PROSPECTS ═══ -->
@@ -1006,6 +1012,8 @@ function subscribeToChanges() {
     .on('postgres_changes', { event: '*', schema: 'public', table: 'tuf_state' }, (payload) => {
       if (payload.eventType !== 'DELETE' && payload.new) {
         localStorage.setItem(payload.new.key, payload.new.value);
+        // Keep the Inbound badge live when a website signup lands (it has no app session to update it).
+        if (payload.new.key === 'tuf_inbound_leads') updateInboundBadge();
       }
       // Re-render active page for other users
       if (payload.new && payload.new.updated_by && payload.new.updated_by !== CURRENT_USER) {
@@ -1394,6 +1402,7 @@ function initApp(user){
   ls.set('tuf_team_emails', merged);
   // Seed default tasks once, only when the server load succeeded and there are genuinely none.
   seedTasksOnce();
+  updateInboundBadge();
   renderHome();
   renderCapSidebar();
   renderNotifBadge();
@@ -1699,7 +1708,7 @@ function seedDefaultData(){
 const PAGE_TITLES = {
   myday:'My Day',
   home:'Morning Brief',teamoverview:'Team Overview',tasks:'Tasks',transcript:'Meeting Notes → Tasks',
-  members:'Existing Clients',pipeline:'Sales Pipeline',
+  members:'Existing Clients',pipeline:'Sales Pipeline',inbound:'Inbound Leads',
   boardroom:'Boardroom',content:'Content',social:'Social Media',ideas:'Content Ideas',kpis:'KPIs',aidump:'AI Tool (Dump)',buildreq:'Build Requests',clientanalysis:'Client Analysis',emaillist:'Email List',watemplates:'WhatsApp Templates',
   prospects:'Warm Prospects',testimonials:'Testimonials',
   onboarding:'Onboarding',sessions:'Session Planner',events:'Event CRM',padel:'Padel Event',
@@ -1735,7 +1744,7 @@ function goPersonTasks(p){ taskViewMode='person'; taskStatusFilter='Open'; taskF
 function renderPage(page){
   const fns = {
     home:renderHome, tasks:renderTasks, transcript:renderTranscript,
-    members:renderMembers, pipeline:renderPipeline,
+    members:renderMembers, pipeline:renderPipeline, inbound:renderInbound,
     boardroom:renderBoardroom, content:renderContentHub, social:renderSocial, ideas:renderIdeas, kpis:renderKPIs, aidump:renderAIDump, buildreq:renderBuildRequests, clientanalysis:renderClientAnalysis, emaillist:renderEmailList, watemplates:renderWATemplates,
     prospects:renderProspects, testimonials:renderTestimonials,
     onboarding:renderOnboarding, sessions:renderSessions, events:renderEventCRM, padel:renderPadel,
@@ -2763,6 +2772,7 @@ function renderDailyControl(){
   const overdueTasks=tasksOpen.filter(t=>t.dueDate&&t.dueDate<today).length;
   const staleProspects=(ls.get('tuf_prospects',[])||[]).filter(p=>p.stage!=='Won'&&p.stage!=='Lost'&&p.lastContact&&daysUntil(p.lastContact)<-7).length;
   const followUps=overdueTasks+staleProspects;
+  const newInbound=(ls.get('tuf_inbound_leads',[])||[]).filter(l=>l.status==='new').length;
   const pending=(ls.get('tuf_prospects',[])||[]).filter(p=>p.stage==='Committed'||p.stage==='Proposal Sent').length;
   let renewSoon=0, guestsEnding=0;
   (ls.get('tuf_members',[])||[]).forEach(m=>{ if((m.boardroomGuest||m.type==='guest')&&m.guestUntil){const d=daysUntil(m.guestUntil); if(d>=0&&d<=7)guestsEnding++;} const a=ls.get('tuf_ca_'+m.id,null); if(a&&a.renewalDate){const d=daysUntil(a.renewalDate); if(d>=0&&d<=30)renewSoon++;} });
@@ -2771,6 +2781,7 @@ function renderDailyControl(){
   const cell=(n,label,color,go)=>`<div class="ns-box" style="cursor:pointer" onclick="${go}"><div class="ns-l">${label}</div><div class="ns-n" style="color:${color}">${n}</div></div>`;
   el.innerHTML=`<div class="sec-hdr">Daily Control <span style="font-size:11px;font-weight:400;color:var(--mut)">Padel · 25 June</span></div>
     <div class="ns-row">
+      ${cell(newInbound,'New signups',newInbound?'var(--amb)':'var(--grn)',"nav('inbound',document.querySelector('[data-page=inbound]'))")}
       ${cell(paidCount,'Tickets paid','var(--grn)',"nav('padel',document.querySelector('[data-page=padel]'))")}
       ${cell(confirmed,'Confirmed coming','var(--grn)',"nav('padel',document.querySelector('[data-page=padel]'))")}
       ${cell(notConfirmed,'Not confirmed',notConfirmed?'var(--amb)':'var(--grn)',"nav('padel',document.querySelector('[data-page=padel]'))")}
@@ -3435,10 +3446,79 @@ function saveProspect(){
   list.push({id:uid(),name,co:document.getElementById('np-co').value.trim(),email:document.getElementById('np-email')?.value.trim()||'',phone:document.getElementById('np-phone')?.value.trim()||'',stage:document.getElementById('np-stage').value,temp:document.getElementById('np-temp').value,score:parseInt(document.getElementById('np-score').value)||null,nextAction:document.getElementById('np-action').value.trim(),nextActionDate:document.getElementById('np-actiondate')?.value||'',notes:document.getElementById('np-notes').value.trim(),lastContact:new Date().toISOString().slice(0,10)});
   ls.set('tuf_prospects',list);closeModal();renderPipeline();
 }
+
+// ═══ INBOUND (website signups → triage → pipeline) ═══════════════════════════
+// Leads arrive from the public signup form via the lead-intake edge function,
+// which appends them to the shared tuf_inbound_leads store. The team triages here.
+let inboundFilter='new';
+function setInboundFilter(f){ inboundFilter=f; renderInbound(); }
+function updateInboundBadge(){
+  const n=(ls.get('tuf_inbound_leads',[])||[]).filter(l=>l.status==='new').length;
+  const b=document.getElementById('sb-inbound');
+  if(b){ b.textContent=n; b.style.display=n?'inline':'none'; }
+}
+function inbWhen(iso){ try{ const d=new Date(iso); const diff=Math.round((Date.now()-d.getTime())/86400000); if(diff<=0) return 'today'; if(diff===1) return 'yesterday'; if(diff<7) return diff+' days ago'; return d.toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'}); }catch(_){ return ''; } }
+function renderInbound(){
+  const el=document.getElementById('inbound-content'); if(!el) return;
+  const all=(ls.get('tuf_inbound_leads',[])||[]).slice().sort((a,b)=>(b.submittedAt||'').localeCompare(a.submittedAt||''));
+  const counts={ new:all.filter(l=>l.status==='new').length, converted:all.filter(l=>l.status==='converted').length, archived:all.filter(l=>l.status==='archived').length };
+  const list = inboundFilter==='all' ? all : all.filter(l=>l.status===inboundFilter);
+  const tab=(k,label)=>`<button class="btn btn-sm ${inboundFilter===k?'btn-k':'btn-ghost'}" onclick="setInboundFilter('${k}')">${label}${counts[k]!=null?` (${counts[k]})`:''}</button>`;
+  const head=`
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px">
+      <div style="display:flex;gap:6px;flex-wrap:wrap">${tab('new','New')}${tab('converted','Added')}${tab('archived','Archived')}<button class="btn btn-sm ${inboundFilter==='all'?'btn-k':'btn-ghost'}" onclick="setInboundFilter('all')">All</button></div>
+      <div style="font-size:12px;color:var(--mut)">Website signups land here. Review, then add the good ones to the pipeline.</div>
+    </div>`;
+  if(!list.length){ el.innerHTML=head+`<div class="empty"><div class="ico">📥</div>${inboundFilter==='new'?'No new website signups right now.':'Nothing here.'}</div>`; updateInboundBadge(); return; }
+  const field=(label,val)=> val?`<div style="margin-top:8px"><div style="font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--mut);font-weight:700">${label}</div><div style="font-size:13.5px;white-space:pre-wrap">${escHtml(val)}</div></div>`:'';
+  const card=l=>{
+    const contact=[l.email?`✉️ <a href="mailto:${escAttr(l.email)}">${escHtml(l.email)}</a>`:'', l.phone?`📞 ${escHtml(l.phone)}`:'', l.website?`🌐 ${escHtml(l.website)}`:''].filter(Boolean).join('&nbsp;&nbsp;·&nbsp;&nbsp;');
+    const actions = l.status==='new'
+      ? `<button class="btn btn-k btn-sm" onclick="inbConvert('${l.id}')">+ Add to Pipeline</button><button class="btn btn-ghost btn-sm" onclick="inbArchive('${l.id}')">Archive</button>`
+      : l.status==='archived'
+        ? `<button class="btn btn-ghost btn-sm" onclick="inbRestore('${l.id}')">Restore</button><button class="btn btn-red btn-sm" onclick="inbDelete('${l.id}')">Delete</button>`
+        : `<span style="font-size:12px;color:var(--grn);font-weight:600">✓ In pipeline</span>`;
+    return `<div class="card" style="margin-bottom:12px">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px">
+        <div><div style="font-weight:700;font-size:16px">${escHtml(l.name||'(no name)')}${l.company?` <span style="color:var(--mut);font-weight:500">· ${escHtml(l.company)}</span>`:''}</div>
+        <div style="font-size:13px;margin-top:3px">${contact||'<span style="color:var(--mut)">No contact details</span>'}</div></div>
+        <div style="font-size:11px;color:var(--mut);white-space:nowrap">${inbWhen(l.submittedAt)}</div>
+      </div>
+      ${field('Business',l.businessDesc)}${field('Annual revenue',l.revenue)}${field('Biggest challenge',l.challenge)}${field('How they heard about us',l.heardVia)}
+      <div style="display:flex;gap:6px;margin-top:14px;flex-wrap:wrap">${actions}</div>
+    </div>`;
+  };
+  el.innerHTML=head+list.map(card).join('');
+  updateInboundBadge();
+}
+function inbConvert(id){
+  const leads=ls.get('tuf_inbound_leads',[])||[]; const l=leads.find(x=>x.id===id); if(!l) return;
+  if(l.status==='converted'){ alert('This lead is already in the pipeline.'); return; }
+  const today=new Date().toISOString().slice(0,10);
+  const notes=[];
+  notes.push('Source: Website signup'+(l.submittedAt?` (${new Date(l.submittedAt).toLocaleDateString('en-GB')})`:''));
+  if(l.website) notes.push('Website: '+l.website);
+  if(l.revenue) notes.push('Annual revenue: '+l.revenue);
+  if(l.businessDesc) notes.push('\nBusiness:\n'+l.businessDesc);
+  if(l.challenge) notes.push('\nBiggest challenge:\n'+l.challenge);
+  if(l.heardVia) notes.push('\nHeard about us via: '+l.heardVia);
+  const prospects=ls.get('tuf_prospects',[]); const pid=uid();
+  prospects.push({ id:pid, name:l.name||'', co:l.company||'', email:l.email||'', phone:l.phone||'', stage:'Prospect', temp:'Warm', score:null, nextAction:'First response to website signup', nextActionDate:today, notes:notes.join('\n'), lastContact:today, source:'Website', fromInboundId:l.id });
+  ls.set('tuf_prospects',prospects);
+  l.status='converted'; l.prospectId=pid; ls.set('tuf_inbound_leads',leads);
+  addNotif(`Website signup added to pipeline: ${l.name||l.email||'lead'}`);
+  renderInbound();
+  const pp=document.getElementById('page-pipeline'); if(pp&&pp.classList.contains('active')) renderPipeline();
+}
+function inbArchive(id){ const leads=ls.get('tuf_inbound_leads',[])||[]; const l=leads.find(x=>x.id===id); if(!l)return; l.status='archived'; ls.set('tuf_inbound_leads',leads); renderInbound(); }
+function inbRestore(id){ const leads=ls.get('tuf_inbound_leads',[])||[]; const l=leads.find(x=>x.id===id); if(!l)return; l.status='new'; ls.set('tuf_inbound_leads',leads); renderInbound(); }
+function inbDelete(id){ if(!confirm('Permanently delete this lead?'))return; ls.set('tuf_inbound_leads',(ls.get('tuf_inbound_leads',[])||[]).filter(x=>x.id!==id)); renderInbound(); }
+
 function editProspectModal(id){
   const p=ls.get('tuf_prospects',[]).find(x=>x.id===id);if(!p)return;
   showModal(`${p.name} — ${p.co}`,`
     ${p.sourceEvent?`<div style="font-size:11px;color:var(--mut);margin-bottom:8px">Origin: event lead from <strong>${escHtml(p.sourceEvent)}</strong></div>`:''}
+    ${p.source==='Website'?`<div style="font-size:11px;color:var(--mut);margin-bottom:8px">Origin: 🌐 <strong>Website signup</strong></div>`:''}
     ${p.convertedToMemberId?`<div style="font-size:11px;color:var(--grn);font-weight:600;margin-bottom:8px">✓ Converted to a member.</div>`:''}
     <div class="grid-2">
       <div class="form-row"><label class="form-label">Email</label><input class="form-input" type="email" id="ep-email" value="${escHtml(p.email||'')}"></div>
