@@ -447,7 +447,7 @@ details>summary::-webkit-details-marker{display:none}
     <div class="sb-item" data-page="social" onclick="nav('social',this)"><span class="ico">📊</span>Social Media</div>
     <div class="sb-item" data-page="postreview" onclick="nav('postreview',this)"><span class="ico">📝</span>Post Review <span class="sb-badge amb" id="sb-postreview" style="display:none">0</span></div>
     <div class="sb-item" data-page="podcast" onclick="nav('podcast',this)"><span class="ico">🎙</span>Podcast</div>
-    <div class="sb-item" data-page="files" onclick="nav('files',this)"><span class="ico">📁</span>Marketing Materials</div>
+    <div class="sb-item" data-page="files" onclick="nav('files',this)"><span class="ico">📁</span>Documents</div>
     <div class="sb-item" data-page="testimonials" onclick="nav('testimonials',this)"><span class="ico">⭐</span>Testimonials</div>
     <div class="sb-item" data-page="emaillist" onclick="nav('emaillist',this)"><span class="ico">📧</span>Email List</div>
     <div class="sb-item" data-page="watemplates" onclick="nav('watemplates',this)"><span class="ico">💬</span>WhatsApp Templates</div>
@@ -1712,7 +1712,7 @@ const PAGE_TITLES = {
   boardroom:'Boardroom',content:'Content',social:'Social Media',ideas:'Content Ideas',kpis:'KPIs',aidump:'AI Tool (Dump)',buildreq:'Build Requests',clientanalysis:'Client Analysis',emaillist:'Email List',watemplates:'WhatsApp Templates',
   prospects:'Warm Prospects',testimonials:'Testimonials',
   onboarding:'Onboarding',sessions:'Session Planner',events:'Event CRM',padel:'Padel Event',
-  calendar:'Content Calendar',postreview:'Post Review',podcast:'Podcast Pipeline',ip:'IP Register',files:'Files',
+  calendar:'Content Calendar',postreview:'Post Review',podcast:'Podcast Pipeline',ip:'IP Register',files:'Documents',
   capmap:'Capability Map',goals:'Goals & OKRs',fourbox:'The 4 Box Model',budget:'Budget',
   roles:'Roles',reviews:'Weekly Review',kb:'Knowledge Base',notifs:'Notifications',
   csuite:'C-Suite',holidays:'Holidays',daily:'Daily Progress',
@@ -4830,31 +4830,87 @@ function updateIP(id){const list=ls.get('tuf_ip',[]);const i=list.findIndex(x=>x
 function deleteIP(id){if(!confirm('Delete?'))return;ls.set('tuf_ip',ls.get('tuf_ip',[]).filter(x=>x.id!==id));closeModal();renderIP();}
 
 // ═══ FILES ═══════════════════════════════════════════════════════════════════
-const FILE_CATS=['Sales','Boardroom','Events','Content','Finance','Operations','Other'];
+const FILE_CATS=['Boardroom Reports','Sales','Boardroom','Events','Content','Finance','Operations','Other'];
+const DOCS_BUCKET='tuf-docs';
+function docType(name){ const e=(String(name||'').split('.').pop()||'').toLowerCase(); if(e==='pdf')return'pdf'; if(['ppt','pptx','key'].includes(e))return'deck'; if(['doc','docx'].includes(e))return'doc'; if(['xls','xlsx','csv'].includes(e))return'sheet'; if(['png','jpg','jpeg','gif','webp','heic'].includes(e))return'image'; return'other'; }
+function docIcon(t){ return t==='pdf'?'📄':t==='deck'?'📊':t==='doc'?'📝':t==='sheet'?'📈':t==='image'?'🖼':'📁'; }
+function fmtSize(b){ if(b==null||isNaN(b))return''; if(b<1024)return b+' B'; if(b<1048576)return (b/1024).toFixed(0)+' KB'; return (b/1048576).toFixed(1)+' MB'; }
 function renderFiles(){
   const list=ls.get('tuf_files',[]);
   const cats=[...new Set(list.map(f=>f.cat))];
   document.getElementById('files-list').innerHTML=cats.length
     ? cats.map(cat=>`
-        <div class="sec-hdr" style="margin-top:14px">${cat}</div>
-        ${list.filter(f=>f.cat===cat).map(f=>`<div class="card" style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
-          <span style="font-size:18px">${f.type==='pdf'?'📄':f.type==='deck'?'📊':f.type==='doc'?'📝':'📁'}</span>
-          <div style="flex:1"><div style="font-weight:700;font-size:13px">${escHtml(f.name)}</div><div style="font-size:10px;color:var(--mut)">${f.updated?fmtDate(f.updated):''}</div></div>
-          ${f.link?`<a href="${escHtml(f.link)}" target="_blank" class="btn btn-k btn-sm">Open ↗</a>`:''}
-          <button class="btn btn-ghost btn-sm" onclick="deleteFile('${f.id}')">✕</button>
-        </div>`).join('')}
+        <div class="sec-hdr" style="margin-top:14px">${escHtml(cat)}</div>
+        ${list.filter(f=>f.cat===cat).map(f=>{
+          const meta=[f.by?'by '+escHtml(f.by):'', f.updated?fmtDate(f.updated):'', f.kind==='upload'?fmtSize(f.size):(f.link?'link':'')].filter(Boolean).join(' · ');
+          const open = f.kind==='upload'
+            ? `<button class="btn btn-k btn-sm" onclick="docOpen('${f.id}')">Open ↗</button>`
+            : (f.link?`<a href="${escHtml(f.link)}" target="_blank" class="btn btn-k btn-sm">Open ↗</a>`:'');
+          return `<div class="card" style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
+            <span style="font-size:18px">${docIcon(f.type)}</span>
+            <div style="flex:1;min-width:0"><div style="font-weight:700;font-size:13px">${escHtml(f.name)}</div><div style="font-size:10px;color:var(--mut)">${meta}</div></div>
+            ${open}
+            <button class="btn btn-ghost btn-sm" onclick="deleteFile('${f.id}')">✕</button>
+          </div>`;
+        }).join('')}
       `).join('')
-    : '<div class="empty"><div class="ico">📁</div>No files linked yet. Add Google Drive links to keep everything findable here.</div>';
-  document.getElementById('topbar-actions').innerHTML=`<button class="btn btn-k btn-sm" onclick="addFileModal()">+ Link File</button>`;
+    : '<div class="empty"><div class="ico">📁</div>No documents yet. Upload a file (e.g. the Boardroom report) or add a link.</div>';
+  document.getElementById('topbar-actions').innerHTML=`<button class="btn btn-k btn-sm" onclick="uploadDocModal()">⬆ Upload</button><button class="btn btn-ghost btn-sm" onclick="addFileModal()">+ Link</button>`;
 }
-function addFileModal(){showModal('Link a File',`
-  <div class="form-row"><label class="form-label">File Name</label><input class="form-input" id="nf-name" placeholder="e.g. TUF Sales Deck"></div>
+function uploadDocModal(){showModal('Upload a File',`
+  <div class="form-row"><label class="form-label">Category</label><select class="form-select" id="uf-cat">${FILE_CATS.map(c=>`<option>${c}</option>`).join('')}</select></div>
+  <div class="form-row"><label class="form-label">File</label><input class="form-input" type="file" id="uf-file" accept=".pdf,.pptx,.ppt,.docx,.doc,.xlsx,.xls,.csv,.png,.jpg,.jpeg"></div>
+  <div style="font-size:11px;color:var(--mut)">Up to 25MB, stored securely for the whole team. For very large files, use “+ Link” instead.</div>
+  <div id="uf-status" style="font-size:12px;margin-top:10px"></div>
+`,`<button class="btn btn-ghost" onclick="closeModal()">Cancel</button><button class="btn btn-k" id="uf-btn" onclick="doUploadDoc()">Upload</button>`);}
+async function doUploadDoc(){
+  const inp=document.getElementById('uf-file'); const f=inp&&inp.files&&inp.files[0];
+  const status=document.getElementById('uf-status'); const btn=document.getElementById('uf-btn');
+  const say=(m,ok)=>{ if(status) status.innerHTML='<span style="color:'+(ok?'var(--grn)':'var(--red)')+'">'+m+'</span>'; };
+  if(!f){ say('Choose a file first.'); return; }
+  if(!sb){ say('No connection — cannot upload right now.'); return; }
+  if(f.size>25*1024*1024){ say('That file is '+(f.size/1048576).toFixed(1)+'MB. Max is 25MB — add it as a link instead.'); return; }
+  if(btn){ btn.disabled=true; btn.textContent='Uploading…'; }
+  const safe=(f.name||'file').replace(/[^A-Za-z0-9.\-_]/g,'_');
+  const path=uid()+'_'+safe;
+  try{
+    const {error}=await sb.storage.from(DOCS_BUCKET).upload(path,f,{upsert:false,contentType:f.type||undefined});
+    if(error) throw error;
+    const list=ls.get('tuf_files',[]);
+    list.push({id:uid(),name:f.name,cat:document.getElementById('uf-cat').value,type:docType(f.name),kind:'upload',path,size:f.size,by:CURRENT_USER,updated:new Date().toISOString().slice(0,10)});
+    ls.set('tuf_files',list);
+    addNotif('📄 Document uploaded: '+f.name);
+    closeModal(); renderFiles();
+  }catch(e){
+    const msg=String((e&&e.message)||e);
+    const notReady=/not found|bucket|does not exist|violates|permission|not authoriz|row-level|403|404/i.test(msg);
+    if(btn){ btn.disabled=false; btn.textContent='Upload'; }
+    say(notReady?'File uploads need the one-time storage setup (see STORAGE_SETUP.md).':'Upload failed: '+escHtml(msg));
+  }
+}
+async function docOpen(id){
+  const f=ls.get('tuf_files',[]).find(x=>x.id===id); if(!f)return;
+  if(f.kind!=='upload'||!f.path){ if(f.link) window.open(f.link,'_blank'); return; }
+  if(!sb){ alert('No connection.'); return; }
+  try{
+    const {data,error}=await sb.storage.from(DOCS_BUCKET).createSignedUrl(f.path,3600);
+    if(error) throw error;
+    window.open(data.signedUrl,'_blank');
+  }catch(e){ alert('Could not open this file: '+String((e&&e.message)||e)); }
+}
+function addFileModal(){showModal('Add a Link',`
+  <div class="form-row"><label class="form-label">Name</label><input class="form-input" id="nf-name" placeholder="e.g. TUF Sales Deck"></div>
   <div class="form-row"><label class="form-label">Category</label><select class="form-select" id="nf-cat">${FILE_CATS.map(c=>`<option>${c}</option>`).join('')}</select></div>
-  <div class="form-row"><label class="form-label">Type</label><select class="form-select" id="nf-type"><option>deck</option><option>doc</option><option>pdf</option><option>sheet</option><option>other</option></select></div>
-  <div class="form-row"><label class="form-label">Google Drive Link</label><input class="form-input" id="nf-link" placeholder="https://drive.google.com/…"></div>
+  <div class="form-row"><label class="form-label">Type</label><select class="form-select" id="nf-type"><option>deck</option><option>doc</option><option>pdf</option><option>sheet</option><option>image</option><option>other</option></select></div>
+  <div class="form-row"><label class="form-label">Link (Google Drive, Dropbox…)</label><input class="form-input" id="nf-link" placeholder="https://…"></div>
 `,`<button class="btn btn-ghost" onclick="closeModal()">Cancel</button><button class="btn btn-k" onclick="saveFile()">Save</button>`);}
-function saveFile(){const name=document.getElementById('nf-name').value.trim();if(!name)return;const list=ls.get('tuf_files',[]);list.push({id:uid(),name,cat:document.getElementById('nf-cat').value,type:document.getElementById('nf-type').value,link:document.getElementById('nf-link').value.trim(),updated:new Date().toISOString().slice(0,10)});ls.set('tuf_files',list);closeModal();renderFiles();}
-function deleteFile(id){if(!confirm('Remove?'))return;ls.set('tuf_files',ls.get('tuf_files',[]).filter(x=>x.id!==id));renderFiles();}
+function saveFile(){const name=document.getElementById('nf-name').value.trim();if(!name)return;const list=ls.get('tuf_files',[]);list.push({id:uid(),name,cat:document.getElementById('nf-cat').value,type:document.getElementById('nf-type').value,kind:'link',link:document.getElementById('nf-link').value.trim(),by:CURRENT_USER,updated:new Date().toISOString().slice(0,10)});ls.set('tuf_files',list);closeModal();renderFiles();}
+async function deleteFile(id){
+  const f=ls.get('tuf_files',[]).find(x=>x.id===id); if(!f)return;
+  if(!confirm('Remove "'+(f.name||'this file')+'"?'))return;
+  if(f.kind==='upload'&&f.path&&sb){ try{ await sb.storage.from(DOCS_BUCKET).remove([f.path]); }catch(e){ console.warn('storage remove failed',e); } }
+  ls.set('tuf_files',ls.get('tuf_files',[]).filter(x=>x.id!==id)); renderFiles();
+}
 
 // ═══ CAPABILITY MAP ══════════════════════════════════════════════════════════
 function getRAG(id){return ls.str('tuf_rag_'+id)||CAPS.find(c=>c.id===id)?.d||'amber';}
