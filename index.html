@@ -445,6 +445,7 @@ details>summary::-webkit-details-marker{display:none}
 
     <div class="sb-section">Marketing</div>
     <div class="sb-item" data-page="social" onclick="nav('social',this)"><span class="ico">📊</span>Social Media</div>
+    <div class="sb-item" data-page="content" onclick="nav('content',this)"><span class="ico">🗓️</span>Content Calendar</div>
     <div class="sb-item" data-page="postreview" onclick="nav('postreview',this)"><span class="ico">📝</span>Post Review <span class="sb-badge amb" id="sb-postreview" style="display:none">0</span></div>
     <div class="sb-item" data-page="podcast" onclick="nav('podcast',this)"><span class="ico">🎙</span>Podcast</div>
     <div class="sb-item" data-page="files" onclick="nav('files',this)"><span class="ico">📁</span>Documents</div>
@@ -589,6 +590,8 @@ details>summary::-webkit-details-marker{display:none}
     </div>
 
     <!-- ═══ SOCIAL MEDIA ═══ -->
+    <div class="page" id="page-content"><div id="content-render"></div></div>
+
     <div class="page" id="page-social">
       <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;align-items:center">
         <div id="social-tabs" style="display:flex;gap:6px"></div>
@@ -1713,7 +1716,7 @@ const PAGE_TITLES = {
   myday:'My Day',
   home:'Morning Brief',teamoverview:'Team Overview',tasks:'Tasks',transcript:'Meeting Notes → Tasks',
   members:'Existing Clients',pipeline:'Sales Pipeline',inbound:'Inbound Leads',dannycal:"Danny's Calendar",
-  boardroom:'Boardroom',social:'Social Media',ideas:'Content Ideas',kpis:'KPIs',aidump:'AI Tool (Dump)',buildreq:'Build Requests',clientanalysis:'Client Analysis',emaillist:'Email List',watemplates:'WhatsApp Templates',
+  boardroom:'Boardroom',content:'Content Calendar',social:'Social Media',ideas:'Content Ideas',kpis:'KPIs',aidump:'AI Tool (Dump)',buildreq:'Build Requests',clientanalysis:'Client Analysis',emaillist:'Email List',watemplates:'WhatsApp Templates',
   prospects:'Warm Prospects',testimonials:'Testimonials',
   onboarding:'Onboarding',sessions:'Session Planner',events:'Event CRM',padel:'Padel Event',
   calendar:'Content Calendar',postreview:'Post Review',podcast:'Podcast Pipeline',ip:'IP Register',files:'Documents',
@@ -1749,7 +1752,7 @@ function renderPage(page){
   const fns = {
     home:renderHome, tasks:renderTasks, transcript:renderTranscript,
     members:renderMembers, pipeline:renderPipeline, inbound:renderInbound, dannycal:renderDannyCal,
-    boardroom:renderBoardroom, social:renderSocial, ideas:renderIdeas, kpis:renderKPIs, aidump:renderAIDump, buildreq:renderBuildRequests, clientanalysis:renderClientAnalysis, emaillist:renderEmailList, watemplates:renderWATemplates,
+    boardroom:renderBoardroom, content:renderContent, social:renderSocial, ideas:renderIdeas, kpis:renderKPIs, aidump:renderAIDump, buildreq:renderBuildRequests, clientanalysis:renderClientAnalysis, emaillist:renderEmailList, watemplates:renderWATemplates,
     prospects:renderProspects, testimonials:renderTestimonials,
     onboarding:renderOnboarding, sessions:renderSessions, events:renderEventCRM, padel:renderPadel,
     calendar:renderCalendar, postreview:renderPostReview, podcast:renderPodcast, ip:renderIP, files:renderFiles,
@@ -4110,6 +4113,167 @@ function postingSlotFor(d){ if(!d) return null; const dt=new Date(d+'T00:00:00')
 let calView='week';                 // 'week' | 'month'
 function ymdLocal(d){ return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
 function mondayOf(d){ const x=new Date(d); x.setHours(0,0,0,0); const day=(x.getDay()+6)%7; x.setDate(x.getDate()-day); return x; }
+
+// ═══ CONTENT CALENDAR (built to the TUF content rules) ═══════════════════════
+const CC_CATEGORIES=['Event Celebration','Thought Leadership','Business Update','Framework','Progress Summary'];
+const CC_OWNER_COLORS={Danny:'#0A0A0B',Jasper:'#2563eb',Joe:'#16a34a',James:'#7c3aed'};
+const CC_RULES_TEXT=`Pillars: Event Celebration · Thought Leadership · Business Update · Framework · Progress Summary.
+
+Danny — LinkedIn (8-week, event-anchored): a celebration post on the first Monday on or after every event; between events 1 to 2 a week rotating Thought Leadership, Business Update and Framework (never the same pillar two weeks running). Danny's voice leads.
+
+Jasper, Joe, James — LinkedIn: one post each per week on a fixed day (Jasper Friday, Joe Wednesday, James Thursday). Category swaps weekly between Business Update and Thought Leadership; every 8th week is a Progress Summary. Tuesday is left open for reactive content.
+
+Danny — Instagram: a talking-to-camera video every weekday (saved for the newsletter); reels on a 2-week rotation (Wk1 Mon/Wed/Fri, Wk2 Tue/Thu); at least 2 in-action story photos every day; a post for every event.
+
+James — YouTube: 2 Shorts a week.
+
+Standing rules: never two people on the same pillar the same day; event weeks take priority (keep both, never the same day); TUF tone; no double dashes or hyphens; brand is black, yellow (#FBF000), white, Georgia display; confirm real event dates before locking (mark TBC otherwise).`;
+
+let ccWeekOffset=0, ccShowRules=false;
+function ccToday(){ return ymdLocal(new Date()); }
+function ccShort(ds){ try{ return new Date(ds+'T00:00:00').toLocaleDateString('en-GB',{day:'numeric',month:'short'}); }catch(_){ return ds; } }
+function ccAddDays(d,n){ const x=new Date(d); x.setHours(0,0,0,0); x.setDate(x.getDate()+n); return x; }
+function ccDowDate(mon,jsDow){ const off=(jsDow===0)?6:(jsDow-1); return ccAddDays(mon,off); }
+function ccDowName(jsDow){ return ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'][jsDow]; }
+function ccEvents(){ return (ls.get('tuf_events',[])||[]).filter(e=>e&&e.date); }
+function ccHasPlat(p,plat){ return (p.platforms&&p.platforms.length?p.platforms:[p.platform]).indexOf(plat)>=0; }
+
+// ---- generator ----
+function ccNextDannyCat(prev,w){ const r=CONTENT_RULES.dannyRotation; let i=w%r.length; if(r[i]===prev) i=(i+1)%r.length; return r[i]; }
+function ccSlot(owner,platform,format,cat,date,w,note){ return { id:uid(), title:(cat||format||(platform+' post')), owner, platform, platforms:[platform], pillar:cat||'', format:format||'', status:'Idea', notes:note||'', date, auto:true, planWeek:w, createdAt:new Date().toISOString() }; }
+function ccGeneratePlan(weeks){
+  weeks=weeks||8;
+  const startMon=mondayOf(new Date());
+  const horizonEnd=ccAddDays(startMon,weeks*7);
+  const celebs={};
+  ccEvents().filter(e=>!e.status||e.status==='Confirmed').forEach(e=>{ const ed=new Date(e.date+'T00:00:00'); if(isNaN(ed))return; let m=mondayOf(ed); if(m<ed) m=ccAddDays(m,7); if(m>=startMon&&m<horizonEnd){ const k=ymdLocal(m); celebs[k]=celebs[k]?celebs[k]+', '+(e.name||'Event'):(e.name||'Event'); } });
+  const slots=[]; let dannyPrev=null;
+  for(let w=0; w<weeks; w++){
+    const wkMon=ccAddDays(startMon,w*7);
+    const isPS=((w+1)%CONTENT_RULES.progressEvery)===0;
+    Object.keys(CONTENT_RULES.linkedinDays).forEach((person,idx)=>{
+      const date=ymdLocal(ccDowDate(wkMon,CONTENT_RULES.linkedinDays[person]));
+      const cat=isPS?'Progress Summary':CONTENT_RULES.rotationPair[(w+idx)%2];
+      slots.push(ccSlot(person,'LinkedIn','Post',cat,date,w,'Weekly '+person+' post.'));
+    });
+    const wsK=ymdLocal(wkMon);
+    if(celebs[wsK]){ slots.push(ccSlot('Danny','LinkedIn','Event recap','Event Celebration',wsK,w,'Celebration: '+celebs[wsK]+'.')); dannyPrev='Event Celebration'; }
+    else { const cat=ccNextDannyCat(dannyPrev,w); slots.push(ccSlot('Danny','LinkedIn','Post',cat,wsK,w,"Danny's voice. No repeat of last week.")); dannyPrev=cat; }
+    ((w%2===0)?CONTENT_RULES.reelsWeekA:CONTENT_RULES.reelsWeekB).forEach(dow=>{ slots.push(ccSlot('Danny','Instagram','Reel','',ymdLocal(ccDowDate(wkMon,dow)),w,'Instagram reel.')); });
+    CONTENT_RULES.youtubeDays.forEach(dow=>{ slots.push(ccSlot('James','YouTube','Short','',ymdLocal(ccDowDate(wkMon,dow)),w,'YouTube Short.')); });
+  }
+  return slots;
+}
+function ccGenerate(){
+  const today=ccToday();
+  const existing=ls.get('tuf_content',[])||[];
+  const futureAuto=existing.filter(p=>p.auto&&p.status==='Idea'&&p.date&&p.date>=today);
+  if(futureAuto.length && !confirm(futureAuto.length+' un-edited auto slots will be rebuilt. Anything you have edited or marked done is kept. Continue?')) return;
+  const kept=existing.filter(p=>!(p.auto&&p.status==='Idea'&&p.date&&p.date>=today));
+  const fresh=ccGeneratePlan(8).filter(s=>s.date>=today);
+  ls.set('tuf_content',kept.concat(fresh));
+  if(typeof addNotif==='function') addNotif('Content calendar generated: '+fresh.length+' slots over 8 weeks.');
+  ccWeekOffset=0; renderContent();
+}
+
+// ---- QA ----
+function ccQA(posts){
+  const issues=[]; const today=ccToday(); const startMon=mondayOf(new Date()); const horizon=ymdLocal(ccAddDays(startMon,56));
+  const win=posts.filter(p=>p.date&&p.date>=today&&p.date<=horizon);
+  const bucket={};
+  win.filter(p=>ccHasPlat(p,'LinkedIn')&&p.pillar).forEach(p=>{ const k=p.date+'|'+p.pillar; (bucket[k]=bucket[k]||[]).push(p.owner); });
+  Object.keys(bucket).forEach(k=>{ const owners=[...new Set(bucket[k])]; if(owners.length>1){ const parts=k.split('|'); issues.push(owners.join(' & ')+' both posting '+parts[1]+' on LinkedIn on '+ccShort(parts[0])); } });
+  ['Joe','James','Jasper'].forEach(person=>{ const dow=CONTENT_RULES.linkedinDays[person]; for(let w=0;w<4;w++){ const date=ymdLocal(ccDowDate(ccAddDays(startMon,w*7),dow)); if(date<today) continue; if(!posts.some(p=>p.owner===person&&p.date===date&&ccHasPlat(p,'LinkedIn'))) issues.push(person+' has no LinkedIn post on '+ccShort(date)+' (their '+ccDowName(dow)+')'); } });
+  ['Danny','Joe','James','Jasper'].forEach(person=>{ const wk={}; win.filter(p=>p.owner===person&&p.pillar&&ccHasPlat(p,'LinkedIn')).forEach(p=>{ wk[ymdLocal(mondayOf(new Date(p.date+'T00:00:00')))]=p.pillar; }); const ks=Object.keys(wk).sort(); for(let i=1;i<ks.length;i++){ if(wk[ks[i]]===wk[ks[i-1]]&&wk[ks[i]]!=='Progress Summary') issues.push(person+' runs '+wk[ks[i]]+' two weeks running (w/c '+ccShort(ks[i])+')'); } });
+  ccEvents().forEach(e=>{ if(e.date<today) return; if(e.status&&e.status!=='Confirmed'){ issues.push('Event "'+e.name+'" ('+ccShort(e.date)+') is '+e.status+' — confirm the date before locking'); return; } const has=posts.some(p=>p.pillar==='Event Celebration'&&p.owner==='Danny'&&p.date&&Math.abs((new Date(p.date)-new Date(e.date))/864e5)<=9); if(!has) issues.push('No celebration post scheduled for "'+e.name+'" ('+ccShort(e.date)+')'); });
+  posts.forEach(p=>{ if(/ -- |—|–/.test((p.title||'')+' '+(p.notes||''))) issues.push('Double dash in "'+(p.title||'post').slice(0,36)+'" — TUF copy uses none'); });
+  return issues;
+}
+
+// ---- daily musts ----
+function ccDailyMustsCard(){
+  const k=ccToday(); const d=ls.get('tuf_content_daily',{})||{}; const st=d[k]||{};
+  const items=[['video','Danny talking-head video (saved for the newsletter)'],['stories','Danny 2+ in-action story photos']];
+  return `<div class="card" style="margin-bottom:14px"><div style="font-weight:800;margin-bottom:6px">Daily musts — ${ccShort(k)}</div>${items.map(it=>`<label style="display:flex;align-items:center;gap:9px;padding:5px 0;cursor:pointer"><input type="checkbox" ${st[it[0]]?'checked':''} onchange="ccToggleDaily('${it[0]}')"><span style="font-size:13.5px;color:var(--mut)">${it[1]}</span></label>`).join('')}</div>`;
+}
+function ccToggleDaily(id){ const k=ccToday(); const d=ls.get('tuf_content_daily',{})||{}; d[k]=d[k]||{}; d[k][id]=!d[k][id]; ls.set('tuf_content_daily',d); renderContent(); }
+
+// ---- render ----
+function renderContent(){
+  const host=document.getElementById('content-render'); if(!host) return;
+  document.getElementById('topbar-actions').innerHTML=`<button class="btn btn-k btn-sm" onclick="ccGenerate()">⚡ Generate 8-week plan</button><button class="btn btn-ghost btn-sm" onclick="ccAddModal()">+ Add post</button>`;
+  const posts=ls.get('tuf_content',[])||[];
+  const qa=ccQA(posts);
+  host.innerHTML = ccDailyMustsCard() + ccQAPanel(qa) + ccWeek(posts) + ccRulesPanel();
+}
+function ccQAPanel(qa){
+  return `<div class="card" style="margin-bottom:14px">
+    <div style="font-weight:800;margin-bottom:${qa.length?'8px':'0'}">Rule check ${qa.length?`<span style="color:var(--red)">(${qa.length})</span>`:'<span style="color:var(--grn)">all clear</span>'}</div>
+    ${qa.length? qa.map(m=>`<div style="font-size:12.5px;color:var(--mut);padding:4px 0;border-top:1px solid var(--bdr)">⚠️ ${escHtml(m)}</div>`).join('') : ''}
+  </div>`;
+}
+function ccWeek(posts){
+  const wkMon=ccAddDays(mondayOf(new Date()),ccWeekOffset*7);
+  const days=[]; for(let i=0;i<7;i++) days.push(ccAddDays(wkMon,i));
+  const todayK=ccToday();
+  const byDay={}; posts.forEach(p=>{ if(!p.date) return; (byDay[p.date]=byDay[p.date]||[]).push(p); }); Object.values(byDay).forEach(a=>a.sort((x,y)=>(x.owner||'').localeCompare(y.owner||'')));
+  const planned=posts.filter(p=>p.date&&p.date>=ymdLocal(days[0])&&p.date<=ymdLocal(days[6])).length;
+  const slot=p=>{ const col=CC_OWNER_COLORS[p.owner]||'#888'; const done=p.status==='Posted'; const tag=p.pillar||p.format||''; return `<div onclick="ccEditModal('${p.id}')" style="border-left:3px solid ${col};background:${done?'#f0fdf4':'#fff'};border:1px solid var(--bdr);border-left:3px solid ${col};border-radius:7px;padding:5px 7px;margin-bottom:5px;cursor:pointer">
+      <div style="font-size:11px;font-weight:700;color:var(--k)">${escHtml(p.owner||'')} <span style="font-weight:500;color:var(--mut)">· ${escHtml(p.platform||'')}</span>${done?' <span style="color:var(--grn)">✓</span>':''}</div>
+      ${tag?`<div style="font-size:11px;color:var(--mut)">${escHtml(tag)}</div>`:''}
+    </div>`; };
+  const col=d=>{ const k=ymdLocal(d); const isT=k===todayK; const isOpen=d.getDay()===CONTENT_RULES.openDay; const evs=byDay[k]||[]; return `<div style="background:#fff;border:1px solid ${isT?'var(--y)':'var(--bdr)'};border-radius:10px;padding:8px;min-height:130px">
+      <div style="font-weight:800;font-size:12px">${d.toLocaleDateString('en-GB',{weekday:'short'})}</div>
+      <div style="font-size:11px;color:var(--mut);margin-bottom:6px">${d.getDate()} ${d.toLocaleDateString('en-GB',{month:'short'})}</div>
+      ${evs.map(slot).join('')}
+      ${!evs.length&&isOpen?'<div style="font-size:10px;color:var(--mut);font-style:italic">open / reactive</div>':''}
+      <div onclick="ccAddModal('${k}')" style="font-size:11px;color:var(--mut);cursor:pointer;margin-top:4px">+ add</div>
+    </div>`; };
+  const range=`${days[0].toLocaleDateString('en-GB',{day:'numeric',month:'short'})} – ${days[6].toLocaleDateString('en-GB',{day:'numeric',month:'short'})}`;
+  return `<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px">
+      <div style="display:flex;gap:6px;align-items:center"><button class="btn btn-ghost btn-sm" onclick="ccNav(-1)">←</button><div style="font-weight:700;min-width:150px;text-align:center">${range}</div><button class="btn btn-ghost btn-sm" onclick="ccNav(1)">→</button>${ccWeekOffset!==0?'<button class="btn btn-ghost btn-sm" onclick="ccNav(0)">This week</button>':''}</div>
+      <div style="font-size:12px;color:var(--mut)">${planned} planned this week</div>
+    </div>
+    <div style="overflow-x:auto"><div style="display:grid;grid-template-columns:repeat(7,minmax(94px,1fr));gap:8px;min-width:680px">${days.map(col).join('')}</div></div>`;
+}
+function ccNav(n){ if(n===0) ccWeekOffset=0; else ccWeekOffset+=n; renderContent(); }
+function ccRulesPanel(){
+  return `<div class="card" style="margin-top:14px">
+    <div style="display:flex;justify-content:space-between;align-items:center;cursor:pointer" onclick="ccShowRules=!ccShowRules;renderContent()">
+      <div style="font-weight:800">The content rules</div><div style="color:var(--mut)">${ccShowRules?'▲':'▼'}</div>
+    </div>
+    ${ccShowRules?`<div style="font-size:13px;color:var(--mut);white-space:pre-wrap;line-height:1.65;margin-top:10px">${escHtml(CC_RULES_TEXT)}</div>`:''}
+  </div>`;
+}
+
+// ---- add / edit ----
+function ccFormHtml(p){
+  p=p||{};
+  const plats=['LinkedIn','Instagram','YouTube'];
+  const fmts=['Post','Reel','Short','Talking-head video','Story','Event recap'];
+  return `<div class="grid-2">
+      <div class="form-row"><label class="form-label">Owner</label><select class="form-select" id="cc-owner">${['Danny','Jasper','Joe','James'].map(o=>`<option${p.owner===o?' selected':''}>${o}</option>`).join('')}</select></div>
+      <div class="form-row"><label class="form-label">Platform</label><select class="form-select" id="cc-plat">${plats.map(o=>`<option${p.platform===o?' selected':''}>${o}</option>`).join('')}</select></div>
+    </div>
+    <div class="grid-2">
+      <div class="form-row"><label class="form-label">Category</label><select class="form-select" id="cc-cat"><option value="">— none —</option>${CC_CATEGORIES.map(o=>`<option${p.pillar===o?' selected':''}>${o}</option>`).join('')}</select></div>
+      <div class="form-row"><label class="form-label">Format</label><select class="form-select" id="cc-fmt">${fmts.map(o=>`<option${p.format===o?' selected':''}>${o}</option>`).join('')}</select></div>
+    </div>
+    <div class="grid-2">
+      <div class="form-row"><label class="form-label">Date</label><input class="form-input" type="date" id="cc-date" value="${p.date||''}"></div>
+      <div class="form-row"><label class="form-label">Status</label><select class="form-select" id="cc-status">${CONTENT_STATUSES.map(s=>`<option${(p.status||'Idea')===s?' selected':''}>${s}</option>`).join('')}</select></div>
+    </div>
+    <div class="form-row"><label class="form-label">Title / hook</label><input class="form-input" id="cc-title" value="${escAttr(p.title||'')}" placeholder="Short label for the slot"></div>
+    <div class="form-row"><label class="form-label">Notes ${typeof micBtnHtml==='function'?micBtnHtml('cc-notes'):''}</label><textarea class="form-textarea" id="cc-notes" style="min-height:70px" placeholder="Reminder of what to post (copy is written by the owner)">${escHtml(p.notes||'')}</textarea></div>`;
+}
+function ccReadForm(){ const plat=document.getElementById('cc-plat').value; return { owner:document.getElementById('cc-owner').value, platform:plat, platforms:[plat], pillar:document.getElementById('cc-cat').value, format:document.getElementById('cc-fmt').value, date:document.getElementById('cc-date').value||'', status:document.getElementById('cc-status').value, title:document.getElementById('cc-title').value.trim(), notes:document.getElementById('cc-notes').value.trim() }; }
+function ccAddModal(date){ const p=(typeof date==='string')?{date}:{}; showModal('Add content slot',ccFormHtml(p),`<button class="btn btn-ghost" onclick="closeModal()">Cancel</button><button class="btn btn-k" onclick="ccSave()">Add</button>`); }
+function ccSave(){ const f=ccReadForm(); if(!f.title) f.title=(f.pillar||f.format||f.platform+' post'); const list=ls.get('tuf_content',[])||[]; list.push({id:uid(),...f,auto:false,createdAt:new Date().toISOString()}); ls.set('tuf_content',list); closeModal(); renderContent(); }
+function ccEditModal(id){ const p=(ls.get('tuf_content',[])||[]).find(x=>x.id===id); if(!p)return; showModal('Edit slot',ccFormHtml(p),`<button class="btn btn-red btn-sm" onclick="ccDelete('${id}')">Delete</button>${p.status==='Posted'?'':`<button class="btn btn-ghost btn-sm" onclick="ccMarkPosted('${id}')">Mark posted</button>`}<button class="btn btn-ghost" onclick="closeModal()">Cancel</button><button class="btn btn-k" onclick="ccUpdate('${id}')">Save</button>`); }
+function ccUpdate(id){ const f=ccReadForm(); const list=ls.get('tuf_content',[])||[]; const i=list.findIndex(x=>x.id===id); if(i<0)return; list[i]={...list[i],...f,auto:false}; ls.set('tuf_content',list); closeModal(); renderContent(); }
+function ccMarkPosted(id){ const list=ls.get('tuf_content',[])||[]; const p=list.find(x=>x.id===id); if(!p)return; p.status='Posted'; p.auto=false; ls.set('tuf_content',list); closeModal(); renderContent(); }
+function ccDelete(id){ if(!confirm('Delete this slot?'))return; ls.set('tuf_content',(ls.get('tuf_content',[])||[]).filter(x=>x.id!==id)); closeModal(); renderContent(); }
+
 
 // ═══ DANNY'S CALENDAR (published Outlook ICS → team availability) ═════════════
 const DC_URL_KEY='tuf_danny_cal_url';
