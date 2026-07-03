@@ -16,6 +16,7 @@
 <script>if('serviceWorker' in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('sw.js').catch(function(){});});}</script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/ical.js@1.5.0/build/ical.min.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Montserrat:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
@@ -459,6 +460,7 @@ details>summary::-webkit-details-marker{display:none}
     <div class="sb-item" data-page="budget" onclick="nav('budget',this)"><span class="ico">💷</span>Budget</div>
 
     <div class="sb-section">Team</div>
+    <div class="sb-item" data-page="dannycal" onclick="nav('dannycal',this)"><span class="ico">📆</span>Danny's Calendar</div>
     <div class="sb-item" data-page="roles" onclick="nav('roles',this)"><span class="ico">👥</span>Roles & Responsibilities</div>
     <div class="sb-item" data-page="reviews" onclick="nav('reviews',this)"><span class="ico">📝</span>Weekly Review</div>
     <div class="sb-item" data-page="daily" onclick="nav('daily',this)"><span class="ico">☀️</span>Daily Progress</div>
@@ -810,6 +812,10 @@ details>summary::-webkit-details-marker{display:none}
 
     <div class="page" id="page-holidays">
       <div id="holidays-render"></div>
+    </div>
+
+    <div class="page" id="page-dannycal">
+      <div id="dannycal-render"></div>
     </div>
 
     <div class="page" id="page-teamoverview">
@@ -1708,7 +1714,7 @@ function seedDefaultData(){
 const PAGE_TITLES = {
   myday:'My Day',
   home:'Morning Brief',teamoverview:'Team Overview',tasks:'Tasks',transcript:'Meeting Notes → Tasks',
-  members:'Existing Clients',pipeline:'Sales Pipeline',inbound:'Inbound Leads',
+  members:'Existing Clients',pipeline:'Sales Pipeline',inbound:'Inbound Leads',dannycal:"Danny's Calendar",
   boardroom:'Boardroom',content:'Content',social:'Social Media',ideas:'Content Ideas',kpis:'KPIs',aidump:'AI Tool (Dump)',buildreq:'Build Requests',clientanalysis:'Client Analysis',emaillist:'Email List',watemplates:'WhatsApp Templates',
   prospects:'Warm Prospects',testimonials:'Testimonials',
   onboarding:'Onboarding',sessions:'Session Planner',events:'Event CRM',padel:'Padel Event',
@@ -1744,7 +1750,7 @@ function goPersonTasks(p){ taskViewMode='person'; taskStatusFilter='Open'; taskF
 function renderPage(page){
   const fns = {
     home:renderHome, tasks:renderTasks, transcript:renderTranscript,
-    members:renderMembers, pipeline:renderPipeline, inbound:renderInbound,
+    members:renderMembers, pipeline:renderPipeline, inbound:renderInbound, dannycal:renderDannyCal,
     boardroom:renderBoardroom, content:renderContentHub, social:renderSocial, ideas:renderIdeas, kpis:renderKPIs, aidump:renderAIDump, buildreq:renderBuildRequests, clientanalysis:renderClientAnalysis, emaillist:renderEmailList, watemplates:renderWATemplates,
     prospects:renderProspects, testimonials:renderTestimonials,
     onboarding:renderOnboarding, sessions:renderSessions, events:renderEventCRM, padel:renderPadel,
@@ -4095,6 +4101,133 @@ function postingSlotFor(d){ if(!d) return null; const dt=new Date(d+'T00:00:00')
 let calView='week';                 // 'week' | 'month'
 function ymdLocal(d){ return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
 function mondayOf(d){ const x=new Date(d); x.setHours(0,0,0,0); const day=(x.getDay()+6)%7; x.setDate(x.getDate()-day); return x; }
+
+// ═══ DANNY'S CALENDAR (published Outlook ICS → team availability) ═════════════
+const DC_URL_KEY='tuf_danny_cal_url';
+const DC_CACHE_KEY='tuf_danny_cal_cache';
+let dcWeekOffset=0;
+let dcEventsCache=null;
+function dcTime(d){ return d.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'}); }
+function dcAgo(iso){ const s=Math.round((Date.now()-new Date(iso).getTime())/1000); if(s<60)return'just now'; const m=Math.round(s/60); if(m<60)return m+'m ago'; const h=Math.round(m/60); if(h<24)return h+'h ago'; return Math.round(h/24)+'d ago'; }
+function renderDannyCal(){
+  const host=document.getElementById('dannycal-render'); if(!host) return;
+  const url=ls.str(DC_URL_KEY,'');
+  document.getElementById('topbar-actions').innerHTML = url ? `<button class="btn btn-ghost btn-sm" onclick="dcSettingsModal()">⚙︎ Calendar link</button>` : '';
+  if(!url){ host.innerHTML=dcSetupHtml(); return; }
+  const cache=ls.get(DC_CACHE_KEY,null);
+  if(cache&&cache.ics){ dcRenderFromCache(cache); } else { host.innerHTML='<div class="empty"><div class="ico">📆</div>Loading Danny\'s calendar…</div>'; }
+  const stale=!cache||!cache.fetchedAt||(Date.now()-new Date(cache.fetchedAt).getTime()>15*60*1000);
+  if(stale) dcRefresh(true);
+}
+function dcSetupHtml(){
+  return `<div class="card" style="max-width:640px">
+    <div style="font-size:34px">📆</div>
+    <h3 style="margin:6px 0">See how busy Danny is</h3>
+    <p style="color:var(--mut);font-size:13.5px">Connect Danny's Outlook calendar to show his week here — meetings, times and free slots — for the whole team.</p>
+    <ol style="color:var(--mut);font-size:13px;line-height:1.8;padding-left:18px;margin:10px 0 16px">
+      <li>Danny publishes his calendar in Outlook and copies the ICS link.</li>
+      <li>Deploy the <strong>calendar-proxy</strong> function once.</li>
+      <li>Paste the link below.</li>
+    </ol>
+    <p style="color:var(--mut);font-size:12px;margin:0 0 14px">Full steps are in <strong>DANNY_CALENDAR_SETUP.md</strong>.</p>
+    <button class="btn btn-k" onclick="dcSettingsModal()">Paste calendar link</button>
+  </div>`;
+}
+function dcSettingsModal(){
+  const cur=ls.str(DC_URL_KEY,'');
+  showModal("Danny's Calendar link",`
+    <p style="font-size:12.5px;color:var(--mut);margin:0 0 12px">Paste Danny's published Outlook calendar link (the <strong>ICS</strong> one). See DANNY_CALENDAR_SETUP.md for how he creates it. It stays private to the team.</p>
+    <div class="form-row"><label class="form-label">Published calendar link (.ics)</label><input class="form-input" id="dc-url" placeholder="https://outlook.office365.com/owa/calendar/…/calendar.ics" value="${escAttr(cur)}"></div>
+  `,`${cur?'<button class="btn btn-red btn-sm" onclick="dcClearUrl()">Disconnect</button>':''}<button class="btn btn-ghost" onclick="closeModal()">Cancel</button><button class="btn btn-k" onclick="dcSaveUrl()">Save & load</button>`);
+}
+function dcSaveUrl(){ let u=document.getElementById('dc-url').value.trim(); if(u.toLowerCase().indexOf('webcal://')===0) u='https://'+u.slice(9); ls.setStr(DC_URL_KEY,u); ls.set(DC_CACHE_KEY,null); dcEventsCache=null; closeModal(); renderDannyCal(); if(u) dcRefresh(false); }
+function dcClearUrl(){ if(!confirm("Disconnect Danny's calendar?"))return; ls.setStr(DC_URL_KEY,''); ls.set(DC_CACHE_KEY,null); dcEventsCache=null; closeModal(); renderDannyCal(); }
+async function dcRefresh(silent){
+  const url=ls.str(DC_URL_KEY,''); if(!url) return;
+  if(!sb){ if(!silent) alert('No connection — sign in again.'); return; }
+  const btn=document.getElementById('dc-refresh-btn'); if(btn){ btn.disabled=true; btn.textContent='Refreshing…'; }
+  try{
+    const {data,error}=await sb.functions.invoke('calendar-proxy',{body:{url}});
+    if(error) throw error;
+    if(data&&data.error) throw new Error(data.error);
+    const ics=(data&&data.ics)||'';
+    if(ics.indexOf('BEGIN:VCALENDAR')<0) throw new Error('That link did not return a calendar.');
+    dcEventsCache=null;
+    ls.set(DC_CACHE_KEY,{ics,fetchedAt:new Date().toISOString(),by:CURRENT_USER});
+    const pg=document.getElementById('page-dannycal'); if(pg&&pg.classList.contains('active')) dcRenderFromCache(ls.get(DC_CACHE_KEY));
+  }catch(e){
+    const msg=String((e&&e.message)||e);
+    const notReady=/Failed to send|Function not found|not found|404|Failed to fetch/i.test(msg);
+    if(btn){ btn.disabled=false; btn.textContent='↻ Refresh'; }
+    if(!silent){
+      const nice=notReady?"The calendar-proxy function isn't deployed yet — see DANNY_CALENDAR_SETUP.md.":msg;
+      if(!ls.get(DC_CACHE_KEY)){ const host=document.getElementById('dannycal-render'); if(host) host.innerHTML='<div class="empty"><div class="ico">⚠️</div>'+escHtml(nice)+'<br><br><button class="btn btn-ghost btn-sm" onclick="dcSettingsModal()">Calendar link</button></div>'; }
+      else alert(nice);
+    }
+  }
+}
+function dcParse(ics){
+  if(dcEventsCache) return dcEventsCache;
+  let out=[];
+  if(typeof ICAL!=='undefined'){
+    try{
+      const comp=new ICAL.Component(ICAL.parse(ics));
+      const vevents=comp.getAllSubcomponents('vevent');
+      const rangeStart=ICAL.Time.fromJSDate(new Date(Date.now()-70*864e5),false);
+      const rangeEnd=ICAL.Time.fromJSDate(new Date(Date.now()+98*864e5),false);
+      vevents.forEach(ve=>{
+        try{
+          const ev=new ICAL.Event(ve);
+          const title=ev.summary||'(no title)';
+          if(ev.isRecurring()){
+            const it=ev.iterator(); let next, guard=0;
+            while((next=it.next())&&guard<500){ guard++; if(next.compare(rangeEnd)>0) break; const occ=ev.getOccurrenceDetails(next); if(occ.endDate.compare(rangeStart)<0) continue; out.push({title,start:occ.startDate.toJSDate(),end:occ.endDate.toJSDate(),allDay:occ.startDate.isDate}); }
+          } else if(ev.startDate){
+            const s=ev.startDate, e=ev.endDate; out.push({title,start:s.toJSDate(),end:e?e.toJSDate():new Date(s.toJSDate().getTime()+18e5),allDay:s.isDate});
+          }
+        }catch(_){}
+      });
+    }catch(e){ out=dcParseNaive(ics); }
+  } else { out=dcParseNaive(ics); }
+  dcEventsCache=out; return out;
+}
+function dcParseNaive(ics){
+  const out=[]; const toDate=(s)=>{ if(!s)return null; const m=s.match(/(\d{4})(\d{2})(\d{2})(?:T(\d{2})(\d{2})(\d{2})(Z)?)?/); if(!m)return null; const Y=+m[1],Mo=+m[2]-1,Da=+m[3]; if(m[4]==null)return new Date(Y,Mo,Da); if(m[7])return new Date(Date.UTC(Y,Mo,Da,+m[4],+m[5],+m[6]||0)); return new Date(Y,Mo,Da,+m[4],+m[5],+m[6]||0); };
+  (ics.split('BEGIN:VEVENT').slice(1)).forEach(raw=>{ const b='\n'+raw.split('END:VEVENT')[0]; const g=(k)=>{ const m=b.match(new RegExp('\\n'+k+'[^:\\n]*:([^\\n\\r]+)')); return m?m[1].trim():''; }; const ds=g('DTSTART'); const s=toDate(ds); if(!s)return; const e=toDate(g('DTEND'))||new Date(s.getTime()+18e5); out.push({title:g('SUMMARY')||'(no title)',start:s,end:e,allDay:!/T\d{6}/.test(ds)}); });
+  return out;
+}
+function dcSummary(events){
+  const now=new Date(); const todayK=ymdLocal(now);
+  const today=events.filter(e=>ymdLocal(e.start)===todayK&&!e.allDay).sort((a,b)=>a.start-b.start);
+  const ongoing=today.find(e=>e.start<=now&&e.end>now);
+  const upcoming=today.filter(e=>e.start>now);
+  let label,color,detail;
+  if(ongoing){ label='Busy now'; color='var(--red)'; detail='In “'+escHtml(ongoing.title)+'” until '+dcTime(ongoing.end); }
+  else if(upcoming.length){ label='Free now'; color='var(--grn)'; detail='Next: “'+escHtml(upcoming[0].title)+'” at '+dcTime(upcoming[0].start); }
+  else { label='Free'; color='var(--grn)'; detail=today.length?'No more meetings today':'Nothing scheduled today'; }
+  return `<div class="card" style="display:flex;gap:22px;align-items:center;flex-wrap:wrap">
+    <div><div style="font-size:11px;color:var(--mut);text-transform:uppercase;letter-spacing:.05em;font-weight:700">Danny right now</div><div style="font-size:24px;font-weight:800;color:${color}">${label}</div></div>
+    <div style="flex:1;min-width:200px;font-size:13px;color:var(--mut)">${detail}</div>
+    <div style="text-align:center"><div style="font-size:24px;font-weight:800">${today.length}</div><div style="font-size:11px;color:var(--mut)">meetings today</div></div>
+  </div>`;
+}
+function dcRenderFromCache(cache){
+  const host=document.getElementById('dannycal-render'); if(!host||!cache) return;
+  const events=dcParse(cache.ics);
+  const weekStart=mondayOf(new Date()); weekStart.setDate(weekStart.getDate()+dcWeekOffset*7);
+  const days=[]; for(let i=0;i<7;i++){ const d=new Date(weekStart); d.setDate(d.getDate()+i); days.push(d); }
+  const todayK=ymdLocal(new Date());
+  const byDay={}; events.forEach(ev=>{ const k=ymdLocal(ev.start); (byDay[k]=byDay[k]||[]).push(ev); }); Object.values(byDay).forEach(a=>a.sort((x,y)=>x.start-y.start));
+  const col=d=>{ const k=ymdLocal(d); const isT=k===todayK; const evs=byDay[k]||[]; const head=`<div style="font-weight:800;font-size:12px">${d.toLocaleDateString('en-GB',{weekday:'short'})}</div><div style="font-size:11px;color:var(--mut)">${d.getDate()} ${d.toLocaleDateString('en-GB',{month:'short'})}</div>`; const blocks=evs.length?evs.map(ev=>`<div style="background:var(--k);color:#fff;border-radius:7px;padding:5px 7px;font-size:11px;line-height:1.35"><div style="color:var(--y);font-weight:700">${ev.allDay?'All day':dcTime(ev.start)+'–'+dcTime(ev.end)}</div>${escHtml(ev.title)}</div>`).join(''):'<div style="font-size:11px;color:var(--grn);padding:6px 0;font-weight:600">Free</div>'; return `<div style="background:#fff;border:1px solid ${isT?'var(--y)':'var(--bdr)'};border-radius:10px;padding:8px;min-height:130px">${head}<div style="margin-top:6px;display:flex;flex-direction:column;gap:4px">${blocks}</div></div>`; };
+  const rangeLabel=`${days[0].toLocaleDateString('en-GB',{day:'numeric',month:'short'})} – ${days[6].toLocaleDateString('en-GB',{day:'numeric',month:'short'})}`;
+  host.innerHTML=`${dcSummary(events)}
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin:14px 0 10px">
+      <div style="display:flex;gap:6px;align-items:center"><button class="btn btn-ghost btn-sm" onclick="dcNav(-1)">←</button><div style="font-weight:700;min-width:150px;text-align:center">${rangeLabel}</div><button class="btn btn-ghost btn-sm" onclick="dcNav(1)">→</button>${dcWeekOffset!==0?'<button class="btn btn-ghost btn-sm" onclick="dcNav(0)">Today</button>':''}</div>
+      <div style="display:flex;gap:10px;align-items:center"><span style="font-size:11px;color:var(--mut)">${cache.fetchedAt?'Updated '+dcAgo(cache.fetchedAt):''}</span><button class="btn btn-k btn-sm" id="dc-refresh-btn" onclick="dcRefresh(false)">↻ Refresh</button></div>
+    </div>
+    <div style="overflow-x:auto"><div style="display:grid;grid-template-columns:repeat(7,minmax(92px,1fr));gap:8px;min-width:660px">${days.map(col).join('')}</div></div>`;
+}
+function dcNav(n){ if(n===0) dcWeekOffset=0; else dcWeekOffset+=n; const c=ls.get(DC_CACHE_KEY,null); if(c&&c.ics) dcRenderFromCache(c); }
 let weekStart=mondayOf(new Date());
 function weekNav(n){ const x=new Date(weekStart); x.setDate(x.getDate()+n*7); weekStart=x; renderCalendar(); }
 function weekThis(){ weekStart=mondayOf(new Date()); renderCalendar(); }
