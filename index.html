@@ -323,52 +323,40 @@ details>summary::-webkit-details-marker{display:none}
 .okr-mini:hover{border-color:var(--y);color:var(--y)}
 .okr-conf-hi{color:var(--amb);font-size:11px}
 .okr-conf-lo{color:var(--red);font-size:11px}
-/* CONTENT HUB (dark mission control). All rules scoped to #page-content so nothing leaks. */
-#page-content{background:#0A0A0A;color:#fff;min-height:100%;font-family:Arial,Helvetica,sans-serif;margin:-24px -28px;padding:24px 28px}
-#page-content .chub-h{font-family:var(--font-display)}
-#page-content .chub-title{font-family:var(--font-display);font-size:24px;font-weight:600;margin:0 0 2px}
-#page-content .chub-sub{color:#8a8a8a;font-size:12px;margin-bottom:16px}
-#page-content .chub-statbar{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:18px}
-#page-content .chub-stat{background:#141414;border:1px solid #262626;border-radius:14px;padding:14px 16px}
-#page-content .chub-stat .n{font-family:var(--font-display);font-size:32px;font-weight:600;line-height:1;color:#fff;font-variant-numeric:tabular-nums}
-#page-content .chub-stat .n.warn{color:#FF5252}#page-content .chub-stat .n.ok{color:#4CAF50}#page-content .chub-stat .n.acc{color:var(--y)}
-#page-content .chub-stat .l{font-size:10px;text-transform:uppercase;letter-spacing:.7px;color:#8a8a8a;margin-top:6px}
-#page-content .chub-tabs{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:16px;border-bottom:1px solid #262626}
-#page-content .chub-tab{padding:9px 15px;font-size:13px;font-weight:700;color:#9a9a9a;cursor:pointer;border-radius:9px 9px 0 0}
-#page-content .chub-tab.on{color:#0A0A0A;background:var(--y)}
-#page-content .chub-tab:hover:not(.on){color:#fff}
-#page-content .chub-card{background:#141414;border:1px solid #262626;border-radius:14px;padding:16px 18px;margin-bottom:14px}
-#page-content .chub-card-title{font-family:var(--font-display);font-size:17px;font-weight:600;margin-bottom:10px;color:#fff}
-#page-content .chub-post{background:#1a1a1a;border:1px solid #2a2a2a;border-left:4px solid #888;border-radius:10px;padding:10px 12px;margin-bottom:8px;cursor:pointer;transition:border-color .15s}
-#page-content .chub-post:hover{border-color:#555}
-#page-content .chub-post.overdue{box-shadow:inset 3px 0 0 #FF5252}
-#page-content .chub-badge{display:inline-block;font-size:9px;font-weight:700;padding:2px 7px;border-radius:20px;background:#262626;color:#cfcfcf;margin-right:4px}
-#page-content .chub-badge.li{background:#0a3d5c;color:#7fc4f0}
-#page-content .chub-badge.ig{background:#4a1530;color:#f48fb1}
-#page-content .chub-badge.yt{background:#4a1212;color:#ff8a80}
-#page-content .chub-pill{display:inline-block;font-size:9px;font-weight:700;padding:2px 8px;border-radius:20px;border:1px solid var(--y);color:var(--y)}
-#page-content .chub-type{display:inline-block;font-size:9px;padding:2px 8px;border-radius:20px;background:#222;color:#aaa}
-#page-content .chub-btn{background:var(--y);color:#0A0A0A;border:none;border-radius:9px;padding:8px 14px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit}
-#page-content .chub-btn.ghost{background:transparent;color:#fff;border:1px solid #3a3a3a}
-#page-content .chub-btn.sm{padding:5px 10px;font-size:11px}
-#page-content .chub-bar{height:8px;background:#222;border-radius:6px;overflow:hidden}
-#page-content .chub-bar>div{height:100%;background:var(--y);transition:width .3s}
-#page-content .chub-grid7{display:grid;grid-template-columns:repeat(7,1fr);gap:8px}
-#page-content .chub-day{background:#141414;border:1px solid #242424;border-radius:10px;padding:8px;min-height:96px}
-#page-content .chub-day.today{border-color:var(--y)}
-#page-content .chub-day .dh{font-size:10px;color:#8a8a8a;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px}
-#page-content .chub-muted{color:#8a8a8a;font-size:11px}
-#page-content .chub-dot{display:inline-block;width:9px;height:9px;border-radius:50%;flex-shrink:0}
-#page-content .chub-row{display:flex;align-items:center;gap:8px}
-#page-content a.chub-link{color:var(--y);text-decoration:none;cursor:pointer}
-@media(max-width:768px){#page-content{margin:-12px;padding:12px}#page-content .chub-statbar{grid-template-columns:1fr 1fr}#page-content .chub-grid7{grid-template-columns:1fr}}
+/* Content Calendar (light, matches the app) */
+.cc-strip{display:grid;grid-template-columns:repeat(auto-fit,minmax(112px,1fr));gap:10px;margin-bottom:14px}
+.cc-tile{background:var(--card);border:1px solid var(--bdr);border-radius:var(--r-md);padding:14px 16px;box-shadow:var(--sh-sm)}
+.cc-tile .n{font-family:var(--font-display);font-size:26px;font-weight:600;line-height:1;letter-spacing:-.3px;font-variant-numeric:tabular-nums;color:var(--txt)}
+.cc-tile .l{font-size:10px;color:var(--mut);margin-top:6px;text-transform:uppercase;letter-spacing:.5px;font-weight:600}
+.cc-tile.ok{border-color:var(--grn)}.cc-tile.ok .n{color:var(--grn)}
+.cc-tile.warn{border-color:var(--amb);cursor:pointer}.cc-tile.warn .n{color:var(--amb)}
+.cc-grid{display:grid;grid-template-columns:repeat(7,minmax(120px,1fr));gap:10px;min-width:840px}
+.cc-day{background:var(--card);border:1px solid var(--bdr);border-radius:var(--r-md);padding:10px;min-height:154px;box-shadow:var(--sh-sm)}
+.cc-day.today{border-color:var(--y);box-shadow:var(--ring),var(--sh-sm)}
+.cc-day .dow{font-weight:700;font-size:12px;color:var(--txt)}
+.cc-day .dnum{font-size:11px;color:var(--mut);margin-bottom:8px}
+.cc-slot{border:1px solid var(--bdr);border-left:3px solid var(--mut);border-radius:var(--r-sm);padding:6px 8px;margin-bottom:6px;cursor:pointer;transition:box-shadow .15s,transform .1s;background:var(--w)}
+.cc-slot:hover{box-shadow:var(--sh-md);transform:translateY(-1px)}
+.cc-slot .who{font-weight:700;font-size:11.5px;line-height:1.25}
+.cc-slot .cat{font-size:11px;color:var(--mut);margin-top:1px}
+.cc-slot.done{opacity:.55}
+.cc-plat{display:inline-block;font-size:8.5px;font-weight:800;letter-spacing:.3px;padding:1px 6px;border-radius:20px;vertical-align:middle;margin-left:5px}
+.cc-plat.li{background:#EBF3FB;color:#0A66C2}
+.cc-plat.ig{background:#FCE7F0;color:#C13584}
+.cc-plat.yt{background:#FDEAEA;color:#CC0000}
+.cc-open{font-size:10.5px;color:var(--mut);font-style:italic;border:1px dashed var(--bdr);border-radius:var(--r-sm);padding:6px 8px;text-align:center}
+.cc-add{font-size:11px;color:var(--mut);cursor:pointer;margin-top:4px}
+.cc-add:hover{color:var(--k)}
+.cc-musts{display:flex;gap:24px;flex-wrap:wrap;align-items:center}
+.cc-musts label{display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;color:var(--mut)}
+@media(max-width:768px){.cc-grid{min-width:660px}}
 /* Voice dictation mic button (Web Speech API) */
 .mic-btn{background:transparent;border:1px solid var(--bdr);border-radius:8px;cursor:pointer;font-size:14px;line-height:1;padding:6px 9px;color:inherit;flex-shrink:0;font-family:inherit}
 .mic-btn:hover{border-color:var(--k)}
 .mic-btn.mic-on{background:var(--red);border-color:var(--red);color:#fff;animation:micpulse 1s infinite}
 @keyframes micpulse{0%,100%{opacity:1}50%{opacity:.55}}
-#okr-session .mic-btn,#page-content .mic-btn{border-color:#3a3a42;color:#fff}
-#okr-session .mic-btn:hover,#page-content .mic-btn:hover{border-color:var(--y)}
+#okr-session .mic-btn{border-color:#3a3a42;color:#fff}
+#okr-session .mic-btn:hover{border-color:var(--y)}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important}}
 </style>
 </head>
@@ -4116,7 +4104,7 @@ function mondayOf(d){ const x=new Date(d); x.setHours(0,0,0,0); const day=(x.get
 
 // ═══ CONTENT CALENDAR (built to the TUF content rules) ═══════════════════════
 const CC_CATEGORIES=['Event Celebration','Thought Leadership','Business Update','Framework','Progress Summary'];
-const CC_OWNER_COLORS={Danny:'#0A0A0B',Jasper:'#2563eb',Joe:'#16a34a',James:'#7c3aed'};
+const CC_OWNER_COLORS={Danny:'#8E44AD',Jasper:'#16A085',Joe:'#2471A3',James:'#E67E22'};
 const CC_RULES_TEXT=`Pillars: Event Celebration · Thought Leadership · Business Update · Framework · Progress Summary.
 
 Danny — LinkedIn (8-week, event-anchored): a celebration post on the first Monday on or after every event; between events 1 to 2 a week rotating Thought Leadership, Business Update and Framework (never the same pillar two weeks running). Danny's voice leads.
@@ -4193,8 +4181,8 @@ function ccQA(posts){
 // ---- daily musts ----
 function ccDailyMustsCard(){
   const k=ccToday(); const d=ls.get('tuf_content_daily',{})||{}; const st=d[k]||{};
-  const items=[['video','Danny talking-head video (saved for the newsletter)'],['stories','Danny 2+ in-action story photos']];
-  return `<div class="card" style="margin-bottom:14px"><div style="font-weight:800;margin-bottom:6px">Daily musts — ${ccShort(k)}</div>${items.map(it=>`<label style="display:flex;align-items:center;gap:9px;padding:5px 0;cursor:pointer"><input type="checkbox" ${st[it[0]]?'checked':''} onchange="ccToggleDaily('${it[0]}')"><span style="font-size:13.5px;color:var(--mut)">${it[1]}</span></label>`).join('')}</div>`;
+  const items=[['video','Danny talking-head video'],['stories','Danny 2+ story photos']];
+  return `<div class="card"><div class="card-title">Daily musts · ${ccShort(k)}</div><div class="cc-musts">${items.map(it=>`<label><input type="checkbox" ${st[it[0]]?'checked':''} onchange="ccToggleDaily('${it[0]}')">${it[1]}</label>`).join('')}</div></div>`;
 }
 function ccToggleDaily(id){ const k=ccToday(); const d=ls.get('tuf_content_daily',{})||{}; d[k]=d[k]||{}; d[k][id]=!d[k][id]; ls.set('tuf_content_daily',d); renderContent(); }
 
@@ -4204,45 +4192,54 @@ function renderContent(){
   document.getElementById('topbar-actions').innerHTML=`<button class="btn btn-k btn-sm" onclick="ccGenerate()">⚡ Generate 8-week plan</button><button class="btn btn-ghost btn-sm" onclick="ccAddModal()">+ Add post</button>`;
   const posts=ls.get('tuf_content',[])||[];
   const qa=ccQA(posts);
-  host.innerHTML = ccDailyMustsCard() + ccQAPanel(qa) + ccWeek(posts) + ccRulesPanel();
+  host.innerHTML = ccSummary(posts,qa) + ccDailyMustsCard() + ccWeek(posts) + ccRulesPanel();
 }
-function ccQAPanel(qa){
-  return `<div class="card" style="margin-bottom:14px">
-    <div style="font-weight:800;margin-bottom:${qa.length?'8px':'0'}">Rule check ${qa.length?`<span style="color:var(--red)">(${qa.length})</span>`:'<span style="color:var(--grn)">all clear</span>'}</div>
-    ${qa.length? qa.map(m=>`<div style="font-size:12.5px;color:var(--mut);padding:4px 0;border-top:1px solid var(--bdr)">⚠️ ${escHtml(m)}</div>`).join('') : ''}
-  </div>`;
+function ccSummary(posts,qa){
+  const wkMon=ccAddDays(mondayOf(new Date()),ccWeekOffset*7); const a=ymdLocal(wkMon), b=ymdLocal(ccAddDays(wkMon,6));
+  const wk=posts.filter(p=>p.date&&p.date>=a&&p.date<=b);
+  const li=wk.filter(p=>ccHasPlat(p,'LinkedIn')).length;
+  const reels=wk.filter(p=>p.platform==='Instagram').length;
+  const shorts=wk.filter(p=>p.platform==='YouTube').length;
+  const tile=(n,l)=>`<div class="cc-tile"><div class="n">${n}</div><div class="l">${l}</div></div>`;
+  const qaTile = qa.length
+    ? `<div class="cc-tile warn" onclick="document.getElementById('cc-qa').scrollIntoView({behavior:'smooth'})"><div class="n">${qa.length}</div><div class="l">to fix</div></div>`
+    : `<div class="cc-tile ok"><div class="n">✓</div><div class="l">rules ok</div></div>`;
+  return `<div class="cc-strip">${tile(wk.length,'This week')}${tile(li,'LinkedIn')}${tile(reels,'IG reels')}${tile(shorts,'YT shorts')}${qaTile}</div>
+    ${qa.length?`<div class="card" id="cc-qa"><div class="card-title">Rule check</div>${qa.map(m=>`<div style="font-size:12.5px;color:var(--mut);padding:5px 0;border-top:1px solid var(--bdr)">⚠️ ${escHtml(m)}</div>`).join('')}</div>`:''}`;
 }
 function ccWeek(posts){
   const wkMon=ccAddDays(mondayOf(new Date()),ccWeekOffset*7);
   const days=[]; for(let i=0;i<7;i++) days.push(ccAddDays(wkMon,i));
   const todayK=ccToday();
-  const byDay={}; posts.forEach(p=>{ if(!p.date) return; (byDay[p.date]=byDay[p.date]||[]).push(p); }); Object.values(byDay).forEach(a=>a.sort((x,y)=>(x.owner||'').localeCompare(y.owner||'')));
+  const byDay={}; posts.forEach(p=>{ if(!p.date) return; (byDay[p.date]=byDay[p.date]||[]).push(p); }); Object.values(byDay).forEach(x=>x.sort((m,n)=>(m.owner||'').localeCompare(n.owner||'')));
   const planned=posts.filter(p=>p.date&&p.date>=ymdLocal(days[0])&&p.date<=ymdLocal(days[6])).length;
-  const slot=p=>{ const col=CC_OWNER_COLORS[p.owner]||'#888'; const done=p.status==='Posted'; const tag=p.pillar||p.format||''; return `<div onclick="ccEditModal('${p.id}')" style="border-left:3px solid ${col};background:${done?'#f0fdf4':'#fff'};border:1px solid var(--bdr);border-left:3px solid ${col};border-radius:7px;padding:5px 7px;margin-bottom:5px;cursor:pointer">
-      <div style="font-size:11px;font-weight:700;color:var(--k)">${escHtml(p.owner||'')} <span style="font-weight:500;color:var(--mut)">· ${escHtml(p.platform||'')}</span>${done?' <span style="color:var(--grn)">✓</span>':''}</div>
-      ${tag?`<div style="font-size:11px;color:var(--mut)">${escHtml(tag)}</div>`:''}
+  const platCls={LinkedIn:'li',Instagram:'ig',YouTube:'yt'}, platLbl={LinkedIn:'LinkedIn',Instagram:'IG',YouTube:'YT'};
+  const slot=p=>{ const c=CC_OWNER_COLORS[p.owner]||'var(--mut)'; const cat=p.pillar||p.format||''; return `<div class="cc-slot${p.status==='Posted'?' done':''}" style="border-left-color:${c}" onclick="ccEditModal('${p.id}')">
+      <div class="who" style="color:${c}">${escHtml(p.owner||'')}<span class="cc-plat ${platCls[p.platform]||''}">${platLbl[p.platform]||escHtml(p.platform||'')}</span>${p.status==='Posted'?' <span style="color:var(--grn)">✓</span>':''}</div>
+      ${cat?`<div class="cat">${escHtml(cat)}</div>`:''}
     </div>`; };
-  const col=d=>{ const k=ymdLocal(d); const isT=k===todayK; const isOpen=d.getDay()===CONTENT_RULES.openDay; const evs=byDay[k]||[]; return `<div style="background:#fff;border:1px solid ${isT?'var(--y)':'var(--bdr)'};border-radius:10px;padding:8px;min-height:130px">
-      <div style="font-weight:800;font-size:12px">${d.toLocaleDateString('en-GB',{weekday:'short'})}</div>
-      <div style="font-size:11px;color:var(--mut);margin-bottom:6px">${d.getDate()} ${d.toLocaleDateString('en-GB',{month:'short'})}</div>
+  const col=d=>{ const k=ymdLocal(d); const isT=k===todayK; const isOpen=d.getDay()===CONTENT_RULES.openDay; const evs=byDay[k]||[]; return `<div class="cc-day${isT?' today':''}">
+      <div class="dow">${d.toLocaleDateString('en-GB',{weekday:'short'})}</div><div class="dnum">${d.getDate()} ${d.toLocaleDateString('en-GB',{month:'short'})}</div>
       ${evs.map(slot).join('')}
-      ${!evs.length&&isOpen?'<div style="font-size:10px;color:var(--mut);font-style:italic">open / reactive</div>':''}
-      <div onclick="ccAddModal('${k}')" style="font-size:11px;color:var(--mut);cursor:pointer;margin-top:4px">+ add</div>
+      ${!evs.length&&isOpen?'<div class="cc-open">open / reactive</div>':''}
+      <div class="cc-add" onclick="ccAddModal('${k}')">+ add</div>
     </div>`; };
   const range=`${days[0].toLocaleDateString('en-GB',{day:'numeric',month:'short'})} – ${days[6].toLocaleDateString('en-GB',{day:'numeric',month:'short'})}`;
-  return `<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px">
-      <div style="display:flex;gap:6px;align-items:center"><button class="btn btn-ghost btn-sm" onclick="ccNav(-1)">←</button><div style="font-weight:700;min-width:150px;text-align:center">${range}</div><button class="btn btn-ghost btn-sm" onclick="ccNav(1)">→</button>${ccWeekOffset!==0?'<button class="btn btn-ghost btn-sm" onclick="ccNav(0)">This week</button>':''}</div>
+  return `<div class="card" style="padding:16px 18px">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px">
+      <div style="display:flex;gap:6px;align-items:center"><button class="btn btn-ghost btn-sm" onclick="ccNav(-1)">←</button><div style="font-family:var(--font-display);font-size:16px;font-weight:600;min-width:150px;text-align:center">${range}</div><button class="btn btn-ghost btn-sm" onclick="ccNav(1)">→</button>${ccWeekOffset!==0?'<button class="btn btn-ghost btn-sm" onclick="ccNav(0)">This week</button>':''}</div>
       <div style="font-size:12px;color:var(--mut)">${planned} planned this week</div>
     </div>
-    <div style="overflow-x:auto"><div style="display:grid;grid-template-columns:repeat(7,minmax(94px,1fr));gap:8px;min-width:680px">${days.map(col).join('')}</div></div>`;
+    <div style="overflow-x:auto"><div class="cc-grid">${days.map(col).join('')}</div></div>
+  </div>`;
 }
 function ccNav(n){ if(n===0) ccWeekOffset=0; else ccWeekOffset+=n; renderContent(); }
 function ccRulesPanel(){
-  return `<div class="card" style="margin-top:14px">
+  return `<div class="card">
     <div style="display:flex;justify-content:space-between;align-items:center;cursor:pointer" onclick="ccShowRules=!ccShowRules;renderContent()">
-      <div style="font-weight:800">The content rules</div><div style="color:var(--mut)">${ccShowRules?'▲':'▼'}</div>
+      <div class="card-title" style="margin:0">The content rules</div><div style="color:var(--mut)">${ccShowRules?'▲':'▼'}</div>
     </div>
-    ${ccShowRules?`<div style="font-size:13px;color:var(--mut);white-space:pre-wrap;line-height:1.65;margin-top:10px">${escHtml(CC_RULES_TEXT)}</div>`:''}
+    ${ccShowRules?`<div style="font-size:13px;color:var(--mut);white-space:pre-wrap;line-height:1.65;margin-top:12px">${escHtml(CC_RULES_TEXT)}</div>`:''}
   </div>`;
 }
 
