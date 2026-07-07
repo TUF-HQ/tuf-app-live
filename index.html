@@ -3028,7 +3028,10 @@ function updateMember(id){
     status:document.getElementById('em-status').value,
     retention:parseInt(document.getElementById('em-ret').value)||null,
     notes:document.getElementById('em-notes').value.trim()};
-  ls.set('tuf_members',members);closeModal();renderMembers();showMemberDetail(id);
+  ls.set('tuf_members',members);closeModal();
+  const bp=document.getElementById('page-boardroom');
+  if(bp&&bp.classList.contains('active')){ renderBoardroom(); }
+  else { renderMembers();showMemberDetail(id); }
 }
 function memberToPipeline(id){
   const members=ls.get('tuf_members',[]); const m=members.find(x=>x.id===id); if(!m)return;
@@ -6670,15 +6673,16 @@ function renderBoardroom(){
   }
   // Boardroom Roster (paying vs complimentary)
   const comp=allMembers.filter(m=>m.type==='existing_client'&&m.boardroomAccess);
+  const brContact=m=>{ const bits=[m.email?`✉️ <a href="mailto:${escAttr(m.email)}" style="color:var(--blu)">${escHtml(m.email)}</a>`:'', m.phone?`📞 ${escHtml(m.phone)}`:''].filter(Boolean).join('&nbsp;·&nbsp;'); return bits?`<div style="font-size:11px;color:var(--mut);margin-top:3px">${bits}</div>`:`<div style="font-size:11px;color:var(--amb);margin-top:3px">No contact details yet</div>`; };
   let roster=`<div style="font-size:11px;color:var(--mut);margin-bottom:10px">Paying members count towards Boardroom MRR. Private clients have complimentary access as part of their existing service and do not.</div>`;
-  roster+=`<div style="font-size:11px;font-weight:700;color:var(--mut);margin-bottom:4px">Paying (${bMembers.length})</div>`+(bMembers.length?bMembers.map(m=>`<div style="display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px solid var(--bdr)"><span style="flex:1;font-size:12px;font-weight:600">${escHtml(m.name)}</span><span class="tag tag-g" style="font-size:9px">£${bFee(m).toLocaleString()}/mo</span></div>`).join(''):'<div style="font-size:11px;color:var(--mut)">None yet</div>');
-  roster+=`<div style="font-size:11px;font-weight:700;color:var(--mut);margin:12px 0 4px">Complimentary access (${comp.length})</div>`+(comp.length?comp.map(m=>`<div style="display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px solid var(--bdr)"><span style="flex:1;font-size:12px;font-weight:600">${escHtml(m.name)}</span><span class="tag tag-b" style="font-size:9px">Free</span><button class="btn btn-ghost btn-sm" onclick="brRemoveAccess('${m.id}')">Remove</button></div>`).join(''):'<div style="font-size:11px;color:var(--mut)">None yet</div>');
+  roster+=`<div style="font-size:11px;font-weight:700;color:var(--mut);margin-bottom:4px">Paying (${bMembers.length})</div>`+(bMembers.length?bMembers.map(m=>`<div style="padding:6px 0;border-bottom:1px solid var(--bdr)"><div style="display:flex;align-items:center;gap:8px"><span style="flex:1;font-size:12px;font-weight:600">${escHtml(m.name)}${m.co?` <span style="font-weight:400;color:var(--mut)">· ${escHtml(m.co)}</span>`:''}</span><span class="tag tag-g" style="font-size:9px">£${bFee(m).toLocaleString()}/mo</span><button class="btn btn-ghost btn-sm" onclick="editMemberModal('${m.id}')">${(m.email||m.phone)?'Edit':'+ Contact'}</button></div>${brContact(m)}</div>`).join(''):'<div style="font-size:11px;color:var(--mut)">None yet</div>');
+  roster+=`<div style="font-size:11px;font-weight:700;color:var(--mut);margin:12px 0 4px">Complimentary access (${comp.length})</div>`+(comp.length?comp.map(m=>`<div style="padding:6px 0;border-bottom:1px solid var(--bdr)"><div style="display:flex;align-items:center;gap:8px"><span style="flex:1;font-size:12px;font-weight:600">${escHtml(m.name)}${m.co?` <span style="font-weight:400;color:var(--mut)">· ${escHtml(m.co)}</span>`:''}</span><span class="tag tag-b" style="font-size:9px">Free</span><button class="btn btn-ghost btn-sm" onclick="editMemberModal('${m.id}')">${(m.email||m.phone)?'Edit':'+ Contact'}</button><button class="btn btn-ghost btn-sm" onclick="brRemoveAccess('${m.id}')">Remove</button></div>${brContact(m)}</div>`).join(''):'<div style="font-size:11px;color:var(--mut)">None yet</div>');
   const guests=allMembers.filter(m=>m.boardroomGuest||m.type==='guest');
   roster+=`<div style="font-size:11px;font-weight:700;color:var(--mut);margin:12px 0 4px">Guests · 1 month free trial (${guests.length})</div>`+(guests.length?guests.map(m=>{
     const dl=m.guestUntil?daysUntil(m.guestUntil):null;
     const lbl=dl===null?'Trial':(dl<0?`ended ${-dl}d ago`:`ends in ${dl}d`);
     const lblColor=dl!==null&&dl<0?'var(--red)':(dl!==null&&dl<=7?'var(--amb)':'var(--mut)');
-    return `<div style="display:flex;align-items:center;gap:6px;padding:4px 0;border-bottom:1px solid var(--bdr)"><span style="flex:1;font-size:12px;font-weight:600">${escHtml(m.name)}${m.co?` <span style="font-weight:400;color:var(--mut)">${escHtml(m.co)}</span>`:''}</span><span style="font-size:9px;color:${lblColor};font-weight:700">${lbl}</span><button class="btn btn-ghost btn-sm" onclick="brConvertGuest('${m.id}')" title="Convert to paying member">Convert</button><button class="btn btn-ghost btn-sm" onclick="brRemoveGuest('${m.id}')">Remove</button></div>`;
+    return `<div style="padding:6px 0;border-bottom:1px solid var(--bdr)"><div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap"><span style="flex:1;min-width:110px;font-size:12px;font-weight:600">${escHtml(m.name)}${m.co?` <span style="font-weight:400;color:var(--mut)">· ${escHtml(m.co)}</span>`:''}</span><span style="font-size:9px;color:${lblColor};font-weight:700">${lbl}</span><button class="btn btn-ghost btn-sm" onclick="editMemberModal('${m.id}')">${(m.email||m.phone)?'Edit':'+ Contact'}</button><button class="btn btn-ghost btn-sm" onclick="brConvertGuest('${m.id}')" title="Convert to paying member">Convert</button><button class="btn btn-ghost btn-sm" onclick="brRemoveGuest('${m.id}')">Remove</button></div>${brContact(m)}</div>`;
   }).join(''):'<div style="font-size:11px;color:var(--mut)">None yet</div>');
   roster+=`<div style="display:flex;gap:6px;margin-top:12px"><button class="btn btn-k btn-sm" style="flex:1" onclick="brAddRosterModal()">+ Add from CRM</button><button class="btn btn-ghost btn-sm" style="flex:1" onclick="brAddGuestModal()">+ Add guest</button></div>`;
   document.getElementById('boardroom-roster').innerHTML=roster;
