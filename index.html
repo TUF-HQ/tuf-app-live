@@ -3366,7 +3366,7 @@ function renderEventCRM(){
   const hot=all.filter(a=>(parseInt(a.score)||0)>=8).length;
   const scores=all.map(a=>parseInt(a.score)||0).filter(n=>n>0);
   const avg=scores.length?(scores.reduce((s,n)=>s+n,0)/scores.length).toFixed(1):'—';
-  document.getElementById('topbar-actions').innerHTML=`<button class="btn btn-k btn-sm" onclick="addELModal()">+ Add attendee</button>`;
+  document.getElementById('topbar-actions').innerHTML=`<button class="btn btn-ghost btn-sm" onclick="elAddFromModal()">+ From clients/members</button><button class="btn btn-k btn-sm" onclick="addELModal()">+ Add attendee</button>`;
   el.innerHTML=`
     ${elEventsPanel(events)}
     <div class="grid-4" style="margin-bottom:14px">
@@ -3403,6 +3403,42 @@ function saveEL(){
   const a=ls.get('tuf_event_attendees',[]);
   a.push({id:uid(),name,co:document.getElementById('nel-co').value.trim(),email:document.getElementById('nel-email').value.trim(),phone:document.getElementById('nel-phone').value.trim(),event:document.getElementById('nel-event').value.trim(),eventDate:document.getElementById('nel-evdate').value||'',score:elClampScore(document.getElementById('nel-score').value),owner:document.getElementById('nel-owner').value,notes:document.getElementById('nel-notes').value.trim(),addedDate:new Date().toISOString().slice(0,10)});
   ls.set('tuf_event_attendees',a);closeModal();renderEventCRM();addNotif(`Event attendee added: ${name}`);
+}
+// Add existing people (members / clients / guests / prospects) to the Event CRM.
+function elAddFromModal(){
+  const members=ls.get('tuf_members',[])||[]; const prospects=ls.get('tuf_prospects',[])||[];
+  const evNames=elEventNameOpts();
+  const row=(p,src)=>`<label style="display:flex;align-items:center;gap:8px;padding:5px 0;cursor:pointer;font-size:12.5px;border-bottom:1px solid var(--bdr)"><input type="checkbox" class="el-pick" data-src="${src}" data-id="${p.id}"><span style="flex:1">${escHtml(p.name||'(no name)')}${p.co?` <span style="color:var(--mut)">· ${escHtml(p.co)}</span>`:''}</span><span style="font-size:9px;color:${(p.email||p.phone)?'var(--grn)':'var(--amb)'}">${(p.email||p.phone)?'has contact':'no contact'}</span></label>`;
+  const group=(label,arr,src)=> arr.length?`<div style="font-size:11px;font-weight:700;color:var(--mut);margin:10px 0 2px">${label} (${arr.length})</div>`+arr.map(p=>row(p,src)).join(''):'';
+  const bMembers=members.filter(m=>m.status==='active'&&(!m.type||m.type==='boardroom')&&!m.boardroomGuest);
+  const clients=members.filter(m=>m.status==='active'&&m.type==='existing_client');
+  const guests=members.filter(m=>m.boardroomGuest||m.type==='guest');
+  const anyPeople=bMembers.length+clients.length+guests.length+prospects.length;
+  showModal('Add existing people to Event CRM',`
+    <div style="font-size:11px;color:var(--mut);margin-bottom:8px">Set the event once, then tick everyone who attended. Their name, business, email and phone are copied across.</div>
+    <div class="grid-2"><div class="form-row"><label class="form-label">Event attended</label><input class="form-input" id="elf-event" list="elf-evnames" placeholder="e.g. Padel Event"><datalist id="elf-evnames">${evNames.map(n=>`<option value="${escHtml(n)}">`).join('')}</datalist></div><div class="form-row"><label class="form-label">Date of event</label><input class="form-input" type="date" id="elf-evdate"></div></div>
+    <div class="grid-2"><div class="form-row"><label class="form-label">Boardroom likelihood (1-10)</label><input class="form-input" type="number" min="1" max="10" id="elf-score" placeholder="optional"></div><div class="form-row"><label class="form-label">Owner</label><select class="form-select" id="elf-owner">${['Danny','Joe','Jasper','James'].map(o=>`<option${o===CURRENT_USER?' selected':''}>${o}</option>`).join('')}</select></div></div>
+    <div style="max-height:250px;overflow-y:auto;border:1px solid var(--bdr);border-radius:8px;padding:4px 12px;margin-top:4px">
+      ${anyPeople?group('Boardroom members',bMembers,'m')+group('Private clients',clients,'m')+group('Guests',guests,'m')+group('Pipeline prospects',prospects,'p'):'<div style="font-size:12px;color:var(--mut);padding:10px 0">No existing people found yet.</div>'}
+    </div>
+  `,`<button class="btn btn-ghost" onclick="closeModal()">Cancel</button><button class="btn btn-k" onclick="elAddFromSave()">Add selected</button>`);
+}
+function elAddFromSave(){
+  const picks=[...document.querySelectorAll('.el-pick:checked')];
+  if(!picks.length){ alert('Tick at least one person first.'); return; }
+  const event=document.getElementById('elf-event').value.trim();
+  const eventDate=document.getElementById('elf-evdate').value||'';
+  const score=elClampScore(document.getElementById('elf-score').value);
+  const owner=document.getElementById('elf-owner').value;
+  const members=ls.get('tuf_members',[])||[]; const prospects=ls.get('tuf_prospects',[])||[];
+  const att=ls.get('tuf_event_attendees',[])||[];
+  let n=0, dup=0;
+  picks.forEach(chk=>{ const src=chk.getAttribute('data-src'); const id=chk.getAttribute('data-id'); const p=(src==='p'?prospects:members).find(x=>x.id===id); if(!p) return;
+    if(att.some(a=>(a.name||'').toLowerCase()===(p.name||'').toLowerCase() && (a.event||'')===event)){ dup++; return; }
+    att.push({id:uid(),name:p.name||'',co:p.co||'',email:p.email||'',phone:p.phone||'',event,eventDate,score,owner,notes:'',addedDate:new Date().toISOString().slice(0,10),fromMemberId:src==='m'?id:'',fromProspectId:src==='p'?id:''}); n++;
+  });
+  ls.set('tuf_event_attendees',att); closeModal(); renderEventCRM();
+  addNotif(`${n} added to Event CRM${dup?` (${dup} already there, skipped)`:''}`);
 }
 function editELModal(id){
   const a=ls.get('tuf_event_attendees',[]).find(x=>x.id===id);if(!a)return;
