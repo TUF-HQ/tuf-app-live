@@ -2890,7 +2890,9 @@ function renderMembers(){
   } else if(memberFilter==='private'){
     document.getElementById('members-list').innerHTML='<div class="sec-hdr" style="margin-bottom:10px">Private Clients</div>'+existing.map(memberCard).join('');
   } else if(memberFilter==='attendees'){
-    document.getElementById('members-list').innerHTML='<div class="sec-hdr" style="margin-bottom:10px">Event Attendees</div><div class="empty" style="margin-top:0"><div class="ico">👥</div>Import event attendees from Monday.com via the Pipeline tab, or add them manually below.</div><button class="btn btn-ghost btn-sm" style="margin-top:10px" onclick="addProspectModal()">+ Add Attendee</button>';
+    const att=(ls.get('tuf_event_attendees',[])||[]).slice().sort((a,b)=>(b.addedDate||'').localeCompare(a.addedDate||''));
+    const rows=att.length?att.map(a=>{const contact=[a.email?`✉️ ${escHtml(a.email)}`:'',a.phone?`📞 ${escHtml(a.phone)}`:''].filter(Boolean).join('&nbsp;·&nbsp;');return `<div class="card" style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:8px"><div style="min-width:0"><div style="font-weight:700;font-size:13px">${escHtml(a.name||'')}${a.co?` <span style="font-weight:400;color:var(--mut)">· ${escHtml(a.co)}</span>`:''}</div><div style="font-size:11px;color:var(--mut);margin-top:3px">${a.event?escHtml(a.event):'No event set'}${a.eventDate?' · '+fmtDate(a.eventDate):''}${contact?'<br>'+contact:'<br><span style="color:var(--amb)">No contact details</span>'}</div></div>${a.score?`<span class="tag tag-a" style="flex-shrink:0">${a.score}/10</span>`:''}</div>`;}).join(''):'<div class="empty" style="margin-top:0"><div class="ico">👥</div>No event attendees yet. Add existing clients and members, or a new person.</div>';
+    document.getElementById('members-list').innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:12px"><div class="sec-hdr" style="margin:0">Event Attendees (${att.length})</div><div style="display:flex;gap:6px"><button class="btn btn-ghost btn-sm" onclick="elAddFromModal()">+ From clients/members</button><button class="btn btn-k btn-sm" onclick="addELModal()">+ Add attendee</button></div></div>${rows}<div style="margin-top:12px"><a style="font-size:11px;color:var(--blu);cursor:pointer" onclick="nav('events',document.querySelector('[data-page=events]'))">Open full Event CRM →</a></div>`;
   }
 
   document.getElementById('topbar-actions').innerHTML=`
@@ -3402,8 +3404,10 @@ function saveEL(){
   const name=document.getElementById('nel-name').value.trim();if(!name)return;
   const a=ls.get('tuf_event_attendees',[]);
   a.push({id:uid(),name,co:document.getElementById('nel-co').value.trim(),email:document.getElementById('nel-email').value.trim(),phone:document.getElementById('nel-phone').value.trim(),event:document.getElementById('nel-event').value.trim(),eventDate:document.getElementById('nel-evdate').value||'',score:elClampScore(document.getElementById('nel-score').value),owner:document.getElementById('nel-owner').value,notes:document.getElementById('nel-notes').value.trim(),addedDate:new Date().toISOString().slice(0,10)});
-  ls.set('tuf_event_attendees',a);closeModal();renderEventCRM();addNotif(`Event attendee added: ${name}`);
+  ls.set('tuf_event_attendees',a);closeModal();refreshAttendees();addNotif(`Event attendee added: ${name}`);
 }
+// Refresh whichever attendee view is showing (Event CRM page, or the Members "Event Attendees" tab).
+function refreshAttendees(){ const mp=document.getElementById('page-members'); if(mp&&mp.classList.contains('active')){ renderMembers(); return; } try{ renderEventCRM(); }catch(e){} }
 // Add existing people (members / clients / guests / prospects) to the Event CRM.
 function elAddFromModal(){
   const members=ls.get('tuf_members',[])||[]; const prospects=ls.get('tuf_prospects',[])||[];
@@ -3437,7 +3441,7 @@ function elAddFromSave(){
     if(att.some(a=>(a.name||'').toLowerCase()===(p.name||'').toLowerCase() && (a.event||'')===event)){ dup++; return; }
     att.push({id:uid(),name:p.name||'',co:p.co||'',email:p.email||'',phone:p.phone||'',event,eventDate,score,owner,notes:'',addedDate:new Date().toISOString().slice(0,10),fromMemberId:src==='m'?id:'',fromProspectId:src==='p'?id:''}); n++;
   });
-  ls.set('tuf_event_attendees',att); closeModal(); renderEventCRM();
+  ls.set('tuf_event_attendees',att); closeModal(); refreshAttendees();
   addNotif(`${n} added to Event CRM${dup?` (${dup} already there, skipped)`:''}`);
 }
 function editELModal(id){
