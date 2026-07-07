@@ -2890,9 +2890,7 @@ function renderMembers(){
   } else if(memberFilter==='private'){
     document.getElementById('members-list').innerHTML='<div class="sec-hdr" style="margin-bottom:10px">Private Clients</div>'+existing.map(memberCard).join('');
   } else if(memberFilter==='attendees'){
-    const att=(ls.get('tuf_event_attendees',[])||[]).slice().sort((a,b)=>(b.addedDate||'').localeCompare(a.addedDate||''));
-    const rows=att.length?att.map(a=>{const contact=[a.email?`✉️ ${escHtml(a.email)}`:'',a.phone?`📞 ${escHtml(a.phone)}`:''].filter(Boolean).join('&nbsp;·&nbsp;');return `<div class="card" style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:8px"><div style="min-width:0"><div style="font-weight:700;font-size:13px">${escHtml(a.name||'')}${a.co?` <span style="font-weight:400;color:var(--mut)">· ${escHtml(a.co)}</span>`:''}</div><div style="font-size:11px;color:var(--mut);margin-top:3px">${a.event?escHtml(a.event):'No event set'}${a.eventDate?' · '+fmtDate(a.eventDate):''}${contact?'<br>'+contact:'<br><span style="color:var(--amb)">No contact details</span>'}</div></div>${a.score?`<span class="tag tag-a" style="flex-shrink:0">${a.score}/10</span>`:''}</div>`;}).join(''):'<div class="empty" style="margin-top:0"><div class="ico">👥</div>No event attendees yet. Add existing clients and members, or a new person.</div>';
-    document.getElementById('members-list').innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:12px"><div class="sec-hdr" style="margin:0">Event Attendees (${att.length})</div><div style="display:flex;gap:6px"><button class="btn btn-ghost btn-sm" onclick="elAddFromModal()">+ From clients/members</button><button class="btn btn-k btn-sm" onclick="addELModal()">+ Add attendee</button></div></div>${rows}<div style="margin-top:12px"><a style="font-size:11px;color:var(--blu);cursor:pointer" onclick="nav('events',document.querySelector('[data-page=events]'))">Open full Event CRM →</a></div>`;
+    renderBoardroomAttendees();
   }
 
   document.getElementById('topbar-actions').innerHTML=`
@@ -3443,6 +3441,54 @@ function elAddFromSave(){
   });
   ls.set('tuf_event_attendees',att); closeModal(); refreshAttendees();
   addNotif(`${n} added to Event CRM${dup?` (${dup} already there, skipped)`:''}`);
+}
+
+// ═══ BOARDROOM EVENT ATTENDEES (attended a Boardroom Day / Implementation Session) ═══
+// Separate from the Padel/networking Event CRM. Store: tuf_boardroom_attendees, tied to a session.
+function baStore(){ return ls.get('tuf_boardroom_attendees',[])||[]; }
+function baSessions(){ return (ls.get('tuf_sessions',[])||[]).slice().sort((a,b)=>(b.date||'').localeCompare(a.date||'')); }
+function baSessionSelect(id,sel){ return `<select class="form-select" id="${id}"><option value="">— pick a session —</option>${baSessions().map(x=>`<option value="${x.id}"${x.id===sel?' selected':''}>${escHtml(x.name)}${x.date?' · '+fmtDate(x.date):''}</option>`).join('')}</select>`; }
+function baSessionMeta(id){ const s=baSessions().find(x=>x.id===id); return s?{sessionName:s.name,sessionDate:s.date||''}:{sessionName:'',sessionDate:''}; }
+function renderBoardroomAttendees(){
+  const list=baStore().slice().sort((a,b)=>(b.sessionDate||b.addedDate||'').localeCompare(a.sessionDate||a.addedDate||''));
+  const rows=list.length?list.map(a=>{const contact=[a.email?`✉️ ${escHtml(a.email)}`:'',a.phone?`📞 ${escHtml(a.phone)}`:''].filter(Boolean).join('&nbsp;·&nbsp;');return `<div class="card" style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:8px"><div style="min-width:0"><div style="font-weight:700;font-size:13px">${escHtml(a.name||'')}${a.co?` <span style="font-weight:400;color:var(--mut)">· ${escHtml(a.co)}</span>`:''}</div><div style="font-size:11px;color:var(--mut);margin-top:3px">${a.sessionName?'🏛 '+escHtml(a.sessionName):'No session set'}${a.sessionDate?' · '+fmtDate(a.sessionDate):''}${contact?'<br>'+contact:'<br><span style="color:var(--amb)">No contact details</span>'}</div></div><div style="display:flex;gap:6px;flex-shrink:0"><button class="btn btn-ghost btn-sm" onclick="baEditModal('${a.id}')">Edit</button><button class="btn btn-ghost btn-sm" onclick="baToPipeline('${a.id}')" title="Add to Sales Pipeline">→ Pipeline</button></div></div>`;}).join(''):'<div class="empty" style="margin-top:0"><div class="ico">🏛</div>No Boardroom attendees logged yet. Add the people who came to a Boardroom Day or Implementation Session.</div>';
+  document.getElementById('members-list').innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:6px"><div class="sec-hdr" style="margin:0">Boardroom Event Attendees (${list.length})</div><div style="display:flex;gap:6px"><button class="btn btn-ghost btn-sm" onclick="baAddFromModal()">+ From clients/members</button><button class="btn btn-k btn-sm" onclick="baAddModal()">+ Add attendee</button></div></div><div style="font-size:11px;color:var(--mut);margin-bottom:12px">Everyone who attended a Boardroom Day or Implementation Session, including those who did not become paying members. Keep their contacts here.</div>${rows}`;
+}
+function baFormRows(a){ a=a||{}; return `<div class="grid-2"><div class="form-row"><label class="form-label">Name</label><input class="form-input" id="ba-name" value="${escAttr(a.name||'')}"></div><div class="form-row"><label class="form-label">Business</label><input class="form-input" id="ba-co" value="${escAttr(a.co||'')}"></div></div>
+  <div class="grid-2"><div class="form-row"><label class="form-label">Email</label><input class="form-input" type="email" id="ba-email" value="${escAttr(a.email||'')}"></div><div class="form-row"><label class="form-label">Phone</label><input class="form-input" type="tel" id="ba-phone" value="${escAttr(a.phone||'')}"></div></div>
+  <div class="grid-2"><div class="form-row"><label class="form-label">Boardroom session attended</label>${baSessionSelect('ba-session',a.sessionId||'')}</div><div class="form-row"><label class="form-label">Owner</label><select class="form-select" id="ba-owner">${['Danny','Joe','Jasper','James'].map(o=>`<option${(a.owner||CURRENT_USER)===o?' selected':''}>${o}</option>`).join('')}</select></div></div>
+  <div class="form-row"><label class="form-label">Notes ${typeof micBtnHtml==='function'?micBtnHtml('ba-notes'):''}</label><textarea class="form-textarea" id="ba-notes" style="min-height:60px">${escHtml(a.notes||'')}</textarea></div>`; }
+function baReadForm(){ const sid=document.getElementById('ba-session').value; const meta=baSessionMeta(sid); return {name:document.getElementById('ba-name').value.trim(),co:document.getElementById('ba-co').value.trim(),email:document.getElementById('ba-email').value.trim(),phone:document.getElementById('ba-phone').value.trim(),sessionId:sid,sessionName:meta.sessionName,sessionDate:meta.sessionDate,owner:document.getElementById('ba-owner').value,notes:document.getElementById('ba-notes').value.trim()}; }
+function baAddModal(){ showModal('Add Boardroom attendee',baFormRows({}),`<button class="btn btn-ghost" onclick="closeModal()">Cancel</button><button class="btn btn-k" onclick="baSave()">Add</button>`); }
+function baSave(){ const f=baReadForm(); if(!f.name){alert('Add a name.');return;} const l=baStore(); l.push({id:uid(),...f,addedDate:new Date().toISOString().slice(0,10)}); ls.set('tuf_boardroom_attendees',l); closeModal(); renderMembers(); addNotif(`Boardroom attendee added: ${f.name}`); }
+function baEditModal(id){ const a=baStore().find(x=>x.id===id); if(!a)return; showModal('Edit Boardroom attendee',baFormRows(a),`<button class="btn btn-red btn-sm" onclick="baDelete('${id}')">Delete</button><button class="btn btn-ghost" onclick="closeModal()">Cancel</button><button class="btn btn-k" onclick="baUpdate('${id}')">Save</button>`); }
+function baUpdate(id){ const f=baReadForm(); const l=baStore(); const i=l.findIndex(x=>x.id===id); if(i<0)return; l[i]={...l[i],...f}; ls.set('tuf_boardroom_attendees',l); closeModal(); renderMembers(); }
+function baDelete(id){ if(!confirm('Remove this attendee?'))return; ls.set('tuf_boardroom_attendees',baStore().filter(x=>x.id!==id)); closeModal(); renderMembers(); }
+function baToPipeline(id){ const a=baStore().find(x=>x.id===id); if(!a)return; const list=ls.get('tuf_prospects',[]); if(list.some(p=>(p.name||'').toLowerCase()===(a.name||'').toLowerCase())&&!confirm(a.name+' may already be in the pipeline. Add again?')) return; const today=new Date().toISOString().slice(0,10); list.push({id:uid(),name:a.name||'',co:a.co||'',email:a.email||'',phone:a.phone||'',stage:'Prospect',temp:'Warm',score:null,nextAction:'Follow up after Boardroom event',nextActionDate:today,notes:('From Boardroom event'+(a.sessionName?': '+a.sessionName:'')+(a.notes?'\n'+a.notes:'')),lastContact:today,sourceEvent:a.sessionName||'Boardroom event'}); ls.set('tuf_prospects',list); addNotif(`${a.name} added to Sales Pipeline`); }
+function baAddFromModal(){
+  const members=ls.get('tuf_members',[])||[]; const prospects=ls.get('tuf_prospects',[])||[];
+  const row=(p,src)=>`<label style="display:flex;align-items:center;gap:8px;padding:5px 0;cursor:pointer;font-size:12.5px;border-bottom:1px solid var(--bdr)"><input type="checkbox" class="ba-pick" data-src="${src}" data-id="${p.id}"><span style="flex:1">${escHtml(p.name||'(no name)')}${p.co?` <span style="color:var(--mut)">· ${escHtml(p.co)}</span>`:''}</span><span style="font-size:9px;color:${(p.email||p.phone)?'var(--grn)':'var(--amb)'}">${(p.email||p.phone)?'has contact':'no contact'}</span></label>`;
+  const group=(label,arr,src)=>arr.length?`<div style="font-size:11px;font-weight:700;color:var(--mut);margin:10px 0 2px">${label} (${arr.length})</div>`+arr.map(p=>row(p,src)).join(''):'';
+  const bMembers=members.filter(m=>m.status==='active'&&(!m.type||m.type==='boardroom')&&!m.boardroomGuest);
+  const clients=members.filter(m=>m.status==='active'&&m.type==='existing_client');
+  const guests=members.filter(m=>m.boardroomGuest||m.type==='guest');
+  const any=bMembers.length+clients.length+guests.length+prospects.length;
+  showModal('Add existing people as Boardroom attendees',`
+    <div style="font-size:11px;color:var(--mut);margin-bottom:8px">Pick the session, then tick everyone who attended. Their contact details are copied across.</div>
+    <div class="grid-2"><div class="form-row"><label class="form-label">Boardroom session</label>${baSessionSelect('baf-session','')}</div><div class="form-row"><label class="form-label">Owner</label><select class="form-select" id="baf-owner">${['Danny','Joe','Jasper','James'].map(o=>`<option${o===CURRENT_USER?' selected':''}>${o}</option>`).join('')}</select></div></div>
+    <div style="max-height:250px;overflow-y:auto;border:1px solid var(--bdr);border-radius:8px;padding:4px 12px;margin-top:4px">${any?group('Boardroom members',bMembers,'m')+group('Private clients',clients,'m')+group('Guests',guests,'m')+group('Pipeline prospects',prospects,'p'):'<div style="font-size:12px;color:var(--mut);padding:10px 0">No existing people found yet.</div>'}</div>
+  `,`<button class="btn btn-ghost" onclick="closeModal()">Cancel</button><button class="btn btn-k" onclick="baAddFromSave()">Add selected</button>`);
+}
+function baAddFromSave(){
+  const picks=[...document.querySelectorAll('.ba-pick:checked')]; if(!picks.length){alert('Tick at least one person first.');return;}
+  const sid=document.getElementById('baf-session').value; const meta=baSessionMeta(sid); const owner=document.getElementById('baf-owner').value;
+  const members=ls.get('tuf_members',[])||[]; const prospects=ls.get('tuf_prospects',[])||[];
+  const l=baStore(); let n=0,dup=0;
+  picks.forEach(chk=>{ const src=chk.getAttribute('data-src'); const id=chk.getAttribute('data-id'); const p=(src==='p'?prospects:members).find(x=>x.id===id); if(!p)return;
+    if(l.some(a=>(a.name||'').toLowerCase()===(p.name||'').toLowerCase()&&a.sessionId===sid)){dup++;return;}
+    l.push({id:uid(),name:p.name||'',co:p.co||'',email:p.email||'',phone:p.phone||'',sessionId:sid,sessionName:meta.sessionName,sessionDate:meta.sessionDate,owner,notes:'',addedDate:new Date().toISOString().slice(0,10),fromMemberId:src==='m'?id:'',fromProspectId:src==='p'?id:''}); n++;
+  });
+  ls.set('tuf_boardroom_attendees',l); closeModal(); renderMembers(); addNotif(`${n} added as Boardroom attendees${dup?` (${dup} already logged, skipped)`:''}`);
 }
 function editELModal(id){
   const a=ls.get('tuf_event_attendees',[]).find(x=>x.id===id);if(!a)return;
