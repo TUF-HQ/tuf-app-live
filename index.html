@@ -3867,10 +3867,11 @@ function renderSessions(){
   sessSelectedId=null;
   const cards=sessions.slice().sort((a,b)=>(a.date||'').localeCompare(b.date||'')).map((s,i)=>{
     const complete=s.status==='Complete';
-    return `<div class="card" style="margin-bottom:8px;cursor:pointer;border-left:4px solid ${complete?'var(--grn)':'var(--y)'}" onclick="sessOpen('${s.id}')">
-      <div style="display:flex;align-items:center;justify-content:space-between">
-        <div><div style="font-family:'Montserrat',sans-serif;font-size:15px;font-weight:700">${escHtml(s.name||('Session '+(i+1)))}</div><div style="font-size:12px;color:var(--mut)">${s.date?fmtDate(s.date):'No date set'}</div></div>
+    return `<div class="card" style="margin-bottom:8px;border-left:4px solid ${complete?'var(--grn)':'var(--y)'}">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+        <div style="flex:1;cursor:pointer" onclick="sessOpen('${s.id}')"><div style="font-family:'Montserrat',sans-serif;font-size:15px;font-weight:700">${escHtml(s.name||('Session '+(i+1)))}</div><div style="font-size:12px;color:var(--mut)">${s.date?fmtDate(s.date):'No date set'}</div></div>
         <span class="tag ${complete?'tag-g':'tag-a'}">${complete?'Complete':'Upcoming'}</span>
+        <button class="btn btn-ghost btn-sm" onclick="sessDelete('${s.id}')" title="Delete session">✕</button>
       </div></div>`;
   }).join('') || '<div class="empty"><div class="ico">📅</div>No sessions yet. Create your first session plan.</div>';
   document.getElementById('sessions-list').innerHTML=cards+renderSessionFeedback();
@@ -3881,6 +3882,7 @@ function sessNewSession(){
   const s={id:uid(),name:'Session '+(sessions.length+1),date:new Date().toISOString().slice(0,10),type:'Boardroom Day',status:'Upcoming',agenda:[],notes:'',blocks:sessDefaultBlocks(),files:[]};
   sessions.push(s); ls.set('tuf_sessions',sessions); sessSelectedId=s.id; sessExpanded=null; renderSessions();
 }
+function sessDelete(id){ const sess=ls.get('tuf_sessions',[]); const s=sess.find(x=>x.id===id); if(!s)return; if(!confirm('Delete "'+(s.name||'this session')+'"'+(s.date?' ('+fmtDate(s.date)+')':'')+'? This cannot be undone.'))return; ls.set('tuf_sessions',sess.filter(x=>x.id!==id)); if(sessSelectedId===id){ sessSelectedId=null; } sessExpanded=null; renderSessions(); addNotif('Session deleted: '+(s.name||'')); }
 function sessOpen(id){ sessSelectedId=id; sessExpanded=null; const sess=ls.get('tuf_sessions',[]); const s=sess.find(x=>x.id===id); if(s&&!s.blocks){ s.blocks=sessDefaultBlocks(); if(!s.files)s.files=[]; ls.set('tuf_sessions',sess); } renderSessions(); }
 function sessBack(){ sessSelectedId=null; sessExpanded=null; renderSessions(); }
 function sessSetField(id,field,val){ const sess=ls.get('tuf_sessions',[]); const s=sess.find(x=>x.id===id); if(!s)return; s[field]=val; ls.set('tuf_sessions',sess); }
@@ -3936,7 +3938,7 @@ function spFileRow(f){ return `<div style="display:flex;align-items:center;gap:8
 function renderSessionPlan(id){
   const sess=ls.get('tuf_sessions',[]); const s=sess.find(x=>x.id===id); if(!s){ sessBack(); return; }
   if(!s.blocks){ s.blocks=sessDefaultBlocks(); } if(!s.files) s.files=[]; if(sessEnsureAnchors(s)) ls.set('tuf_sessions',sess);
-  document.getElementById('topbar-actions').innerHTML=`<button class="btn btn-ghost btn-sm" onclick="sessBack()">← All Sessions</button><button class="btn btn-ghost btn-sm" onclick="sessExportPDF('${id}')">Export PDF</button>`;
+  document.getElementById('topbar-actions').innerHTML=`<button class="btn btn-ghost btn-sm" onclick="sessBack()">← All Sessions</button><button class="btn btn-ghost btn-sm" onclick="sessExportPDF('${id}')">Export PDF</button><button class="btn btn-red btn-sm" onclick="sessDelete('${id}')">Delete session</button>`;
   const items=(s.blocks||[]).slice().sort((a,b)=>spMins(a.start)-spMins(b.start));
   const timeline=items.map(b=>spBlockHtml(s,b)).join('');
   const palette=SP_PALETTE.map(([type])=>`<span class="sp-chip" draggable="true" ondragstart="sessDragType(event,'${type}')">+ ${SP_TITLES[type]}</span>`).join('');
