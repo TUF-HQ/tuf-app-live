@@ -2979,7 +2979,12 @@ function saveMember(){
 function editMemberModal(id){
   const m=ls.get('tuf_members',[]).find(x=>x.id===id);if(!m)return;
   const isClient=(m.type==='existing_client');
-  showModal('Edit Member',`
+  const isGuest=(m.type==='guest'||m.boardroomGuest);
+  showModal('Edit Member',(isGuest?`
+    <input type="hidden" id="em-isguest" value="1">
+    <div style="background:var(--abg);border:1px solid #f0e2c0;border-radius:8px;padding:8px 10px;font-size:11px;color:var(--amb);margin-bottom:12px">Boardroom guest · one month free trial. Saving keeps their guest status.</div>
+    <div class="form-row"><label class="form-label">Trial ends</label><input class="form-input" type="date" id="em-guestuntil" value="${m.guestUntil||''}"></div>
+  `:`
     <div class="form-row"><label class="form-label">Member Type</label>
       <select class="form-select" id="em-type" onchange="toggleEditFeeField()">
         <option value="boardroom"${!isClient?' selected':''}>Boardroom Member (£1,000/month)</option>
@@ -2990,6 +2995,7 @@ function editMemberModal(id){
       <label class="form-label">Monthly Fee (£)</label>
       <input class="form-input" id="em-fee" type="number" value="${isClient?(m.clientFee||''):(m.boardroomFee!=null?m.boardroomFee:1000)}" placeholder="Boardroom standard 1000, or 750 each for a pair">
     </div>
+  `)+`
     <div class="form-row"><label class="form-label">Name</label><input class="form-input" id="em-name" value="${escHtml(m.name)}"></div>
     <div class="form-row"><label class="form-label">Company</label><input class="form-input" id="em-co" value="${escHtml(m.co)}"></div>
     <div class="grid-2">
@@ -3014,9 +3020,12 @@ function toggleEditFeeField(){
 }
 function updateMember(id){
   const members=ls.get('tuf_members',[]);const i=members.findIndex(x=>x.id===id);if(i<0)return;
-  const type=document.getElementById('em-type')?.value||members[i].type||'boardroom';
+  const wasGuest=!!document.getElementById('em-isguest');
+  const type=wasGuest?'guest':(document.getElementById('em-type')?.value||members[i].type||'boardroom');
   members[i]={...members[i],
     type,
+    boardroomGuest:wasGuest?true:(members[i].boardroomGuest||false),
+    guestUntil:wasGuest?(document.getElementById('em-guestuntil')?.value||members[i].guestUntil||''):members[i].guestUntil,
     clientFee:type==='existing_client'?(parseInt(document.getElementById('em-fee')?.value)||0):0,
     boardroomFee:type==='boardroom'?(parseInt(document.getElementById('em-fee')?.value)||1000):(members[i].boardroomFee||0),
     boardroomAccess:type==='existing_client'?(document.getElementById('em-attends')?.value==='yes'):(members[i].boardroomAccess||false),
