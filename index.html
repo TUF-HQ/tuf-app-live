@@ -2914,8 +2914,10 @@ function showMemberDetail(id){
         <span class="tag ${m.status==='active'?'tag-g':'tag-r'}">${m.status}</span>
         ${(m.sessions||[]).map(s=>`<span class="tag tag-b">${s}</span>`).join('')}
       </div>
-      ${(m.fromProspectId||m.sourceEvent)?`<div style="font-size:11px;color:var(--mut);margin-bottom:10px">Journey: ${m.sourceEvent?`event lead from <strong>${escHtml(m.sourceEvent)}</strong> → `:''}sales pipeline → member</div>`:''}
-      <div class="form-row"><label class="form-label">Notes</label><div style="font-size:12px;color:var(--txt);padding:8px;background:#F9F9F9;border-radius:5px;min-height:50px">${escHtml(m.notes)||'No notes yet'}</div></div>
+      ${journeyGet(m.name).length?journeyHtml(m.name):((m.fromProspectId||m.sourceEvent)?`<div style="font-size:11px;color:var(--mut);margin-bottom:10px">Journey: ${m.sourceEvent?`event lead from <strong>${escHtml(m.sourceEvent)}</strong> → `:''}sales pipeline → member</div>`:'')}
+      <div class="form-row"><label class="form-label">Notes log</label><div style="font-size:12px;color:var(--txt);padding:8px;background:#F9F9F9;border-radius:5px;min-height:50px;white-space:pre-wrap">${escHtml(m.notes)||'No notes yet'}</div></div>
+      <div style="display:flex;gap:6px;margin-top:6px"><input class="form-input" id="mn-new" placeholder="Add a dated note" style="flex:1" onkeydown="if(event.key==='Enter')memberNoteAdd('${m.id}')"><button class="btn btn-ghost btn-sm" onclick="memberNoteAdd('${m.id}')">Add note</button></div>
+      ${memberFormsHtml(m)}
       <div style="display:flex;gap:6px;margin-top:10px">
         <div style="flex:1"><div class="form-label">Retention score</div><div style="font-family:'Montserrat',sans-serif;font-size:20px;font-weight:700;color:var(--grn)">${m.retention||'—'}/10</div></div>
         <div style="flex:1"><div class="form-label">Last touchpoint</div><div style="font-size:12px">${m.touchpoint?fmtDate(m.touchpoint):'Not recorded'}</div></div>
@@ -2969,11 +2971,13 @@ function saveMember(){
   const name=document.getElementById('m-name').value.trim();
   if(!name) return;
   const type=document.getElementById('m-type')?.value||'boardroom';
+  if(!dupCheckWarn(name,document.getElementById('m-email')?.value.trim()||''))return;
   const members=ls.get('tuf_members',[]);
   const newM={id:uid(),name,co:document.getElementById('m-co').value.trim(),email:document.getElementById('m-email')?.value.trim()||'',phone:document.getElementById('m-phone')?.value.trim()||'',stage:parseInt(document.getElementById('m-stage').value),notes:document.getElementById('m-notes').value.trim(),status:'active',type,clientFee:type==='existing_client'?(parseInt(document.getElementById('m-fee')?.value)||0):0,boardroomFee:type==='boardroom'?(parseInt(document.getElementById('m-fee')?.value)||1000):0,boardroomAccess:type==='existing_client'?(document.getElementById('m-attends')?.value==='yes'):false,sessions:[],touchpoint:new Date().toISOString().slice(0,10),retention:null};
   members.push(newM);
   ls.set('tuf_members',members);
   addNotif(`New ${type==='boardroom'?'Boardroom member':'private client'} added: ${name}`);
+  journeyLog(name,type==='boardroom'?'Became a Boardroom member':'Added as a private client');
   closeModal();renderMembers();
 }
 function editMemberModal(id){
@@ -3051,6 +3055,7 @@ function memberToPipeline(id){
   const i=members.findIndex(x=>x.id===id); members[i].status='paused';
   ls.set('tuf_prospects',prospects); ls.set('tuf_members',members);
   addNotif(`${m.name} moved back to Sales Pipeline${(fs&&/^\d{4}-\d{2}-\d{2}$/.test(fs))?' (start '+fs+')':''}`);
+  journeyLog(m.name,'Boardroom member → back to Sales Pipeline (delayed start)');
   renderMembers();
   const det=document.getElementById('member-detail'); if(det) det.innerHTML='<div class="empty"><div class="ico">↩</div>Moved to Sales Pipeline. Find them under Sales Pipeline.</div>';
 }
@@ -3090,6 +3095,7 @@ function openProfile(name,company){
       ${row('Testimonials',f.tests.length?f.tests.length+' on file':none)}
       ${row('Open tasks',f.tasks.length?f.tasks.map(t=>escHtml(t.title)).join('<br>'):none)}
     </tbody></table>
+    ${journeyHtml(name)}
     <div class="form-row" style="margin-top:14px"><label class="form-label">Profile notes <span style="font-weight:400;color:var(--mut)">(shared across every section)</span></label><textarea class="form-textarea" id="prof-notes" style="min-height:90px">${escHtml(profileNotesGet(name))}</textarea><button class="btn btn-ghost btn-sm" style="margin-top:6px" onclick="profileSaveNotes('${na}')">Save notes</button></div>
     <div class="card-title" style="margin-top:14px">Add to a section</div>
     <div style="display:flex;flex-wrap:wrap;gap:6px">
@@ -3106,17 +3112,113 @@ function profileAddTo(name,target){
   const f=profileFind(name);
   const co=(f.member&&f.member.co)||(f.prospect&&f.prospect.co)||(f.lead&&f.lead.co)||(f.warm&&f.warm.co)||'';
   const email=(f.member&&f.member.email)||(f.prospect&&f.prospect.email)||(f.lead&&f.lead.email)||'';
-  if(target==='pipeline'){ const l=ls.get('tuf_prospects',[]); l.push({id:uid(),name,co,email,phone:'',stage:'Prospect',temp:'Warm',score:null,nextAction:'',notes:'',lastContact:new Date().toISOString().slice(0,10)}); ls.set('tuf_prospects',l); try{ if(document.getElementById('pipeline-tab-content')) renderPipeline(); }catch(e){} addNotif(name+' added to Sales Pipeline'); }
-  else if(target==='padel'){ const l=ls.get('tuf_event_leads',[]); l.push({id:uid(),name,co,email,phone:'',event:'Padel',assignedTo:CURRENT_USER,notes:'',status:'New Lead',attendance:'Invited',score:'',lastContact:new Date().toISOString().slice(0,10),addedDate:new Date().toISOString().slice(0,10)}); ls.set('tuf_event_leads',l); try{ if(document.getElementById('padel-pipeline')) renderPadel(); }catch(e){} addNotif(name+' added to Padel pipeline'); }
-  else if(target==='member'){ const m=ls.get('tuf_members',[]); m.push({id:uid(),name,co,email,phone:'',stage:3,notes:'',status:'active',type:'boardroom',clientFee:0,boardroomFee:1000,sessions:[],touchpoint:new Date().toISOString().slice(0,10),retention:null,onboardingComplete:true}); ls.set('tuf_members',m); try{ if(document.getElementById('members-list')) renderMembers(); }catch(e){} addNotif(name+' added as a Boardroom member'); }
-  else if(target==='onboarding'){ const m=ls.get('tuf_members',[]); const i=m.findIndex(x=>profileKey(x.name)===profileKey(name)); if(i>=0){ m[i].onboardingComplete=false; m[i].status='active'; } else { m.push({id:uid(),name,co,email,phone:'',stage:3,notes:'',status:'active',type:'boardroom',clientFee:0,boardroomFee:1000,sessions:[],touchpoint:new Date().toISOString().slice(0,10),retention:null,onboardingComplete:false,onboardingType:'new'}); } ls.set('tuf_members',m); try{ if(document.getElementById('ob-member-list')) renderOnboarding(); }catch(e){} addNotif(name+' added to Onboarding'); }
+  if(target==='pipeline'){ const l=ls.get('tuf_prospects',[]); l.push({id:uid(),name,co,email,phone:'',stage:'Prospect',temp:'Warm',score:null,nextAction:'',notes:'',lastContact:new Date().toISOString().slice(0,10)}); ls.set('tuf_prospects',l); try{ if(document.getElementById('pipeline-tab-content')) renderPipeline(); }catch(e){} addNotif(name+' added to Sales Pipeline'); journeyLog(name,'Added to the Sales Pipeline (from profile)'); }
+  else if(target==='padel'){ const l=ls.get('tuf_event_leads',[]); l.push({id:uid(),name,co,email,phone:'',event:'Padel',assignedTo:CURRENT_USER,notes:'',status:'New Lead',attendance:'Invited',score:'',lastContact:new Date().toISOString().slice(0,10),addedDate:new Date().toISOString().slice(0,10)}); ls.set('tuf_event_leads',l); try{ if(document.getElementById('padel-pipeline')) renderPadel(); }catch(e){} addNotif(name+' added to Padel pipeline'); journeyLog(name,'Added to the Padel pipeline (from profile)'); }
+  else if(target==='member'){ const m=ls.get('tuf_members',[]); m.push({id:uid(),name,co,email,phone:'',stage:3,notes:'',status:'active',type:'boardroom',clientFee:0,boardroomFee:1000,sessions:[],touchpoint:new Date().toISOString().slice(0,10),retention:null,onboardingComplete:true}); ls.set('tuf_members',m); try{ if(document.getElementById('members-list')) renderMembers(); }catch(e){} addNotif(name+' added as a Boardroom member'); journeyLog(name,'Became a Boardroom member (from profile)'); }
+  else if(target==='onboarding'){ const m=ls.get('tuf_members',[]); const i=m.findIndex(x=>profileKey(x.name)===profileKey(name)); if(i>=0){ m[i].onboardingComplete=false; m[i].status='active'; } else { m.push({id:uid(),name,co,email,phone:'',stage:3,notes:'',status:'active',type:'boardroom',clientFee:0,boardroomFee:1000,sessions:[],touchpoint:new Date().toISOString().slice(0,10),retention:null,onboardingComplete:false,onboardingType:'new'}); } ls.set('tuf_members',m); try{ if(document.getElementById('ob-member-list')) renderOnboarding(); }catch(e){} addNotif(name+' added to Onboarding'); journeyLog(name,'Entered Onboarding'); }
   openProfile(name,co);
+}
+// ── Client journey (stage history, per person, shared via tuf_profiles) ──
+function journeyLog(name,entry){
+  if(!(name||'').trim()||!entry) return;
+  const p=ls.get('tuf_profiles',{})||{}; const k=profileKey(name);
+  p[k]=p[k]||{}; p[k].journey=p[k].journey||[];
+  const today=new Date().toISOString().slice(0,10);
+  if(p[k].journey.some(j=>j.date===today&&j.entry===entry)) return; // no same-day duplicates
+  p[k].journey.push({date:today,entry,by:typeof CURRENT_USER!=='undefined'?CURRENT_USER:''});
+  ls.set('tuf_profiles',p);
+}
+function journeyGet(name){ const p=ls.get('tuf_profiles',{})||{}; return ((p[profileKey(name)]||{}).journey||[]).slice(); }
+function journeyHtml(name){
+  const j=journeyGet(name); if(!j.length) return '';
+  return `<div class="card-title" style="margin-top:14px">Journey</div><div style="border-left:2px solid var(--bdr);padding-left:12px;margin-left:4px;margin-bottom:4px">${j.map(x=>`<div style="font-size:12px;padding:4px 0"><span style="color:var(--mut);font-variant-numeric:tabular-nums">${fmtDate(x.date)}</span> · ${escHtml(x.entry)}${x.by?` <span style="color:var(--mut);font-size:10.5px">(${escHtml(x.by)})</span>`:''}</div>`).join('')}</div>`;
+}
+// ── Duplicate guard: one person, one record per section ──
+function dupCheckWarn(name,email){
+  const k=profileKey(name); if(!k) return true;
+  const em=(email||'').trim().toLowerCase();
+  const places=[];
+  const scan=(arr,label)=>{ (arr||[]).forEach(x=>{ if(profileKey(x.name)===k||(em&&(x.email||'').trim().toLowerCase()===em)) places.push(label); }); };
+  scan(ls.get('tuf_members',[]),'Clients and Members');
+  scan(ls.get('tuf_prospects',[]),'Sales Pipeline');
+  scan(ls.get('tuf_event_attendees',[]),'Event CRM');
+  scan(ls.get('tuf_boardroom_attendees',[]),'Boardroom Attendees');
+  if(!places.length) return true;
+  const uniq=[...new Set(places)];
+  return confirm(`${name} already exists in: ${uniq.join(', ')}. One person should only have one record per section. Add anyway?`);
 }
 function deleteMember(id){if(!confirm('Delete this member?'))return;const members=ls.get('tuf_members',[]).filter(x=>x.id!==id);ls.set('tuf_members',members);closeModal();renderMembers();document.getElementById('member-detail').innerHTML='<div class="empty"><div class="ico">👤</div>Select a member to view their profile</div>';}
 function logTouchpoint(id){
   const members=ls.get('tuf_members',[]);const i=members.findIndex(x=>x.id===id);if(i<0)return;
   members[i].touchpoint=new Date().toISOString().slice(0,10);
   ls.set('tuf_members',members);showMemberDetail(id);addNotif(`Touchpoint logged for ${members[i].name}`);
+}
+// ── Member notes log (append only, timestamped) ──
+function memberNoteAdd(id){
+  const inp=document.getElementById('mn-new'); const v=(inp?.value||'').trim(); if(!v) return;
+  const members=ls.get('tuf_members',[]); const i=members.findIndex(x=>x.id===id); if(i<0) return;
+  const stamp='['+new Date().toISOString().slice(0,10)+' · '+CURRENT_USER+'] ';
+  members[i].notes=((members[i].notes||'')+(members[i].notes?'\n':'')+stamp+v).trim();
+  ls.set('tuf_members',members); showMemberDetail(id); addNotif('Note added for '+members[i].name);
+}
+// ── Prep and feedback forms on a member's record (stored in tuf_files) ──
+function memberFormsHtml(m){
+  const files=(ls.get('tuf_files',[])||[]).filter(f=>f.memberId===m.id);
+  const sec=(type,label)=>{
+    const list=files.filter(f=>f.formType===type).sort((a,b)=>(b.updated||'').localeCompare(a.updated||''));
+    return `<div style="display:flex;justify-content:space-between;align-items:center;margin-top:12px"><div class="form-label" style="margin:0">${label} (${list.length})</div><button class="btn btn-ghost btn-sm" onclick="memberFormModal('${m.id}','${type}')">+ File one</button></div>
+    ${list.length?list.map(f=>`<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:12px;padding:6px 8px;border:1px solid var(--bdr);border-radius:6px;margin-top:5px"><span style="min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${f.kind==='upload'?'📎':'📝'} ${escHtml(f.name)}</span><span style="display:flex;gap:6px;align-items:center;flex-shrink:0"><span style="color:var(--mut);font-size:10.5px">${f.updated?fmtDate(f.updated):''}</span><button class="btn btn-ghost btn-sm" onclick="memberFormOpen('${f.id}')">Open</button></span></div>`).join(''):`<div style="font-size:11px;color:var(--mut);margin-top:4px">None filed yet.</div>`}`;
+  };
+  return sec('prep','Prep forms')+sec('feedback','Feedback forms');
+}
+function memberFormModal(memberId,type){
+  const label=type==='prep'?'Prep form':'Feedback form';
+  showModal('File a '+label,`
+    <div style="font-size:11px;color:var(--mut);margin-bottom:10px">Paste the form content below, or attach a file. It is saved to this member's record with a dated pointer in their notes log. Forms are never deleted.</div>
+    <div class="grid-2"><div class="form-row"><label class="form-label">Session or title</label><input class="form-input" id="mf-title" placeholder="e.g. Boardroom Session 2"></div><div class="form-row"><label class="form-label">Date</label><input class="form-input" type="date" id="mf-date" value="${new Date().toISOString().slice(0,10)}"></div></div>
+    <div class="form-row"><label class="form-label">Paste the form content ${typeof micBtnHtml==='function'?micBtnHtml('mf-text'):''}</label><textarea class="form-textarea" id="mf-text" style="min-height:120px" placeholder="Paste the whole form here"></textarea></div>
+    <div class="form-row"><label class="form-label">Or attach a file <span style="font-weight:400;color:var(--mut)">(needs the Documents storage setup)</span></label><input class="form-input" type="file" id="mf-file"></div>
+    <div id="mf-status" style="font-size:12px;margin-top:6px"></div>
+  `,`<button class="btn btn-ghost" onclick="closeModal()">Cancel</button><button class="btn btn-k" id="mf-btn" onclick="memberFormSave('${memberId}','${type}')">File it</button>`);
+}
+async function memberFormSave(memberId,type){
+  const m=(ls.get('tuf_members',[])||[]).find(x=>x.id===memberId); if(!m){closeModal();return;}
+  const label=type==='prep'?'Prep form':'Feedback form';
+  const say=msg=>{ const s=document.getElementById('mf-status'); if(s) s.innerHTML='<span style="color:var(--red)">'+msg+'</span>'; };
+  const title=(document.getElementById('mf-title')?.value||'').trim();
+  const date=document.getElementById('mf-date')?.value||new Date().toISOString().slice(0,10);
+  const text=(document.getElementById('mf-text')?.value||'').trim();
+  const fileEl=document.getElementById('mf-file'); const file=fileEl&&fileEl.files&&fileEl.files[0];
+  if(!text&&!file){ say('Paste the form content or attach a file first.'); return; }
+  const name=label+(title?': '+title:'')+' ('+fmtDate(date)+')';
+  const rec={id:uid(),name,cat:'Boardroom Reports',type:'Form',by:CURRENT_USER,updated:date,memberId,memberName:m.name,formType:type};
+  if(file){
+    if(file.size>25*1024*1024){ say('That file is over 25MB. Paste the content instead.'); return; }
+    if(!sb){ say('No connection, cannot upload right now.'); return; }
+    const btn=document.getElementById('mf-btn'); if(btn){ btn.disabled=true; btn.textContent='Uploading…'; }
+    const safe=(file.name||'form').replace(/[^A-Za-z0-9.\-_]/g,'_');
+    const path='forms_'+uid()+'_'+safe;
+    try{
+      const {error}=await sb.storage.from(DOCS_BUCKET).upload(path,file,{upsert:false,contentType:file.type||undefined});
+      if(error) throw error;
+      rec.kind='upload'; rec.path=path; rec.size=file.size; if(text) rec.content=text;
+    }catch(e){
+      const msg=String((e&&e.message)||e);
+      const notReady=/not found|bucket|does not exist|violates|permission|not authoriz|row-level|403|404/i.test(msg);
+      if(btn){ btn.disabled=false; btn.textContent='File it'; }
+      say(notReady?'File uploads need the storage setup (see STORAGE_SETUP.md). Paste the form as text instead for now.':'Upload failed: '+escHtml(msg));
+      return;
+    }
+  } else { rec.kind='text'; rec.content=text; }
+  const files=ls.get('tuf_files',[])||[]; files.push(rec); ls.set('tuf_files',files);
+  const members=ls.get('tuf_members',[]); const i=members.findIndex(x=>x.id===memberId);
+  if(i>=0){ const stamp='['+new Date().toISOString().slice(0,10)+' · '+CURRENT_USER+'] '; members[i].notes=((members[i].notes||'')+(members[i].notes?'\n':'')+stamp+label+' filed: '+name).trim(); ls.set('tuf_members',members); }
+  closeModal(); showMemberDetail(memberId); addNotif(label+' filed for '+m.name);
+}
+function memberFormOpen(id){
+  const f=(ls.get('tuf_files',[])||[]).find(x=>x.id===id); if(!f) return;
+  if(f.kind==='upload'&&f.path){ docOpen(id); return; }
+  showModal(escHtml(f.name),`<div style="font-size:12.5px;white-space:pre-wrap;line-height:1.6;max-height:60vh;overflow-y:auto">${escHtml(f.content||'No content')}</div>`,`<button class="btn btn-k" onclick="closeModal()">Close</button>`);
 }
 
 // ═══ SALES PIPELINE ══════════════════════════════════════════════════════════
@@ -3400,9 +3502,11 @@ function addELModal(){
 }
 function saveEL(){
   const name=document.getElementById('nel-name').value.trim();if(!name)return;
+  if(!dupCheckWarn(name,document.getElementById('nel-email').value.trim()))return;
   const a=ls.get('tuf_event_attendees',[]);
   a.push({id:uid(),name,co:document.getElementById('nel-co').value.trim(),email:document.getElementById('nel-email').value.trim(),phone:document.getElementById('nel-phone').value.trim(),event:document.getElementById('nel-event').value.trim(),eventDate:document.getElementById('nel-evdate').value||'',score:elClampScore(document.getElementById('nel-score').value),owner:document.getElementById('nel-owner').value,notes:document.getElementById('nel-notes').value.trim(),addedDate:new Date().toISOString().slice(0,10)});
   ls.set('tuf_event_attendees',a);closeModal();refreshAttendees();addNotif(`Event attendee added: ${name}`);
+  journeyLog(name,'Entered the system: Event CRM'+(a[a.length-1].event?' ('+a[a.length-1].event+')':''));
 }
 // Refresh whichever attendee view is showing (Event CRM page, or the Members "Event Attendees" tab).
 function refreshAttendees(){ const mp=document.getElementById('page-members'); if(mp&&mp.classList.contains('active')){ renderMembers(); return; } try{ renderEventCRM(); }catch(e){} }
@@ -3438,6 +3542,7 @@ function elAddFromSave(){
   picks.forEach(chk=>{ const src=chk.getAttribute('data-src'); const id=chk.getAttribute('data-id'); const p=(src==='p'?prospects:members).find(x=>x.id===id); if(!p) return;
     if(att.some(a=>(a.name||'').toLowerCase()===(p.name||'').toLowerCase() && (a.event||'')===event)){ dup++; return; }
     att.push({id:uid(),name:p.name||'',co:p.co||'',email:p.email||'',phone:p.phone||'',event,eventDate,score,owner,notes:'',addedDate:new Date().toISOString().slice(0,10),fromMemberId:src==='m'?id:'',fromProspectId:src==='p'?id:''}); n++;
+    journeyLog(p.name,'Added to Event CRM'+(event?' ('+event+')':''));
   });
   ls.set('tuf_event_attendees',att); closeModal(); refreshAttendees();
   addNotif(`${n} added to Event CRM${dup?` (${dup} already there, skipped)`:''}`);
@@ -3460,11 +3565,11 @@ function baFormRows(a){ a=a||{}; return `<div class="grid-2"><div class="form-ro
   <div class="form-row"><label class="form-label">Notes ${typeof micBtnHtml==='function'?micBtnHtml('ba-notes'):''}</label><textarea class="form-textarea" id="ba-notes" style="min-height:60px">${escHtml(a.notes||'')}</textarea></div>`; }
 function baReadForm(){ const sid=document.getElementById('ba-session').value; const meta=baSessionMeta(sid); return {name:document.getElementById('ba-name').value.trim(),co:document.getElementById('ba-co').value.trim(),email:document.getElementById('ba-email').value.trim(),phone:document.getElementById('ba-phone').value.trim(),sessionId:sid,sessionName:meta.sessionName,sessionDate:meta.sessionDate,owner:document.getElementById('ba-owner').value,notes:document.getElementById('ba-notes').value.trim()}; }
 function baAddModal(){ showModal('Add Boardroom attendee',baFormRows({}),`<button class="btn btn-ghost" onclick="closeModal()">Cancel</button><button class="btn btn-k" onclick="baSave()">Add</button>`); }
-function baSave(){ const f=baReadForm(); if(!f.name){alert('Add a name.');return;} const l=baStore(); l.push({id:uid(),...f,addedDate:new Date().toISOString().slice(0,10)}); ls.set('tuf_boardroom_attendees',l); closeModal(); renderMembers(); addNotif(`Boardroom attendee added: ${f.name}`); }
+function baSave(){ const f=baReadForm(); if(!f.name){alert('Add a name.');return;} if(!dupCheckWarn(f.name,f.email))return; const l=baStore(); l.push({id:uid(),...f,addedDate:new Date().toISOString().slice(0,10)}); ls.set('tuf_boardroom_attendees',l); closeModal(); renderMembers(); addNotif(`Boardroom attendee added: ${f.name}`); journeyLog(f.name,'Logged as Boardroom event attendee'+(f.sessionName?' ('+f.sessionName+')':'')); }
 function baEditModal(id){ const a=baStore().find(x=>x.id===id); if(!a)return; showModal('Edit Boardroom attendee',baFormRows(a),`<button class="btn btn-red btn-sm" onclick="baDelete('${id}')">Delete</button><button class="btn btn-ghost" onclick="closeModal()">Cancel</button><button class="btn btn-k" onclick="baUpdate('${id}')">Save</button>`); }
 function baUpdate(id){ const f=baReadForm(); const l=baStore(); const i=l.findIndex(x=>x.id===id); if(i<0)return; l[i]={...l[i],...f}; ls.set('tuf_boardroom_attendees',l); closeModal(); renderMembers(); }
 function baDelete(id){ if(!confirm('Remove this attendee?'))return; ls.set('tuf_boardroom_attendees',baStore().filter(x=>x.id!==id)); closeModal(); renderMembers(); }
-function baToPipeline(id){ const a=baStore().find(x=>x.id===id); if(!a)return; const list=ls.get('tuf_prospects',[]); if(list.some(p=>(p.name||'').toLowerCase()===(a.name||'').toLowerCase())&&!confirm(a.name+' may already be in the pipeline. Add again?')) return; const today=new Date().toISOString().slice(0,10); list.push({id:uid(),name:a.name||'',co:a.co||'',email:a.email||'',phone:a.phone||'',stage:'Prospect',temp:'Warm',score:null,nextAction:'Follow up after Boardroom event',nextActionDate:today,notes:('From Boardroom event'+(a.sessionName?': '+a.sessionName:'')+(a.notes?'\n'+a.notes:'')),lastContact:today,sourceEvent:a.sessionName||'Boardroom event'}); ls.set('tuf_prospects',list); addNotif(`${a.name} added to Sales Pipeline`); }
+function baToPipeline(id){ const a=baStore().find(x=>x.id===id); if(!a)return; const list=ls.get('tuf_prospects',[]); if(list.some(p=>(p.name||'').toLowerCase()===(a.name||'').toLowerCase())&&!confirm(a.name+' may already be in the pipeline. Add again?')) return; const today=new Date().toISOString().slice(0,10); list.push({id:uid(),name:a.name||'',co:a.co||'',email:a.email||'',phone:a.phone||'',stage:'Prospect',temp:'Warm',score:null,nextAction:'Follow up after Boardroom event',nextActionDate:today,notes:('From Boardroom event'+(a.sessionName?': '+a.sessionName:'')+(a.notes?'\n'+a.notes:'')),lastContact:today,sourceEvent:a.sessionName||'Boardroom event'}); ls.set('tuf_prospects',list); addNotif(`${a.name} added to Sales Pipeline`); journeyLog(a.name,'Boardroom event attendee → Sales Pipeline'+(a.sessionName?' (from '+a.sessionName+')':'')); }
 function baAddFromModal(){
   const members=ls.get('tuf_members',[])||[]; const prospects=ls.get('tuf_prospects',[])||[];
   const row=(p,src)=>`<label style="display:flex;align-items:center;gap:8px;padding:5px 0;cursor:pointer;font-size:12.5px;border-bottom:1px solid var(--bdr)"><input type="checkbox" class="ba-pick" data-src="${src}" data-id="${p.id}"><span style="flex:1">${escHtml(p.name||'(no name)')}${p.co?` <span style="color:var(--mut)">· ${escHtml(p.co)}</span>`:''}</span><span style="font-size:9px;color:${(p.email||p.phone)?'var(--grn)':'var(--amb)'}">${(p.email||p.phone)?'has contact':'no contact'}</span></label>`;
@@ -3487,6 +3592,7 @@ function baAddFromSave(){
   picks.forEach(chk=>{ const src=chk.getAttribute('data-src'); const id=chk.getAttribute('data-id'); const p=(src==='p'?prospects:members).find(x=>x.id===id); if(!p)return;
     if(l.some(a=>(a.name||'').toLowerCase()===(p.name||'').toLowerCase()&&a.sessionId===sid)){dup++;return;}
     l.push({id:uid(),name:p.name||'',co:p.co||'',email:p.email||'',phone:p.phone||'',sessionId:sid,sessionName:meta.sessionName,sessionDate:meta.sessionDate,owner,notes:'',addedDate:new Date().toISOString().slice(0,10),fromMemberId:src==='m'?id:'',fromProspectId:src==='p'?id:''}); n++;
+    journeyLog(p.name,'Logged as Boardroom event attendee'+(meta.sessionName?' ('+meta.sessionName+')':''));
   });
   ls.set('tuf_boardroom_attendees',l); closeModal(); renderMembers(); addNotif(`${n} added as Boardroom attendees${dup?` (${dup} already logged, skipped)`:''}`);
 }
@@ -3512,6 +3618,7 @@ function convertELtoPipeline(id){
   ls.set('tuf_prospects',prospects);
   const i=list.findIndex(x=>x.id===id);list[i].promotedToProspectId=newId;ls.set('tuf_event_attendees',list);
   addNotif(`${a.name} sent to the Sales Pipeline`);
+  journeyLog(a.name,'Event CRM → Sales Pipeline'+(a.event?' (from '+a.event+')':''));
   renderEventCRM();
 }
 
@@ -3535,9 +3642,11 @@ function addProspectModal(stage='Prospect'){
 }
 function saveProspect(){
   const name=document.getElementById('np-name').value.trim();if(!name)return;
+  if(!dupCheckWarn(name,document.getElementById('np-email')?.value.trim()||''))return;
   const list=ls.get('tuf_prospects',[]);
   list.push({id:uid(),name,co:document.getElementById('np-co').value.trim(),email:document.getElementById('np-email')?.value.trim()||'',phone:document.getElementById('np-phone')?.value.trim()||'',stage:document.getElementById('np-stage').value,temp:document.getElementById('np-temp').value,score:parseInt(document.getElementById('np-score').value)||null,nextAction:document.getElementById('np-action').value.trim(),nextActionDate:document.getElementById('np-actiondate')?.value||'',notes:document.getElementById('np-notes').value.trim(),lastContact:new Date().toISOString().slice(0,10)});
   ls.set('tuf_prospects',list);closeModal();renderPipeline();
+  journeyLog(name,'Entered the Sales Pipeline ('+list[list.length-1].stage+')');
 }
 
 // ═══ INBOUND (website signups → triage → pipeline) ═══════════════════════════
@@ -3600,6 +3709,7 @@ function inbConvert(id){
   ls.set('tuf_prospects',prospects);
   l.status='converted'; l.prospectId=pid; ls.set('tuf_inbound_leads',leads);
   addNotif(`Website signup added to pipeline: ${l.name||l.email||'lead'}`);
+  journeyLog(l.name,'Website signup → Sales Pipeline');
   renderInbound();
   const pp=document.getElementById('page-pipeline'); if(pp&&pp.classList.contains('active')) renderPipeline();
 }
@@ -3641,13 +3751,14 @@ function convertProspectToMember(id){
   ls.set('tuf_members',members);
   const i=list.findIndex(x=>x.id===id);list[i].convertedToMemberId=newId;list[i].stage='Won';ls.set('tuf_prospects',list);
   addNotif(`${p.name} converted from pipeline to a Boardroom member`);
+  journeyLog(p.name,'Sales Pipeline → Boardroom member');
   closeModal();renderPipeline();
 }
 function updateProspect(id){
   const list=ls.get('tuf_prospects',[]);const i=list.findIndex(x=>x.id===id);if(i<0)return;
   const oldStage=list[i].stage;
   list[i]={...list[i],email:document.getElementById('ep-email')?.value.trim()||list[i].email||'',phone:document.getElementById('ep-phone')?.value.trim()||list[i].phone||'',stage:document.getElementById('ep-stage').value,temp:document.getElementById('ep-temp').value,score:parseInt(document.getElementById('ep-score').value)||list[i].score||null,nextAction:document.getElementById('ep-action').value.trim(),nextActionDate:document.getElementById('ep-actiondate')?.value||'',notes:document.getElementById('ep-notes').value.trim(),futureStart:document.getElementById('ep-future')?.value||list[i].futureStart||'',lastContact:document.getElementById('ep-lastcontact').value||new Date().toISOString().slice(0,10)};
-  if(list[i].stage!==oldStage) addNotif(`${list[i].name} moved to ${list[i].stage}`);
+  if(list[i].stage!==oldStage){ addNotif(`${list[i].name} moved to ${list[i].stage}`); journeyLog(list[i].name,'Pipeline stage: '+(oldStage||'?')+' → '+list[i].stage); }
   ls.set('tuf_prospects',list);closeModal();renderPipeline();
 }
 function deleteProspect(id){if(!confirm('Delete?'))return;ls.set('tuf_prospects',ls.get('tuf_prospects',[]).filter(x=>x.id!==id));closeModal();renderPipeline();}
@@ -4818,10 +4929,12 @@ function renderFiles(){
     ? cats.map(cat=>`
         <div class="sec-hdr" style="margin-top:14px">${escHtml(cat)}</div>
         ${list.filter(f=>f.cat===cat).map(f=>{
-          const meta=[f.by?'by '+escHtml(f.by):'', f.updated?fmtDate(f.updated):'', f.kind==='upload'?fmtSize(f.size):(f.link?'link':'')].filter(Boolean).join(' · ');
+          const meta=[f.memberName?'👤 '+escHtml(f.memberName):'', f.by?'by '+escHtml(f.by):'', f.updated?fmtDate(f.updated):'', f.kind==='upload'?fmtSize(f.size):(f.link?'link':'')].filter(Boolean).join(' · ');
           const open = f.kind==='upload'
             ? `<button class="btn btn-k btn-sm" onclick="docOpen('${f.id}')">Open ↗</button>`
-            : (f.link?`<a href="${escHtml(f.link)}" target="_blank" class="btn btn-k btn-sm">Open ↗</a>`:'');
+            : f.kind==='text'
+              ? `<button class="btn btn-k btn-sm" onclick="memberFormOpen('${f.id}')">Open</button>`
+              : (f.link?`<a href="${escHtml(f.link)}" target="_blank" class="btn btn-k btn-sm">Open ↗</a>`:'');
           return `<div class="card" style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
             <span style="font-size:18px">${docIcon(f.type)}</span>
             <div style="flex:1;min-width:0"><div style="font-weight:700;font-size:13px">${escHtml(f.name)}</div><div style="font-size:10px;color:var(--mut)">${meta}</div></div>
