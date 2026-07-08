@@ -3171,18 +3171,20 @@ function memberFormsHtml(m){
   };
   return sec('prep','Prep forms')+sec('feedback','Feedback forms');
 }
-function memberFormModal(memberId,type){
+function memberFormModal(memberId,type,who){
+  who=who||'m';
   const label=type==='prep'?'Prep form':'Feedback form';
   showModal('File a '+label,`
-    <div style="font-size:11px;color:var(--mut);margin-bottom:10px">Paste the form content below, or attach a file. It is saved to this member's record with a dated pointer in their notes log. Forms are never deleted.</div>
+    <div style="font-size:11px;color:var(--mut);margin-bottom:10px">Paste the form content below, or attach a file. It is saved to this ${who==='ba'?'attendee':'member'}'s record with a dated pointer in their notes. Forms are never deleted.</div>
     <div class="grid-2"><div class="form-row"><label class="form-label">Session or title</label><input class="form-input" id="mf-title" placeholder="e.g. Boardroom Session 2"></div><div class="form-row"><label class="form-label">Date</label><input class="form-input" type="date" id="mf-date" value="${new Date().toISOString().slice(0,10)}"></div></div>
     <div class="form-row"><label class="form-label">Paste the form content ${typeof micBtnHtml==='function'?micBtnHtml('mf-text'):''}</label><textarea class="form-textarea" id="mf-text" style="min-height:120px" placeholder="Paste the whole form here"></textarea></div>
     <div class="form-row"><label class="form-label">Or attach a file <span style="font-weight:400;color:var(--mut)">(needs the Documents storage setup)</span></label><input class="form-input" type="file" id="mf-file"></div>
     <div id="mf-status" style="font-size:12px;margin-top:6px"></div>
-  `,`<button class="btn btn-ghost" onclick="closeModal()">Cancel</button><button class="btn btn-k" id="mf-btn" onclick="memberFormSave('${memberId}','${type}')">File it</button>`);
+  `,`<button class="btn btn-ghost" onclick="closeModal()">Cancel</button><button class="btn btn-k" id="mf-btn" onclick="memberFormSave('${memberId}','${type}','${who}')">File it</button>`);
 }
-async function memberFormSave(memberId,type){
-  const m=(ls.get('tuf_members',[])||[]).find(x=>x.id===memberId); if(!m){closeModal();return;}
+async function memberFormSave(memberId,type,who){
+  who=who||'m'; const isBA=(who==='ba');
+  const m=isBA?baStore().find(x=>x.id===memberId):(ls.get('tuf_members',[])||[]).find(x=>x.id===memberId); if(!m){closeModal();return;}
   const label=type==='prep'?'Prep form':'Feedback form';
   const say=msg=>{ const s=document.getElementById('mf-status'); if(s) s.innerHTML='<span style="color:var(--red)">'+msg+'</span>'; };
   const title=(document.getElementById('mf-title')?.value||'').trim();
@@ -3191,7 +3193,8 @@ async function memberFormSave(memberId,type){
   const fileEl=document.getElementById('mf-file'); const file=fileEl&&fileEl.files&&fileEl.files[0];
   if(!text&&!file){ say('Paste the form content or attach a file first.'); return; }
   const name=label+(title?': '+title:'')+' ('+fmtDate(date)+')';
-  const rec={id:uid(),name,cat:'Boardroom Reports',type:'Form',by:CURRENT_USER,updated:date,memberId,memberName:m.name,formType:type};
+  const rec={id:uid(),name,cat:'Boardroom Reports',type:'Form',by:CURRENT_USER,updated:date,memberName:m.name,formType:type};
+  if(isBA) rec.baId=memberId; else rec.memberId=memberId;
   if(file){
     if(file.size>25*1024*1024){ say('That file is over 25MB. Paste the content instead.'); return; }
     if(!sb){ say('No connection, cannot upload right now.'); return; }
@@ -3211,9 +3214,27 @@ async function memberFormSave(memberId,type){
     }
   } else { rec.kind='text'; rec.content=text; }
   const files=ls.get('tuf_files',[])||[]; files.push(rec); ls.set('tuf_files',files);
-  const members=ls.get('tuf_members',[]); const i=members.findIndex(x=>x.id===memberId);
-  if(i>=0){ const stamp='['+new Date().toISOString().slice(0,10)+' · '+CURRENT_USER+'] '; members[i].notes=((members[i].notes||'')+(members[i].notes?'\n':'')+stamp+label+' filed: '+name).trim(); ls.set('tuf_members',members); }
-  closeModal(); showMemberDetail(memberId); addNotif(label+' filed for '+m.name);
+  const stamp='['+new Date().toISOString().slice(0,10)+' · '+CURRENT_USER+'] ';
+  if(isBA){
+    const l=baStore(); const i=l.findIndex(x=>x.id===memberId);
+    if(i>=0){ l[i].notes=((l[i].notes||'')+(l[i].notes?'\n':'')+stamp+label+' filed: '+name).trim(); ls.set('tuf_boardroom_attendees',l); }
+    closeModal(); try{ renderMembers(); }catch(_){}
+  } else {
+    const members=ls.get('tuf_members',[]); const i=members.findIndex(x=>x.id===memberId);
+    if(i>=0){ members[i].notes=((members[i].notes||'')+(members[i].notes?'\n':'')+stamp+label+' filed: '+name).trim(); ls.set('tuf_members',members); }
+    closeModal(); showMemberDetail(memberId);
+  }
+  addNotif(label+' filed for '+m.name);
+}
+// Forms sections for a Boardroom event attendee (shown in the attendee edit modal)
+function baFormsHtml(a){
+  const files=(ls.get('tuf_files',[])||[]).filter(f=>f.baId===a.id);
+  const sec=(type,label)=>{
+    const list=files.filter(f=>f.formType===type).sort((x,y)=>(y.updated||'').localeCompare(x.updated||''));
+    return `<div style="display:flex;justify-content:space-between;align-items:center;margin-top:12px"><div class="form-label" style="margin:0">${label} (${list.length})</div><button class="btn btn-ghost btn-sm" onclick="memberFormModal('${a.id}','${type}','ba')">+ File one</button></div>
+    ${list.length?list.map(f=>`<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:12px;padding:6px 8px;border:1px solid var(--bdr);border-radius:6px;margin-top:5px"><span style="min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${f.kind==='upload'?'📎':'📝'} ${escHtml(f.name)}</span><span style="display:flex;gap:6px;align-items:center;flex-shrink:0"><span style="color:var(--mut);font-size:10.5px">${f.updated?fmtDate(f.updated):''}</span><button class="btn btn-ghost btn-sm" onclick="memberFormOpen('${f.id}')">Open</button></span></div>`).join(''):`<div style="font-size:11px;color:var(--mut);margin-top:4px">None filed yet.</div>`}`;
+  };
+  return sec('prep','Prep forms')+sec('feedback','Feedback forms');
 }
 function memberFormOpen(id){
   const f=(ls.get('tuf_files',[])||[]).find(x=>x.id===id); if(!f) return;
@@ -3566,7 +3587,7 @@ function baFormRows(a){ a=a||{}; return `<div class="grid-2"><div class="form-ro
 function baReadForm(){ const sid=document.getElementById('ba-session').value; const meta=baSessionMeta(sid); return {name:document.getElementById('ba-name').value.trim(),co:document.getElementById('ba-co').value.trim(),email:document.getElementById('ba-email').value.trim(),phone:document.getElementById('ba-phone').value.trim(),sessionId:sid,sessionName:meta.sessionName,sessionDate:meta.sessionDate,owner:document.getElementById('ba-owner').value,notes:document.getElementById('ba-notes').value.trim()}; }
 function baAddModal(){ showModal('Add Boardroom attendee',baFormRows({}),`<button class="btn btn-ghost" onclick="closeModal()">Cancel</button><button class="btn btn-k" onclick="baSave()">Add</button>`); }
 function baSave(){ const f=baReadForm(); if(!f.name){alert('Add a name.');return;} if(!dupCheckWarn(f.name,f.email))return; const l=baStore(); l.push({id:uid(),...f,addedDate:new Date().toISOString().slice(0,10)}); ls.set('tuf_boardroom_attendees',l); closeModal(); renderMembers(); addNotif(`Boardroom attendee added: ${f.name}`); journeyLog(f.name,'Logged as Boardroom event attendee'+(f.sessionName?' ('+f.sessionName+')':'')); }
-function baEditModal(id){ const a=baStore().find(x=>x.id===id); if(!a)return; showModal('Edit Boardroom attendee',baFormRows(a),`<button class="btn btn-red btn-sm" onclick="baDelete('${id}')">Delete</button><button class="btn btn-ghost" onclick="closeModal()">Cancel</button><button class="btn btn-k" onclick="baUpdate('${id}')">Save</button>`); }
+function baEditModal(id){ const a=baStore().find(x=>x.id===id); if(!a)return; showModal('Edit Boardroom attendee',baFormRows(a)+baFormsHtml(a),`<button class="btn btn-red btn-sm" onclick="baDelete('${id}')">Delete</button><button class="btn btn-ghost" onclick="closeModal()">Cancel</button><button class="btn btn-k" onclick="baUpdate('${id}')">Save</button>`); }
 function baUpdate(id){ const f=baReadForm(); const l=baStore(); const i=l.findIndex(x=>x.id===id); if(i<0)return; l[i]={...l[i],...f}; ls.set('tuf_boardroom_attendees',l); closeModal(); renderMembers(); }
 function baDelete(id){ if(!confirm('Remove this attendee?'))return; ls.set('tuf_boardroom_attendees',baStore().filter(x=>x.id!==id)); closeModal(); renderMembers(); }
 function baToPipeline(id){ const a=baStore().find(x=>x.id===id); if(!a)return; const list=ls.get('tuf_prospects',[]); if(list.some(p=>(p.name||'').toLowerCase()===(a.name||'').toLowerCase())&&!confirm(a.name+' may already be in the pipeline. Add again?')) return; const today=new Date().toISOString().slice(0,10); list.push({id:uid(),name:a.name||'',co:a.co||'',email:a.email||'',phone:a.phone||'',stage:'Prospect',temp:'Warm',score:null,nextAction:'Follow up after Boardroom event',nextActionDate:today,notes:('From Boardroom event'+(a.sessionName?': '+a.sessionName:'')+(a.notes?'\n'+a.notes:'')),lastContact:today,sourceEvent:a.sessionName||'Boardroom event'}); ls.set('tuf_prospects',list); addNotif(`${a.name} added to Sales Pipeline`); journeyLog(a.name,'Boardroom event attendee → Sales Pipeline'+(a.sessionName?' (from '+a.sessionName+')':'')); }
