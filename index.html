@@ -358,6 +358,61 @@ details>summary::-webkit-details-marker{display:none}
 #okr-session .mic-btn{border-color:#3a3a42;color:#fff}
 #okr-session .mic-btn:hover{border-color:var(--y)}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important}}
+
+/* ═══ BOARDROOM SECTION — premium dark, strictly scoped to #page-boardroom ═══ */
+#page-boardroom{background:#0A0A0B;color:#F2F2F4;margin:-24px -28px;padding:24px 30px 48px;min-height:calc(100vh - 52px);font-family:'Montserrat',sans-serif;
+  /* token overrides so existing components (cards, checklist, templates, forms, tags) go dark automatically */
+  --bg:#0A0A0B;--bg-2:#1A1A1D;--card:#131316;--bdr:#26262B;--bdr-2:#303036;--txt:#F2F2F4;--mut:#9BA0A8;--w:#131316;
+  --gbg:#12241A;--abg:#2A2208;--rbg:#2A1414;--bbg:#101E2C;--pbg:#1F1430;--sh-sm:none;--sh-md:0 8px 24px rgba(0,0,0,.5)}
+#page-boardroom .card{box-shadow:none}
+#page-boardroom .card-title,#page-boardroom .sec-hdr{color:#fff;font-family:'Montserrat',sans-serif}
+#page-boardroom .btn-k{background:var(--y);color:#0A0A0B;border-color:var(--y)}
+#page-boardroom .btn-k:hover{background:#fff;border-color:#fff}
+#page-boardroom .btn-ghost{color:#D9D9DE;border-color:#303036;background:transparent}
+#page-boardroom .btn-ghost:hover{border-color:var(--y);color:var(--y)}
+#page-boardroom .btn-red{background:transparent;color:#F27D72;border:1px solid #4A2020}
+#page-boardroom .form-input,#page-boardroom .form-select,#page-boardroom .form-textarea{background:#1A1A1D;border-color:#303036;color:#F2F2F4}
+#page-boardroom .form-label{color:#9BA0A8}
+#page-boardroom .empty{color:#84848D}
+#page-boardroom .chk-box{border-color:#3A3A42}
+.brx-nav{position:sticky;top:0;z-index:5;display:flex;gap:8px;flex-wrap:wrap;align-items:center;background:rgba(10,10,11,.94);backdrop-filter:blur(6px);padding:6px 0 14px;margin-bottom:22px;border-bottom:1px solid #1F1F24}
+.brx-pill{font-family:'Montserrat',sans-serif;font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;padding:9px 18px;border-radius:24px;border:1px solid #303036;background:transparent;color:#9BA0A8;cursor:pointer;transition:all .15s}
+.brx-pill:hover{color:#fff;border-color:#54545C}
+.brx-pill.on{background:var(--y);border-color:var(--y);color:#0A0A0B}
+.brx-hero{padding:34px 34px 30px;border:1px solid #26262B;border-radius:18px;background:linear-gradient(145deg,#141416 0%,#0E0E10 60%);margin-bottom:26px;position:relative;overflow:hidden}
+.brx-hero:before{content:'';position:absolute;inset:0 0 auto 0;height:3px;background:var(--y)}
+.brx-kicker{font-size:10.5px;font-weight:800;letter-spacing:.22em;text-transform:uppercase;color:var(--y);margin-bottom:12px}
+.brx-hero h1{font-family:'Montserrat',sans-serif;font-size:34px;font-weight:800;letter-spacing:-.5px;line-height:1.1;margin:0 0 12px;color:#fff}
+.brx-promise{font-size:14.5px;line-height:1.7;color:#C9CBD1;max-width:720px;margin-bottom:20px}
+.brx-chips{display:flex;gap:10px;flex-wrap:wrap}
+.brx-chip{font-size:11px;color:#D9D9DE;border:1px solid #303036;border-radius:22px;padding:7px 14px;background:#111113}
+.brx-chip b{color:var(--y);font-weight:800}
+.brx-sec{font-size:11px;font-weight:800;letter-spacing:.18em;text-transform:uppercase;color:var(--y);margin:30px 0 12px;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+.brx-card{background:#131316;border:1px solid #26262B;border-radius:14px;padding:18px 20px}
+.brx-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px}
+.brx-mcard{background:#131316;border:1px solid #26262B;border-radius:14px;padding:16px 18px;cursor:pointer;transition:transform .12s,border-color .12s}
+.brx-mcard:hover{transform:translateY(-2px);border-color:var(--y)}
+.brx-months{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:10px}
+.brx-month{background:#131316;border:1px solid #26262B;border-radius:12px;padding:12px 14px;min-height:96px}
+.brx-month.now{border-color:var(--y)}
+.brx-month .m{font-size:11px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:#9BA0A8;margin-bottom:8px}
+.brx-month.now .m{color:var(--y)}
+.brx-sess{display:block;width:100%;text-align:left;font-family:'Montserrat',sans-serif;font-size:11.5px;font-weight:700;padding:7px 10px;border-radius:8px;margin-bottom:6px;cursor:pointer;border:1px solid transparent}
+.brx-sess.bd{background:var(--y);color:#0A0A0B}
+.brx-sess.bd:hover{background:#fff}
+.brx-sess.imp{background:transparent;color:#E8E8EC;border-color:#3A3A42}
+.brx-sess.imp:hover{border-color:#fff}
+.brx-bar{height:7px;background:#26262B;border-radius:4px;overflow:hidden}
+.brx-bar>div{height:100%;background:var(--y)}
+.brx-back{display:inline-block;font-size:12px;font-weight:700;color:#9BA0A8;cursor:pointer;margin-bottom:14px}
+.brx-back:hover{color:var(--y)}
+.brx-row{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid #1F1F24;flex-wrap:wrap}
+.brx-tag{display:inline-block;font-size:9px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;padding:3px 9px;border-radius:14px}
+.brx-tag.y{background:var(--y);color:#0A0A0B}
+.brx-tag.o{border:1px solid #3A3A42;color:#C9CBD1}
+.brx-tag.g{background:#12241A;color:#5AC98E}
+.brx-tag.r{background:#2A1414;color:#F27D72}
+@media(max-width:768px){#page-boardroom{margin:-16px -14px;padding:16px 14px 40px}.brx-hero{padding:24px 20px}.brx-hero h1{font-size:26px}}
 </style>
 </head>
 <body>
@@ -542,39 +597,9 @@ details>summary::-webkit-details-marker{display:none}
       <div id="email-content"></div>
     </div>
 
-    <!-- ═══ BOARDROOM PRODUCT ═══ -->
+    <!-- ═══ BOARDROOM PRODUCT (dark section, 4 areas) ═══ -->
     <div class="page" id="page-boardroom">
-      <div class="grid-4" id="boardroom-stats" style="margin-bottom:16px"></div>
-      <div id="boardroom-checklist" style="margin-bottom:18px"></div>
-      <div id="boardroom-templates" style="margin-bottom:18px"></div>
-      <div class="grid-2">
-        <div>
-          <div class="sec-hdr">Service Model</div>
-          <div class="card" style="margin-bottom:10px">
-            <div class="card-title">What Boardroom Members Get</div>
-            <div id="boardroom-model-list"></div>
-            <button class="btn btn-ghost btn-sm" style="margin-top:10px" onclick="editBoardroomModel()">Edit Service Model</button>
-          </div>
-          <div class="sec-hdr">Upcoming Sessions</div>
-          <div id="boardroom-sessions"></div>
-        </div>
-        <div>
-          <div class="sec-hdr">WhatsApp Community</div>
-          <div class="card" style="margin-bottom:10px" id="boardroom-wa"></div>
-          <div class="sec-hdr">Member Retention</div>
-          <div id="boardroom-retention"></div>
-        </div>
-      </div>
-      <div class="grid-2" style="margin-top:16px">
-        <div>
-          <div class="sec-hdr">Previous Boardrooms</div>
-          <div class="card" id="boardroom-previous"></div>
-        </div>
-        <div>
-          <div class="sec-hdr">Boardroom Roster</div>
-          <div class="card" id="boardroom-roster"></div>
-        </div>
-      </div>
+      <div id="brx-root"></div>
     </div>
 
     <!-- ═══ SOCIAL MEDIA ═══ -->
@@ -2900,7 +2925,9 @@ function renderMembers(){
 function showMemberDetail(id){
   const m = ls.get('tuf_members',[]).find(x=>x.id===id);
   if(!m) return;
-  document.getElementById('member-detail').innerHTML=`
+  const host=document.getElementById('member-detail');
+  if(!host){ if(typeof brxRefresh==='function') brxRefresh(); return; }
+  host.innerHTML=`
     <div class="card">
       <div class="mc-name" style="font-size:16px;font-family:'Montserrat',sans-serif">${escHtml(m.name)}</div>
       <div class="mc-co" style="margin-bottom:6px">${escHtml(m.co)}</div>
@@ -3177,6 +3204,7 @@ function memberFormModal(memberId,type,who){
   showModal('File a '+label,`
     <div style="font-size:11px;color:var(--mut);margin-bottom:10px">Paste the form content below, or attach a file. It is saved to this ${who==='ba'?'attendee':'member'}'s record with a dated pointer in their notes. Forms are never deleted.</div>
     <div class="grid-2"><div class="form-row"><label class="form-label">Session or title</label><input class="form-input" id="mf-title" placeholder="e.g. Boardroom Session 2"></div><div class="form-row"><label class="form-label">Date</label><input class="form-input" type="date" id="mf-date" value="${new Date().toISOString().slice(0,10)}"></div></div>
+    <div class="form-row"><label class="form-label">Link to a session <span style="font-weight:400;color:var(--mut)">(optional, shows it on that session in the Boardroom calendar)</span></label>${baSessionSelect('mf-session','')}</div>
     <div class="form-row"><label class="form-label">Paste the form content ${typeof micBtnHtml==='function'?micBtnHtml('mf-text'):''}</label><textarea class="form-textarea" id="mf-text" style="min-height:120px" placeholder="Paste the whole form here"></textarea></div>
     <div class="form-row"><label class="form-label">Or attach a file <span style="font-weight:400;color:var(--mut)">(needs the Documents storage setup)</span></label><input class="form-input" type="file" id="mf-file"></div>
     <div id="mf-status" style="font-size:12px;margin-top:6px"></div>
@@ -3195,6 +3223,7 @@ async function memberFormSave(memberId,type,who){
   const name=label+(title?': '+title:'')+' ('+fmtDate(date)+')';
   const rec={id:uid(),name,cat:'Boardroom Reports',type:'Form',by:CURRENT_USER,updated:date,memberName:m.name,formType:type};
   if(isBA) rec.baId=memberId; else rec.memberId=memberId;
+  const sidSel=document.getElementById('mf-session'); if(sidSel&&sidSel.value) rec.sessionId=sidSel.value;
   if(file){
     if(file.size>25*1024*1024){ say('That file is over 25MB. Paste the content instead.'); return; }
     if(!sb){ say('No connection, cannot upload right now.'); return; }
@@ -3218,7 +3247,7 @@ async function memberFormSave(memberId,type,who){
   if(isBA){
     const l=baStore(); const i=l.findIndex(x=>x.id===memberId);
     if(i>=0){ l[i].notes=((l[i].notes||'')+(l[i].notes?'\n':'')+stamp+label+' filed: '+name).trim(); ls.set('tuf_boardroom_attendees',l); }
-    closeModal(); try{ renderMembers(); }catch(_){}
+    closeModal(); try{ renderMembers(); }catch(_){} brxRefresh();
   } else {
     const members=ls.get('tuf_members',[]); const i=members.findIndex(x=>x.id===memberId);
     if(i>=0){ members[i].notes=((members[i].notes||'')+(members[i].notes?'\n':'')+stamp+label+' filed: '+name).trim(); ls.set('tuf_members',members); }
@@ -3586,10 +3615,10 @@ function baFormRows(a){ a=a||{}; return `<div class="grid-2"><div class="form-ro
   <div class="form-row"><label class="form-label">Notes ${typeof micBtnHtml==='function'?micBtnHtml('ba-notes'):''}</label><textarea class="form-textarea" id="ba-notes" style="min-height:60px">${escHtml(a.notes||'')}</textarea></div>`; }
 function baReadForm(){ const sid=document.getElementById('ba-session').value; const meta=baSessionMeta(sid); return {name:document.getElementById('ba-name').value.trim(),co:document.getElementById('ba-co').value.trim(),email:document.getElementById('ba-email').value.trim(),phone:document.getElementById('ba-phone').value.trim(),sessionId:sid,sessionName:meta.sessionName,sessionDate:meta.sessionDate,owner:document.getElementById('ba-owner').value,notes:document.getElementById('ba-notes').value.trim()}; }
 function baAddModal(){ showModal('Add Boardroom attendee',baFormRows({}),`<button class="btn btn-ghost" onclick="closeModal()">Cancel</button><button class="btn btn-k" onclick="baSave()">Add</button>`); }
-function baSave(){ const f=baReadForm(); if(!f.name){alert('Add a name.');return;} if(!dupCheckWarn(f.name,f.email))return; const l=baStore(); l.push({id:uid(),...f,addedDate:new Date().toISOString().slice(0,10)}); ls.set('tuf_boardroom_attendees',l); closeModal(); renderMembers(); addNotif(`Boardroom attendee added: ${f.name}`); journeyLog(f.name,'Logged as Boardroom event attendee'+(f.sessionName?' ('+f.sessionName+')':'')); }
+function baSave(){ const f=baReadForm(); if(!f.name){alert('Add a name.');return;} if(!dupCheckWarn(f.name,f.email))return; const l=baStore(); l.push({id:uid(),...f,addedDate:new Date().toISOString().slice(0,10)}); ls.set('tuf_boardroom_attendees',l); closeModal(); renderMembers(); brxRefresh(); addNotif(`Boardroom attendee added: ${f.name}`); journeyLog(f.name,'Logged as Boardroom event attendee'+(f.sessionName?' ('+f.sessionName+')':'')); }
 function baEditModal(id){ const a=baStore().find(x=>x.id===id); if(!a)return; showModal('Edit Boardroom attendee',baFormRows(a)+baFormsHtml(a),`<button class="btn btn-red btn-sm" onclick="baDelete('${id}')">Delete</button><button class="btn btn-ghost" onclick="closeModal()">Cancel</button><button class="btn btn-k" onclick="baUpdate('${id}')">Save</button>`); }
-function baUpdate(id){ const f=baReadForm(); const l=baStore(); const i=l.findIndex(x=>x.id===id); if(i<0)return; l[i]={...l[i],...f}; ls.set('tuf_boardroom_attendees',l); closeModal(); renderMembers(); }
-function baDelete(id){ if(!confirm('Remove this attendee?'))return; ls.set('tuf_boardroom_attendees',baStore().filter(x=>x.id!==id)); closeModal(); renderMembers(); }
+function baUpdate(id){ const f=baReadForm(); const l=baStore(); const i=l.findIndex(x=>x.id===id); if(i<0)return; l[i]={...l[i],...f}; ls.set('tuf_boardroom_attendees',l); closeModal(); renderMembers(); brxRefresh(); }
+function baDelete(id){ if(!confirm('Remove this attendee?'))return; ls.set('tuf_boardroom_attendees',baStore().filter(x=>x.id!==id)); closeModal(); renderMembers(); brxRefresh(); }
 function baToPipeline(id){ const a=baStore().find(x=>x.id===id); if(!a)return; const list=ls.get('tuf_prospects',[]); if(list.some(p=>(p.name||'').toLowerCase()===(a.name||'').toLowerCase())&&!confirm(a.name+' may already be in the pipeline. Add again?')) return; const today=new Date().toISOString().slice(0,10); list.push({id:uid(),name:a.name||'',co:a.co||'',email:a.email||'',phone:a.phone||'',stage:'Prospect',temp:'Warm',score:null,nextAction:'Follow up after Boardroom event',nextActionDate:today,notes:('From Boardroom event'+(a.sessionName?': '+a.sessionName:'')+(a.notes?'\n'+a.notes:'')),lastContact:today,sourceEvent:a.sessionName||'Boardroom event'}); ls.set('tuf_prospects',list); addNotif(`${a.name} added to Sales Pipeline`); journeyLog(a.name,'Boardroom event attendee → Sales Pipeline'+(a.sessionName?' (from '+a.sessionName+')':'')); }
 function baAddFromModal(){
   const members=ls.get('tuf_members',[])||[]; const prospects=ls.get('tuf_prospects',[])||[];
@@ -6867,58 +6896,381 @@ function brTplCopy(id,btn){
   else { fallback(); done(); }
 }
 
+// ═══ BOARDROOM SECTION — four areas: Service Model / Session Calendar / Member CRM / Leads & Guests ═══
+let brxView='model', brxMemberId=null, brxSessionId=null;
+function brxNav(v){ brxView=v; brxMemberId=null; brxSessionId=null; renderBoardroom(); }
+function brxRefresh(){ const p=document.getElementById('page-boardroom'); if(p&&p.classList.contains('active')) renderBoardroom(); }
+function brxService(){ return ls.get('tuf_boardroom_service',{name:'The Boardroom',promise:'A private boardroom of ambitious founders, chaired by Danny Wicks. Real numbers on the table, honest challenge from peers who run businesses of their own, and clear commitments to walk out with. Founders building with founders.',who:'Owner managed businesses, typically £1m to £20m turnover, led by founders who want to scale with structure and honesty.',format:'Bimonthly in person Boardroom Days plus a monthly online implementation session in between',term:'12 month engagement'}); }
+
 function renderBoardroom(){
-  renderBoardroomTemplates();
-  const allMembers=ls.get('tuf_members',[]).filter(m=>m.status==='active');
-  const bMembers=allMembers.filter(m=>!m.type||m.type==='boardroom');
-  const privClients=allMembers.filter(m=>m.type==='existing_client');
-  const brGuests=allMembers.filter(m=>m.boardroomGuest||m.type==='guest');
-  const brComp=privClients.filter(m=>m.boardroomAccess);
-  const boardroomMRR=boardroomMRRof(bMembers);
-  const sessions=ls.get('tuf_sessions',[]);
-  const nextSess=sessions.filter(s=>s.date>=new Date().toISOString().slice(0,10)).sort((a,b)=>a.date.localeCompare(b.date))[0];
-  const s2Days=daysUntil('2026-07-02');
-  document.getElementById('boardroom-stats').innerHTML=`
-    <div class="stat y"><div class="n">${bMembers.length+brComp.length+brGuests.length}</div><div class="l">In Boardroom<br><span style="font-weight:400;font-size:9px;color:var(--mut)">${bMembers.length}/20 paying · ${brComp.length} private · ${brGuests.length} guest</span></div></div>
-    <div class="stat g"><div class="n">£${boardroomMRR.toLocaleString()}</div><div class="l">Boardroom MRR</div></div>
-    <div class="stat ${s2Days<=7?'r':'a'}"><div class="n">${s2Days>0?s2Days+'d':'TODAY'}</div><div class="l">Days to S2</div></div>
-    <div class="stat"><div class="n">${privClients.length}</div><div class="l">Private Clients</div></div>`;
+  const root=document.getElementById('brx-root'); if(!root) return;
+  const pills=[['model','Service Model'],['calendar','Session Calendar'],['members','Member CRM'],['leads','Leads & Guests']];
+  let body='';
+  if(brxView==='calendar') body=brxSessionId?brxSessionView(brxSessionId):brxCalendarView();
+  else if(brxView==='members') body=brxMemberId?brxMemberProfile(brxMemberId):brxMembersView();
+  else if(brxView==='leads') body=brxLeadsView();
+  else body=brxModelView();
+  root.innerHTML=`<div class="brx-nav">${pills.map(p=>`<button class="brx-pill${brxView===p[0]?' on':''}" onclick="brxNav('${p[0]}')">${p[1]}</button>`).join('')}</div>`+body;
+  if(brxView==='model') renderBoardroomTemplates();
+  if(brxView==='calendar'&&brxSessionId) renderBoardroomChecklist();
+  const ta=document.getElementById('topbar-actions'); if(ta) ta.innerHTML=`<button class="btn btn-ghost btn-sm" onclick="goPage('sessions')">Session Planner</button><button class="btn btn-ghost btn-sm" onclick="goPage('members')">All Members</button>`;
+}
+
+// ── Area 1: Service Model ──
+function brxModelView(){
+  const s=brxService();
   const model=ls.get('tuf_boardroom_model',{items:['Bi-monthly Boardroom Days (full day, in person)','Bi-monthly Implementation Sessions (online)','Private WhatsApp Boardroom Group','Direct access to Danny between sessions','Annual 1-2-1 strategy session with Danny','Access to all UF Network events','Guest expert sessions each Boardroom Day']});
-  document.getElementById('boardroom-model-list').innerHTML=model.items.map(i=>`<div style="display:flex;gap:8px;align-items:flex-start;padding:5px 0;border-bottom:1px solid var(--bdr);font-size:12px"><span style="color:var(--grn);flex-shrink:0">✓</span>${escHtml(i)}</div>`).join('');
-  document.getElementById('boardroom-sessions').innerHTML=sessions.slice(0,3).map(s=>`<div class="card" style="margin-bottom:6px"><div style="display:flex;justify-content:space-between;align-items:center"><div><div style="font-weight:700;font-size:12px">${escHtml(s.name)}</div><div style="font-size:11px;color:var(--mut)">${fmtDate(s.date)} · ${s.type}</div></div><span class="tag ${s.status==='Confirmed'?'tag-g':'tag-a'}">${s.status}</span></div></div>`).join('')||'<div class="empty">No sessions planned</div>';
-  const waStatus=ls.get('tuf_wa_status',{launched:false,members:0,rules:'Chatham House rules, no GIFs, business only. Launch when 12 paying members confirmed.'});
-  document.getElementById('boardroom-wa').innerHTML=`
-    <div class="card-title">WhatsApp Boardroom Group</div>
-    <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">
-      <span class="tag ${waStatus.launched?'tag-g':'tag-a'}">${waStatus.launched?'LIVE':'NOT LAUNCHED'}</span>
-      ${!waStatus.launched?`<span style="font-size:11px;color:var(--mut)">Launch trigger: 12 paying members (currently ${bMembers.length})</span>`:''}
+  const paying=(ls.get('tuf_members',[])||[]).filter(m=>m.status==='active'&&(!m.type||m.type==='boardroom'));
+  const wa=ls.get('tuf_wa_status',{launched:false,members:0,rules:'Chatham House rules, no GIFs, business only. Launch when 12 paying members confirmed.'});
+  return `
+  <div class="brx-hero">
+    <div class="brx-kicker">The Ultimate Founder · Flagship offer</div>
+    <h1>${escHtml(s.name)}</h1>
+    <div class="brx-promise">${escHtml(s.promise)}</div>
+    <div class="brx-chips">
+      <span class="brx-chip"><b>Format</b>&nbsp; ${escHtml(s.format)}</span>
+      <span class="brx-chip"><b>Term</b>&nbsp; ${escHtml(s.term)}</span>
+      <span class="brx-chip"><b>Room</b>&nbsp; ${paying.length} paying members · capped at 20</span>
     </div>
-    <div style="font-size:11px;color:var(--mut);margin-bottom:10px">${escHtml(waStatus.rules)}</div>
-    <button class="btn btn-ghost btn-sm" onclick="toggleWALaunch()">Mark as ${waStatus.launched?'Not Live':'Launched'}</button>`;
-  document.getElementById('boardroom-retention').innerHTML=bMembers.map(m=>`<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--bdr)"><span style="flex:1;font-size:12px;font-weight:600">${escHtml(m.name)}</span><div style="width:80px;height:6px;background:var(--bdr);border-radius:3px;overflow:hidden"><div style="height:100%;background:${(m.retention||5)>=7?'var(--grn)':'var(--amb)'};width:${((m.retention||5)/10)*100}%"></div></div><span style="font-size:11px;color:var(--mut);width:30px;text-align:right">${m.retention||'-'}/10</span></div>`).join('')||'<div class="empty">No members yet</div>';
-  // Previous Boardrooms
-  const opts=brPrevOptions();
-  if(!opts.length){ document.getElementById('boardroom-previous').innerHTML='<div class="empty" style="font-size:12px">No previous boardrooms recorded yet. Plan one in Session Planning, or log feedback in Sessions.</div>'; }
-  else { if(!opts.some(o=>o.key===brPrevSel)) brPrevSel=opts[0].key; const sel=opts.find(o=>o.key===brPrevSel);
-    document.getElementById('boardroom-previous').innerHTML=`<div class="form-row"><label class="form-label">Select a boardroom</label><select class="form-select" onchange="brSelectPrev(this.value)">${opts.map(o=>`<option value="${o.key}"${o.key===brPrevSel?' selected':''}>${escHtml(o.label)}</option>`).join('')}</select></div>${brPrevDetail(sel)}`;
+    <div style="font-size:12.5px;color:#C9CBD1;margin-top:16px;max-width:720px"><b style="color:var(--y)">Who it serves:</b> ${escHtml(s.who)}</div>
+    <button class="btn btn-ghost btn-sm" style="margin-top:18px" onclick="brxEditService()">Edit the one pager</button>
+  </div>
+  <div class="brx-sec">What members get</div>
+  <div class="brx-card">
+    ${model.items.map(i=>`<div style="display:flex;gap:10px;align-items:flex-start;padding:7px 0;border-bottom:1px solid #1F1F24;font-size:13px"><span style="color:var(--y);flex-shrink:0;font-weight:800">✓</span>${escHtml(i)}</div>`).join('')}
+    <button class="btn btn-ghost btn-sm" style="margin-top:12px" onclick="editBoardroomModel()">Edit list</button>
+  </div>
+  <div class="brx-sec">WhatsApp community</div>
+  <div class="brx-card">
+    <div style="display:flex;gap:10px;align-items:center;margin-bottom:8px;flex-wrap:wrap"><span class="brx-tag ${wa.launched?'g':'o'}">${wa.launched?'Live':'Not launched'}</span>${!wa.launched?`<span style="font-size:11.5px;color:var(--mut)">Launch trigger: 12 paying members (currently ${paying.length})</span>`:''}</div>
+    <div style="font-size:12px;color:var(--mut);margin-bottom:10px">${escHtml(wa.rules)}</div>
+    <button class="btn btn-ghost btn-sm" onclick="toggleWALaunch()">Mark as ${wa.launched?'Not Live':'Launched'}</button>
+  </div>
+  <div id="boardroom-templates" style="margin-top:26px"></div>`;
+}
+function brxEditService(){
+  const s=brxService();
+  showModal('Edit the Boardroom one pager',`
+    <div class="form-row"><label class="form-label">Offer name</label><input class="form-input" id="bs-name" value="${escAttr(s.name)}"></div>
+    <div class="form-row"><label class="form-label">Core promise</label><textarea class="form-textarea" id="bs-promise" style="min-height:90px">${escHtml(s.promise)}</textarea></div>
+    <div class="form-row"><label class="form-label">Who it serves</label><textarea class="form-textarea" id="bs-who" style="min-height:60px">${escHtml(s.who)}</textarea></div>
+    <div class="form-row"><label class="form-label">Format</label><input class="form-input" id="bs-format" value="${escAttr(s.format)}"></div>
+    <div class="form-row"><label class="form-label">Engagement length</label><input class="form-input" id="bs-term" value="${escAttr(s.term)}"></div>
+  `,`<button class="btn btn-ghost" onclick="closeModal()">Cancel</button><button class="btn btn-k" onclick="brxSaveService()">Save</button>`);
+}
+function brxSaveService(){ const g=id=>document.getElementById(id).value.trim(); ls.set('tuf_boardroom_service',{name:g('bs-name')||'The Boardroom',promise:g('bs-promise'),who:g('bs-who'),format:g('bs-format'),term:g('bs-term')}); closeModal(); renderBoardroom(); }
+
+// ── Area 2: Session Calendar Map ──
+function brxMonths(count,backMonths){
+  const out=[]; const now=new Date(); const start=new Date(now.getFullYear(),now.getMonth()-(backMonths==null?2:backMonths),1);
+  for(let i=0;i<(count||12);i++){ const d=new Date(start.getFullYear(),start.getMonth()+i,1); out.push({key:d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'),label:d.toLocaleDateString('en-GB',{month:'short',year:'numeric'}),now:d.getFullYear()===now.getFullYear()&&d.getMonth()===now.getMonth()}); }
+  return out;
+}
+function brxCalendarView(){
+  const sessions=(ls.get('tuf_sessions',[])||[]).slice().sort((a,b)=>(a.date||'').localeCompare(b.date||''));
+  const months=brxMonths(12,2);
+  const today=new Date().toISOString().slice(0,10);
+  const next=sessions.find(s=>(s.date||'')>=today);
+  const cell=mo=>{ const list=sessions.filter(s=>(s.date||'').slice(0,7)===mo.key);
+    return `<div class="brx-month${mo.now?' now':''}"><div class="m">${mo.label}</div>
+      ${list.length?list.map(s=>`<button class="brx-sess ${s.type==='Boardroom Day'?'bd':'imp'}" onclick="brxOpenSession('${s.id}')">${escHtml(s.name||'Session')}<span style="display:block;font-weight:500;font-size:10px;opacity:.75">${s.date?fmtShort(s.date):''} · ${s.type==='Boardroom Day'?'In person':'Online'}</span></button>`).join(''):'<div style="font-size:11px;color:#54545C">—</div>'}
+    </div>`; };
+  return `
+  <div class="brx-sec">The 12 month journey ${next?`<span style="color:var(--mut);text-transform:none;letter-spacing:0;font-weight:600">Next: ${escHtml(next.name)} · ${fmtDate(next.date)} (${daysUntil(next.date)}d)</span>`:''}</div>
+  <div style="display:flex;gap:16px;align-items:center;margin-bottom:12px;font-size:11px;color:var(--mut);flex-wrap:wrap">
+    <span><span style="display:inline-block;width:10px;height:10px;background:var(--y);border-radius:3px;margin-right:6px;vertical-align:-1px"></span>Boardroom Day · in person, bimonthly</span>
+    <span><span style="display:inline-block;width:10px;height:10px;border:1px solid #3A3A42;border-radius:3px;margin-right:6px;vertical-align:-1px"></span>Implementation session · online, monthly</span>
+    <button class="btn btn-k btn-sm" style="margin-left:auto" onclick="brxAddSessionModal()">+ Add session</button>
+  </div>
+  <div class="brx-months">${months.map(cell).join('')}</div>
+  <div style="font-size:11px;color:#54545C;margin-top:12px">Click a session for prep, agenda, feedback and attendance. Build the day itself in the Session Planner.</div>`;
+}
+function brxOpenSession(id){ brxView='calendar'; brxSessionId=id; renderBoardroom(); }
+function brxAddSessionModal(){
+  showModal('Add a session',`
+    <div class="form-row"><label class="form-label">Name</label><input class="form-input" id="bsx-name" placeholder="e.g. Boardroom Session 3"></div>
+    <div class="grid-2">
+      <div class="form-row"><label class="form-label">Date</label><input class="form-input" type="date" id="bsx-date"></div>
+      <div class="form-row"><label class="form-label">Type</label><select class="form-select" id="bsx-type"><option>Boardroom Day</option><option>Implementation Session</option></select></div>
+    </div>
+  `,`<button class="btn btn-ghost" onclick="closeModal()">Cancel</button><button class="btn btn-k" onclick="brxAddSession()">Add</button>`);
+}
+function brxAddSession(){
+  const name=document.getElementById('bsx-name').value.trim(); const date=document.getElementById('bsx-date').value; const type=document.getElementById('bsx-type').value;
+  if(!name||!date){ alert('Add a name and a date.'); return; }
+  const sessions=ls.get('tuf_sessions',[]); sessions.push({id:uid(),name,date,type,status:'Upcoming',agenda:[],notes:'',blocks:type==='Boardroom Day'?sessDefaultBlocks():[],files:[]});
+  ls.set('tuf_sessions',sessions); closeModal(); addNotif('Session added: '+name); renderBoardroom();
+}
+function brxOpenPlanner(id){ sessSelectedId=id; sessExpanded=null; goPage('sessions'); }
+function brxNearDate(a,b,days){ if(!a||!b) return false; return Math.abs(new Date(a+'T00:00:00')-new Date(b+'T00:00:00'))/86400000<=days; }
+function brxFormsForSession(s,type){
+  return (ls.get('tuf_files',[])||[]).filter(f=>f.formType===type&&(f.sessionId?f.sessionId===s.id:(brxNearDate(f.updated,s.date,14)||((s.name||'').length>3&&(f.name||'').toLowerCase().includes((s.name||'').toLowerCase())))));
+}
+function brxAvgRating(forms){ const ns=forms.map(f=>{const m=(f.content||'').match(/Overall rating:\s*(\d+)\s*\/\s*10/); return m?parseInt(m[1]):null;}).filter(x=>x!=null); return ns.length?(ns.reduce((a,b)=>a+b,0)/ns.length):null; }
+function brxSessionView(id){
+  const s=(ls.get('tuf_sessions',[])||[]).find(x=>x.id===id);
+  if(!s){ brxSessionId=null; return brxCalendarView(); }
+  const preForms=brxFormsForSession(s,'prep'), fbForms=brxFormsForSession(s,'feedback');
+  const avg=brxAvgRating(fbForms);
+  const att=baStore().filter(a=>a.sessionId===s.id);
+  const fbs=ls.get('tuf_session_feedback',[])||[];
+  const fb=fbs.find(f=>s.name&&f.session&&(s.name.includes(f.session)||f.session.includes(s.name)));
+  const past=(s.date||'')<new Date().toISOString().slice(0,10)||s.status==='Complete';
+  const sub=t=>`<div style="font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--mut);margin-bottom:8px">${t}</div>`;
+  const formRow=f=>`<div class="brx-row"><span style="font-size:12.5px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">📝 <b>${escHtml(f.memberName||'')}</b> <span style="color:var(--mut)">· ${escHtml(f.name)}</span></span><button class="btn btn-ghost btn-sm" onclick="memberFormOpen('${f.id}')">Open</button></div>`;
+  const blocks=(s.blocks||[]).slice().sort((a,b)=>(a.start||'').localeCompare(b.start||''));
+  return `
+  <span class="brx-back" onclick="brxSessionId=null;renderBoardroom()">← Session calendar</span>
+  <div class="brx-hero" style="padding:26px 30px">
+    <div class="brx-kicker">${escHtml(s.type||'Session')} · ${past?'Completed':'Upcoming'}</div>
+    <h1 style="font-size:26px">${escHtml(s.name||'Session')}</h1>
+    <div class="brx-chips">
+      <span class="brx-chip"><b>Date</b>&nbsp; ${s.date?fmtDate(s.date):'TBC'}${!past&&s.date?` · in ${daysUntil(s.date)}d`:''}</span>
+      ${avg!=null?`<span class="brx-chip"><b>${avg.toFixed(1)}/10</b>&nbsp; avg across ${fbForms.length} feedback forms</span>`:''}
+      ${fb&&fb.nps!=null&&fb.nps!==''?`<span class="brx-chip"><b>NPS</b>&nbsp; ${escHtml(String(fb.nps))}</span>`:''}
+      ${att.length?`<span class="brx-chip"><b>${att.length}</b>&nbsp; attendees logged</span>`:''}
+    </div>
+    <button class="btn btn-ghost btn-sm" style="margin-top:16px" onclick="brxOpenPlanner('${s.id}')">Open in Session Planner →</button>
+  </div>
+  <div class="grid-2" style="align-items:start">
+    <div>
+      <div class="brx-sec" style="margin-top:6px">Before the day</div>
+      <div class="brx-card" style="margin-bottom:14px">
+        ${sub('Day structure')}
+        ${blocks.length?blocks.map(b=>`<div class="brx-row"><span style="font-size:12.5px"><b style="color:var(--y);font-variant-numeric:tabular-nums">${escHtml(b.start||'')}</b>&nbsp; ${escHtml(b.title||'')}${b.fields&&b.fields.speaker?` <span style="color:var(--mut)">· ${escHtml(b.fields.speaker)}</span>`:''}</span><span style="font-size:11px;color:var(--mut)">${b.dur?b.dur+'min':''}</span></div>`).join(''):'<div style="font-size:12px;color:var(--mut)">No agenda yet. Build it in the Session Planner.</div>'}
+      </div>
+      <div class="brx-card" style="margin-bottom:14px">
+        ${sub('Prep forms in ('+preForms.length+')')}
+        ${preForms.length?preForms.map(formRow).join(''):'<div style="font-size:12px;color:var(--mut)">None matched to this session yet. File them from a member profile.</div>'}
+      </div>
+      <div id="boardroom-checklist"></div>
+    </div>
+    <div>
+      <div class="brx-sec" style="margin-top:6px">After the day</div>
+      <div class="brx-card" style="margin-bottom:14px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><div style="font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--mut)">Team debrief</div><button class="btn btn-ghost btn-sm" onclick="addSessionFeedbackModal()">${fb?'Log another':'+ Log debrief'}</button></div>
+        ${fb?`<table class="tbl"><tbody>
+          ${fb.attendees?`<tr><td style="color:var(--mut);font-size:11px;padding-right:12px">Attendees</td><td style="font-size:12px">${escHtml(String(fb.attendees))}</td></tr>`:''}
+          ${fb.avgScore?`<tr><td style="color:var(--mut);font-size:11px;padding-right:12px">Avg score</td><td style="font-size:12px">${escHtml(String(fb.avgScore))}/10</td></tr>`:''}
+          ${(fb.nps!=null&&fb.nps!=='')?`<tr><td style="color:var(--mut);font-size:11px;padding-right:12px">NPS</td><td style="font-size:12px">${escHtml(String(fb.nps))}</td></tr>`:''}
+          ${fb.commitRate?`<tr><td style="color:var(--mut);font-size:11px;padding-right:12px">Commit rate</td><td style="font-size:12px">${escHtml(String(fb.commitRate))}%</td></tr>`:''}
+        </tbody></table>
+        ${fb.highlights?`<div style="font-size:10.5px;font-weight:800;color:var(--mut);margin:10px 0 3px;letter-spacing:.06em">HIGHLIGHTS</div><div style="font-size:12.5px">${escHtml(fb.highlights)}</div>`:''}
+        ${fb.improvements?`<div style="font-size:10.5px;font-weight:800;color:var(--mut);margin:10px 0 3px;letter-spacing:.06em">IMPROVE NEXT TIME</div><div style="font-size:12.5px">${escHtml(fb.improvements)}</div>`:''}`
+        :'<div style="font-size:12px;color:var(--mut)">No internal debrief logged for this session yet.</div>'}
+      </div>
+      <div class="brx-card" style="margin-bottom:14px">
+        ${sub('Feedback forms ('+fbForms.length+')'+(avg!=null?' · avg '+avg.toFixed(1)+'/10':''))}
+        ${fbForms.length?fbForms.map(formRow).join(''):'<div style="font-size:12px;color:var(--mut)">None matched to this session yet.</div>'}
+      </div>
+      <div class="brx-card" style="margin-bottom:14px">
+        ${sub('Attendance ('+att.length+')')}
+        ${att.length?att.map(a=>`<div class="brx-row"><span style="font-size:12.5px">${escHtml(a.name)}${a.co?` <span style="color:var(--mut)">· ${escHtml(a.co)}</span>`:''}</span><span class="brx-tag g">Attended</span></div>`).join(''):'<div style="font-size:12px;color:var(--mut)">No attendees logged yet. Log them from Leads & Guests, or the Event Attendees tab.</div>'}
+      </div>
+      <div class="brx-card">
+        ${sub('Internal notes · themes covered')}
+        <textarea class="form-textarea" id="brx-sess-notes" style="min-height:80px" placeholder="Themes covered, what landed, follow ups…">${escHtml(s.notes||'')}</textarea>
+        <button class="btn btn-k btn-sm" style="margin-top:8px" onclick="brxSaveSessNotes('${s.id}')">Save notes</button>
+      </div>
+    </div>
+  </div>`;
+}
+function brxSaveSessNotes(id){ const v=document.getElementById('brx-sess-notes')?.value||''; sessSetField(id,'notes',v); addNotif('Session notes saved'); }
+
+// ── Area 3: Member CRM ──
+function brxRoomMembers(){ return (ls.get('tuf_members',[])||[]).filter(m=>m.status==='active'&&((!m.type||m.type==='boardroom')||(m.type==='existing_client'&&m.boardroomAccess))); }
+function brxContractInfo(m){
+  if(!m.contractStart) return null;
+  const start=new Date(m.contractStart+'T00:00:00'); const end=new Date(start); end.setFullYear(end.getFullYear()+1);
+  const y=end.getFullYear(),mo=String(end.getMonth()+1).padStart(2,'0'),da=String(end.getDate()).padStart(2,'0');
+  const endYMD=y+'-'+mo+'-'+da;
+  const total=Math.round((end-start)/86400000)||365; const gone=Math.round((new Date()-start)/86400000);
+  const pct=Math.max(0,Math.min(100,Math.round(gone/total*100)));
+  const left=daysUntil(endYMD);
+  return {endYMD,pct,left,monthsLeft:Math.max(0,Math.round(left/30.44))};
+}
+function brxMembersView(){
+  const room=brxRoomMembers().slice().sort((a,b)=>(a.name||'').localeCompare(b.name||''));
+  const paying=room.filter(m=>!m.type||m.type==='boardroom');
+  const mrr=boardroomMRRof(paying);
+  const today=new Date().toISOString().slice(0,10);
+  const next=(ls.get('tuf_sessions',[])||[]).filter(s=>(s.date||'')>=today).sort((a,b)=>a.date.localeCompare(b.date))[0];
+  const rets=room.map(m=>m.retention).filter(Boolean);
+  const avgRet=rets.length?(rets.reduce((a,b)=>a+b,0)/rets.length).toFixed(1):null;
+  const stat=(n,l)=>`<div class="brx-card"><div style="font-size:26px;font-weight:800;color:#fff;font-variant-numeric:tabular-nums">${n}</div><div style="font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--mut);margin-top:5px">${l}</div></div>`;
+  const card=m=>{ const c=brxContractInfo(m); const isPay=!m.type||m.type==='boardroom';
+    return `<div class="brx-mcard" onclick="brxOpenMember('${m.id}')">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:4px"><div style="font-weight:800;font-size:14.5px;color:#fff">${escHtml(m.name)}</div><span class="brx-tag ${isPay?'y':'o'}">${isPay?'£'+bFee(m).toLocaleString()+'/mo':'Client'}</span></div>
+      <div style="font-size:11.5px;color:var(--mut);margin-bottom:12px;min-height:15px">${escHtml(m.co||'')}</div>
+      <div style="display:flex;align-items:center;gap:8px;font-size:10.5px;color:var(--mut)"><span style="width:62px;flex-shrink:0">Retention</span><div class="brx-bar" style="flex:1"><div style="width:${((m.retention||0)/10)*100}%;background:${(m.retention||0)>=7?'#5AC98E':(m.retention?'#E8B33C':'#3A3A42')}"></div></div><span style="width:34px;text-align:right">${m.retention||'–'}/10</span></div>
+      <div style="display:flex;align-items:center;gap:8px;font-size:10.5px;color:var(--mut);margin-top:7px"><span style="width:62px;flex-shrink:0">Contract</span>${c?`<div class="brx-bar" style="flex:1"><div style="width:${c.pct}%"></div></div><span style="width:34px;text-align:right;white-space:nowrap">${c.monthsLeft}mo</span>`:'<span style="color:#54545C">start date not set</span>'}</div>
+    </div>`; };
+  return `
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:6px">
+    ${stat(room.length,'Confirmed members')}${stat('£'+mrr.toLocaleString(),'Boardroom MRR')}${stat(next?daysUntil(next.date)+'d':'—',next?'To '+escHtml(next.name):'No session booked')}${stat(avgRet||'—','Avg retention')}
+  </div>
+  <div class="brx-sec">Members (${room.length}) <span><button class="btn btn-k btn-sm" onclick="brAddRosterModal()">+ Add member</button></span></div>
+  <div class="brx-grid">${room.map(card).join('')||'<div style="color:var(--mut);font-size:12px">No members yet.</div>'}</div>
+  <div style="font-size:11px;color:#54545C;margin-top:12px">Yellow = paying Boardroom member. Client = private client with Boardroom access included in their existing service.</div>`;
+}
+function brxOpenMember(id){ brxView='members'; brxMemberId=id; renderBoardroom(); }
+function brxSetContract(id,val){ const members=ls.get('tuf_members',[]); const i=members.findIndex(x=>x.id===id); if(i<0)return; members[i].contractStart=val||''; ls.set('tuf_members',members); renderBoardroom(); }
+function brxAttendanceRows(m){
+  const today=new Date().toISOString().slice(0,10);
+  const sessions=(ls.get('tuf_sessions',[])||[]).slice().sort((a,b)=>(a.date||'').localeCompare(b.date||''));
+  const ba=baStore(); const k=profileKey(m.name);
+  return sessions.map(s=>({s,went:ba.some(a=>a.sessionId===s.id&&profileKey(a.name)===k),future:(s.date||'')>=today&&s.status!=='Complete'}));
+}
+function brxMemberProfile(id){
+  const m=(ls.get('tuf_members',[])||[]).find(x=>x.id===id);
+  if(!m){ brxMemberId=null; return brxMembersView(); }
+  const c=brxContractInfo(m); const isPay=!m.type||m.type==='boardroom';
+  const attRows=brxAttendanceRows(m);
+  const attended=attRows.filter(r=>r.went).length;
+  const sub=t=>`<div style="font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--mut);margin-bottom:10px">${t}</div>`;
+  const journey=journeyGet(m.name);
+  return `
+  <span class="brx-back" onclick="brxMemberId=null;renderBoardroom()">← Member CRM</span>
+  <div class="brx-hero" style="padding:26px 30px;margin-bottom:20px">
+    <div style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:flex-start">
+      <div>
+        <div class="brx-kicker">${isPay?'Boardroom member · £'+bFee(m).toLocaleString()+'/month':'Private client · Boardroom access included'}</div>
+        <h1 style="font-size:26px;margin-bottom:4px">${escHtml(m.name)}</h1>
+        <div style="font-size:13px;color:var(--mut)">${escHtml(m.co||'')}</div>
+        <div style="display:flex;gap:16px;flex-wrap:wrap;margin-top:12px;font-size:12.5px">
+          ${m.email?`<a href="mailto:${escAttr(m.email)}" style="color:var(--y)">✉️ ${escHtml(m.email)}</a>`:''}
+          ${m.phone?`<a href="tel:${escAttr(m.phone)}" style="color:#fff;text-decoration:none">📞 ${escHtml(m.phone)}</a>`:''}
+          ${(!m.email&&!m.phone)?'<span style="color:#E8B33C">No contact details yet — Edit to add</span>':''}
+        </div>
+      </div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        <button class="btn btn-ghost btn-sm" onclick="editMemberModal('${m.id}')">Edit</button>
+        <button class="btn btn-ghost btn-sm" onclick="openProfile('${escAttr(m.name)}','${escAttr(m.co||'')}')">Across UFHQ</button>
+        ${(!isPay)?`<button class="btn btn-ghost btn-sm" onclick="brRemoveAccess('${m.id}')">Remove from Boardroom</button>`:''}
+      </div>
+    </div>
+  </div>
+  <div class="grid-2" style="align-items:start">
+    <div>
+      <div class="brx-card" style="margin-bottom:14px">
+        ${sub('12 month contract')}
+        ${c?`<div class="brx-bar" style="margin-bottom:8px"><div style="width:${c.pct}%"></div></div>
+          <div style="display:flex;justify-content:space-between;font-size:11.5px;color:var(--mut);gap:8px;flex-wrap:wrap"><span>Started ${fmtDate(m.contractStart)}</span><b style="color:${c.left<0?'#F27D72':c.left<=60?'#E8B33C':'#fff'}">${c.left>=0?c.monthsLeft+' months left':'Ended '+fmtDate(c.endYMD)}</b><span>Ends ${fmtDate(c.endYMD)}</span></div>`
+        :'<div style="font-size:12px;color:var(--mut);margin-bottom:6px">No start date set yet.</div>'}
+        <div style="display:flex;gap:10px;align-items:center;margin-top:12px"><label style="font-size:11px;color:var(--mut)">Contract start</label><input class="form-input" type="date" style="max-width:170px" value="${m.contractStart||''}" onchange="brxSetContract('${m.id}',this.value)"></div>
+      </div>
+      <div class="brx-card" style="margin-bottom:14px">
+        ${sub('Session attendance'+(attRows.filter(r=>!r.future).length?' · '+attended+' of '+attRows.filter(r=>!r.future).length+' past sessions':''))}
+        ${attRows.length?attRows.map(r=>`<div class="brx-row"><span style="font-size:12.5px">${escHtml(r.s.name)} <span style="color:var(--mut)">· ${r.s.date?fmtShort(r.s.date):'TBC'}</span></span>${r.future?'<span class="brx-tag o">Upcoming</span>':(r.went?'<span class="brx-tag g">Attended</span>':'<span class="brx-tag r">Missed</span>')}</div>`).join(''):'<div style="font-size:12px;color:var(--mut)">No sessions in the planner yet.</div>'}
+      </div>
+      <div class="brx-card" style="margin-bottom:14px">
+        ${sub('Journey with us')}
+        ${journey.length?`<div style="border-left:2px solid #26262B;padding-left:12px;margin-left:4px">${journey.map(x=>`<div style="font-size:12px;padding:4px 0"><span style="color:var(--mut);font-variant-numeric:tabular-nums">${fmtDate(x.date)}</span> · ${escHtml(x.entry)}</div>`).join('')}</div>`:'<div style="font-size:12px;color:var(--mut)">No journey entries yet. Stage moves are logged automatically from now on.</div>'}
+      </div>
+      ${brxActionsPanel(m)}
+    </div>
+    <div>
+      <div class="brx-card" style="margin-bottom:14px">
+        ${sub('Notes log · append only')}
+        <div style="font-size:12.5px;white-space:pre-wrap;line-height:1.6;background:#0E0E10;border:1px solid #1F1F24;border-radius:8px;padding:10px 12px;max-height:320px;overflow:auto">${escHtml(m.notes)||'No notes yet'}</div>
+        <div style="display:flex;gap:6px;margin-top:8px"><input class="form-input" id="mn-new" placeholder="Add a dated note" style="flex:1" onkeydown="if(event.key==='Enter')memberNoteAdd('${m.id}')"><button class="btn btn-k btn-sm" onclick="memberNoteAdd('${m.id}')">Add</button></div>
+      </div>
+      <div class="brx-card">${memberFormsHtml(m)}</div>
+    </div>
+  </div>`;
+}
+
+// ── Google Sheet actions (read only) ──
+function brxParseCSV(text){
+  const rows=[]; let row=[],cur='',q=false;
+  for(let i=0;i<text.length;i++){ const ch=text[i];
+    if(q){ if(ch==='"'){ if(text[i+1]==='"'){cur+='"';i++;} else q=false; } else cur+=ch; }
+    else if(ch==='"') q=true;
+    else if(ch===','){ row.push(cur); cur=''; }
+    else if(ch==='\n'||ch==='\r'){ if(ch==='\r'&&text[i+1]==='\n') i++; row.push(cur); if(row.some(c=>c!=='')) rows.push(row); row=[]; cur=''; }
+    else cur+=ch; }
+  if(cur!==''||row.length){ row.push(cur); if(row.some(c=>c!=='')) rows.push(row); }
+  return rows;
+}
+function brxActionsPanel(m){
+  const url=ls.str('tuf_actions_sheet_url')||'';
+  const cache=ls.get('tuf_actions_cache',null);
+  let inner='';
+  if(!url){ inner=`<div style="font-size:12px;color:var(--mut)">Connect the post session actions Google Sheet: in Sheets go to File → Share → Publish to web → CSV, then paste the link here. Actions match to members by name.</div><button class="btn btn-ghost btn-sm" style="margin-top:10px" onclick="brxSheetModal()">Connect the Sheet</button>`; }
+  else if(!cache||!cache.rows||!cache.rows.length){ inner=`<div style="font-size:12px;color:var(--mut)">Sheet connected. Hit Refresh to load the actions.</div>`; }
+  else {
+    const k=profileKey(m.name); const first=(m.name||'').split(' ')[0].toLowerCase();
+    const head=cache.rows[0]||[];
+    const mine=cache.rows.slice(1).filter(r=>r.some(cell=>{ const c=String(cell||'').toLowerCase(); return c.includes(k)||(first.length>2&&c.split(/[^a-z]+/).includes(first)); }));
+    inner=mine.length
+      ?`<div style="overflow-x:auto"><table class="tbl" style="font-size:11.5px;width:100%"><thead><tr>${head.map(h=>`<th style="text-align:left;color:var(--mut);font-size:10px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;padding:4px 12px 6px 0">${escHtml(h)}</th>`).join('')}</tr></thead><tbody>${mine.map(r=>`<tr>${head.map((_,i)=>`<td style="padding:6px 12px 6px 0;border-top:1px solid #1F1F24;vertical-align:top">${escHtml(r[i]||'')}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`
+      :`<div style="font-size:12px;color:var(--mut)">No rows in the Sheet mention ${escHtml(m.name)}.</div>`;
+    inner+=`<div style="font-size:10px;color:#54545C;margin-top:8px">Read only, pulled from your Google Sheet${cache.fetchedAt?` · loaded ${fmtDate(cache.fetchedAt.slice(0,10))}`:''}. Update actions in the Sheet itself.</div>`;
   }
-  // Boardroom Roster (paying vs complimentary)
-  const comp=allMembers.filter(m=>m.type==='existing_client'&&m.boardroomAccess);
-  const brContact=m=>{ const bits=[m.email?`✉️ <a href="mailto:${escAttr(m.email)}" style="color:var(--blu)">${escHtml(m.email)}</a>`:'', m.phone?`📞 ${escHtml(m.phone)}`:''].filter(Boolean).join('&nbsp;·&nbsp;'); return bits?`<div style="font-size:11px;color:var(--mut);margin-top:3px">${bits}</div>`:`<div style="font-size:11px;color:var(--amb);margin-top:3px">No contact details yet</div>`; };
-  let roster=`<div style="font-size:11px;color:var(--mut);margin-bottom:10px">Paying members count towards Boardroom MRR. Private clients have complimentary access as part of their existing service and do not.</div>`;
-  roster+=`<div style="font-size:11px;font-weight:700;color:var(--mut);margin-bottom:4px">Paying (${bMembers.length})</div>`+(bMembers.length?bMembers.map(m=>`<div style="padding:6px 0;border-bottom:1px solid var(--bdr)"><div style="display:flex;align-items:center;gap:8px"><span style="flex:1;font-size:12px;font-weight:600">${escHtml(m.name)}${m.co?` <span style="font-weight:400;color:var(--mut)">· ${escHtml(m.co)}</span>`:''}</span><span class="tag tag-g" style="font-size:9px">£${bFee(m).toLocaleString()}/mo</span><button class="btn btn-ghost btn-sm" onclick="editMemberModal('${m.id}')">${(m.email||m.phone)?'Edit':'+ Contact'}</button></div>${brContact(m)}</div>`).join(''):'<div style="font-size:11px;color:var(--mut)">None yet</div>');
-  roster+=`<div style="font-size:11px;font-weight:700;color:var(--mut);margin:12px 0 4px">Complimentary access (${comp.length})</div>`+(comp.length?comp.map(m=>`<div style="padding:6px 0;border-bottom:1px solid var(--bdr)"><div style="display:flex;align-items:center;gap:8px"><span style="flex:1;font-size:12px;font-weight:600">${escHtml(m.name)}${m.co?` <span style="font-weight:400;color:var(--mut)">· ${escHtml(m.co)}</span>`:''}</span><span class="tag tag-b" style="font-size:9px">Free</span><button class="btn btn-ghost btn-sm" onclick="editMemberModal('${m.id}')">${(m.email||m.phone)?'Edit':'+ Contact'}</button><button class="btn btn-ghost btn-sm" onclick="brRemoveAccess('${m.id}')">Remove</button></div>${brContact(m)}</div>`).join(''):'<div style="font-size:11px;color:var(--mut)">None yet</div>');
-  const guests=allMembers.filter(m=>m.boardroomGuest||m.type==='guest');
-  roster+=`<div style="font-size:11px;font-weight:700;color:var(--mut);margin:12px 0 4px">Guests · 1 month free trial (${guests.length})</div>`+(guests.length?guests.map(m=>{
-    const dl=m.guestUntil?daysUntil(m.guestUntil):null;
-    const lbl=dl===null?'Trial':(dl<0?`ended ${-dl}d ago`:`ends in ${dl}d`);
-    const lblColor=dl!==null&&dl<0?'var(--red)':(dl!==null&&dl<=7?'var(--amb)':'var(--mut)');
-    return `<div style="padding:6px 0;border-bottom:1px solid var(--bdr)"><div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap"><span style="flex:1;min-width:110px;font-size:12px;font-weight:600">${escHtml(m.name)}${m.co?` <span style="font-weight:400;color:var(--mut)">· ${escHtml(m.co)}</span>`:''}</span><span style="font-size:9px;color:${lblColor};font-weight:700">${lbl}</span><button class="btn btn-ghost btn-sm" onclick="editMemberModal('${m.id}')">${(m.email||m.phone)?'Edit':'+ Contact'}</button><button class="btn btn-ghost btn-sm" onclick="brConvertGuest('${m.id}')" title="Convert to paying member">Convert</button><button class="btn btn-ghost btn-sm" onclick="brRemoveGuest('${m.id}')">Remove</button></div>${brContact(m)}</div>`;
-  }).join(''):'<div style="font-size:11px;color:var(--mut)">None yet</div>');
-  roster+=`<div style="display:flex;gap:6px;margin-top:12px"><button class="btn btn-k btn-sm" style="flex:1" onclick="brAddRosterModal()">+ Add from CRM</button><button class="btn btn-ghost btn-sm" style="flex:1" onclick="brAddGuestModal()">+ Add guest</button></div>`;
-  document.getElementById('boardroom-roster').innerHTML=roster;
-  renderBoardroomChecklist();
-  document.getElementById('topbar-actions').innerHTML=`<button class="btn btn-ghost btn-sm" onclick="nav('members',document.querySelector('[data-page=members]'))">View All Members</button>`;
+  return `<div class="brx-card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;gap:8px"><div style="font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--mut)">Post session actions</div><span style="display:flex;gap:6px">${url?`<button class="btn btn-ghost btn-sm" onclick="brxActionsRefresh()">↻ Refresh</button><button class="btn btn-ghost btn-sm" onclick="brxSheetModal()">Link</button>`:''}</span></div>
+    ${inner}
+  </div>`;
+}
+function brxSheetModal(){
+  showModal('Connect the actions Google Sheet',`
+    <div style="font-size:11.5px;color:var(--mut);margin-bottom:10px">In Google Sheets: File → Share → Publish to web → pick the actions tab and CSV → copy the link. Keep member names in one of the columns so actions match to profiles. The app only reads it, the Sheet stays the source of truth.</div>
+    <div class="form-row"><label class="form-label">Published CSV link</label><input class="form-input" id="bx-sheet" value="${escAttr(ls.str('tuf_actions_sheet_url')||'')}" placeholder="https://docs.google.com/spreadsheets/d/e/…/pub?output=csv"></div>
+  `,`<button class="btn btn-ghost" onclick="closeModal()">Cancel</button><button class="btn btn-k" onclick="brxSheetSave()">Save</button>`);
+}
+function brxSheetSave(){ const v=document.getElementById('bx-sheet').value.trim(); ls.setStr('tuf_actions_sheet_url',v); closeModal(); if(v) brxActionsRefresh(); else renderBoardroom(); }
+async function brxActionsRefresh(){
+  const url=ls.str('tuf_actions_sheet_url')||''; if(!url){ brxSheetModal(); return; }
+  try{
+    const res=await fetch(url); if(!res.ok) throw new Error('HTTP '+res.status);
+    const text=await res.text();
+    ls.set('tuf_actions_cache',{fetchedAt:new Date().toISOString(),rows:brxParseCSV(text)});
+    addNotif('Actions sheet refreshed'); renderBoardroom();
+  }catch(e){ alert('Could not load the Sheet: '+String((e&&e.message)||e)+'. Check it is the published CSV link (File → Share → Publish to web).'); }
+}
+
+// ── Area 4: Leads & Guests ──
+function brxLeadsView(){
+  const members=ls.get('tuf_members',[])||[];
+  const guests=members.filter(m=>(m.boardroomGuest||m.type==='guest')&&m.status==='active');
+  const memberKeys=new Set(members.map(m=>profileKey(m.name)));
+  const ba=baStore().filter(a=>!memberKeys.has(profileKey(a.name)));
+  const files=ls.get('tuf_files',[])||[];
+  const guestRow=m=>{ const dl=m.guestUntil?daysUntil(m.guestUntil):null;
+    const lbl=dl===null?'Trial':(dl<0?`Trial ended ${-dl}d ago`:`Trial ends in ${dl}d`);
+    const fCount=files.filter(f=>f.memberId===m.id).length;
+    return `<div class="brx-row">
+      <div style="min-width:0"><div style="font-weight:700;font-size:13px;color:#fff">${escHtml(m.name)}${m.co?` <span style="font-weight:500;color:var(--mut)">· ${escHtml(m.co)}</span>`:''}</div>
+      <div style="font-size:11px;color:var(--mut);margin-top:2px">${m.sourceEvent?`From ${escHtml(m.sourceEvent)} · `:''}<span style="color:${dl!==null&&dl<0?'#F27D72':(dl!==null&&dl<=7?'#E8B33C':'var(--mut)')}">${lbl}</span>${fCount?` · ${fCount} form${fCount>1?'s':''} on file`:''}</div></div>
+      <span style="display:flex;gap:6px;flex-shrink:0"><button class="btn btn-ghost btn-sm" onclick="brxLeadNotes('${m.id}')">Notes</button><button class="btn btn-ghost btn-sm" onclick="editMemberModal('${m.id}')">Edit</button><button class="btn btn-k btn-sm" onclick="brConvertGuest('${m.id}')">Convert →</button><button class="btn btn-ghost btn-sm" onclick="brRemoveGuest('${m.id}')">✕</button></span>
+    </div>`; };
+  const baRow=a=>{ const inPipe=(ls.get('tuf_prospects',[])||[]).some(p=>profileKey(p.name)===profileKey(a.name));
+    const fCount=files.filter(f=>f.baId===a.id).length;
+    return `<div class="brx-row">
+      <div style="min-width:0"><div style="font-weight:700;font-size:13px;color:#fff">${escHtml(a.name)}${a.co?` <span style="font-weight:500;color:var(--mut)">· ${escHtml(a.co)}</span>`:''}</div>
+      <div style="font-size:11px;color:var(--mut);margin-top:2px">${a.sessionName?`Attended ${escHtml(a.sessionName)}${a.sessionDate?' · '+fmtShort(a.sessionDate):''}`:'Invited · not attended yet'}${a.owner?` · owner ${escHtml(a.owner)}`:''}${fCount?` · ${fCount} form${fCount>1?'s':''} on file`:''}</div></div>
+      <span style="display:flex;gap:6px;flex-shrink:0"><button class="btn btn-ghost btn-sm" onclick="baEditModal('${a.id}')">Open</button>${inPipe?'<span class="brx-tag o" style="align-self:center">In pipeline</span>':`<button class="btn btn-ghost btn-sm" onclick="baToPipeline('${a.id}');renderBoardroom()">→ Pipeline</button>`}</span>
+    </div>`; };
+  return `
+  <div class="brx-sec">Guests on a free session (${guests.length}) <span><button class="btn btn-k btn-sm" onclick="brAddGuestModal()">+ Add guest</button></span></div>
+  <div class="brx-card" style="margin-bottom:22px">${guests.length?guests.map(guestRow).join(''):'<div style="font-size:12px;color:var(--mut)">No guests right now. Add referrals and event contacts invited to try a session.</div>'}</div>
+  <div class="brx-sec">Session attendees · not yet members (${ba.length}) <span><button class="btn btn-ghost btn-sm" onclick="baAddModal()">+ Log attendee</button></span></div>
+  <div class="brx-card">${ba.length?ba.map(baRow).join(''):'<div style="font-size:12px;color:var(--mut)">Everyone who attended a session is already a member or guest.</div>'}
+  <div style="font-size:10px;color:#54545C;margin-top:10px">This pipeline stays separate from the Member CRM until someone converts. Open a person to log impressions, business stage and their forms.</div></div>`;
+}
+function brxLeadNotes(id){
+  const m=(ls.get('tuf_members',[])||[]).find(x=>x.id===id); if(!m) return;
+  showModal('Notes · '+escHtml(m.name),`
+    <div style="font-size:12.5px;white-space:pre-wrap;line-height:1.6;background:var(--bg);border:1px solid var(--bdr);border-radius:8px;padding:10px 12px;max-height:300px;overflow:auto;margin-bottom:10px">${escHtml(m.notes)||'No notes yet'}</div>
+    <div class="form-row"><label class="form-label">Add a dated note (impressions, business stage, follow up)</label><textarea class="form-textarea" id="bln-new" style="min-height:60px"></textarea></div>
+  `,`<button class="btn btn-ghost" onclick="closeModal()">Close</button><button class="btn btn-k" onclick="brxLeadNoteSave('${id}')">Add note</button>`);
+}
+function brxLeadNoteSave(id){
+  const v=(document.getElementById('bln-new')?.value||'').trim(); if(!v){ closeModal(); return; }
+  const members=ls.get('tuf_members',[]); const i=members.findIndex(x=>x.id===id); if(i<0) return;
+  const stamp='['+new Date().toISOString().slice(0,10)+' · '+CURRENT_USER+'] ';
+  members[i].notes=((members[i].notes||'')+(members[i].notes?'\n':'')+stamp+v).trim();
+  ls.set('tuf_members',members); closeModal(); addNotif('Note added for '+members[i].name); brxRefresh();
 }
 
 // ── Boardroom event checklist (one ongoing editable list) ──
@@ -7103,7 +7455,7 @@ function brRemoveAccess(id){
   members[i].boardroomAccess=false; ls.set('tuf_members',members); renderBoardroom();
 }
 function guestDefaultUntil(){const d=new Date();d.setMonth(d.getMonth()+1);return d.toISOString().slice(0,10);}
-function refreshBoardroomViews(){ if(document.getElementById('boardroom-roster')) renderBoardroom(); if(document.getElementById('members-list')) renderMembers(); }
+function refreshBoardroomViews(){ brxRefresh(); if(document.getElementById('members-list')) renderMembers(); }
 function brAddGuestModal(){
   showModal('Add Boardroom Guest',`
     <div style="font-size:11px;color:var(--mut);margin-bottom:10px">Guests get one month of free Boardroom access to see if they want to join. They do not count towards Boardroom MRR.</div>
@@ -7583,7 +7935,8 @@ function saveSessionFeedback(){
   const name=document.getElementById('nsf-name').value.trim();if(!name)return;
   const all=ls.get('tuf_session_feedback',[]);
   all.push({id:uid(),session:name,date:document.getElementById('nsf-date').value,attendees:parseInt(document.getElementById('nsf-att').value)||0,avgScore:parseFloat(document.getElementById('nsf-score').value)||0,nps:parseInt(document.getElementById('nsf-nps').value)||0,commitRate:parseInt(document.getElementById('nsf-commit').value)||0,highlights:document.getElementById('nsf-hi').value.trim(),improvements:document.getElementById('nsf-imp').value.trim(),createdAt:new Date().toISOString()});
-  ls.set('tuf_session_feedback',all);closeModal();renderSessions();
+  ls.set('tuf_session_feedback',all);closeModal();try{renderSessions();}catch(_){}
+  if(typeof brxRefresh==='function') brxRefresh();
 }
 
 // ════════════════════════════════════════════════════════════════════
