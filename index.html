@@ -1446,6 +1446,7 @@ function initApp(user){
   seedTasksOnce();
   peopleBuild();
   peopleSweep();
+  stripeSyncToCRM();
   updateInboundBadge();
   renderHome();
   renderCapSidebar();
@@ -4536,6 +4537,42 @@ function padelSeedJasper(){
 function padelAddLead(){ const inp=document.getElementById('padel-add'); const n=(inp?.value||'').trim(); if(!n)return; const l=ls.get('tuf_event_leads',[]); l.push({id:uid(),name:n,co:'',email:'',phone:'',event:'Padel',assignedTo:CURRENT_USER,notes:'',status:'New Lead',lastContact:new Date().toISOString().slice(0,10),addedDate:new Date().toISOString().slice(0,10)}); ls.set('tuf_event_leads',l); addNotif('Padel lead added: '+n); renderPadel(); }
 function padelHidePayment(key){ const h=ls.get('tuf_padel_hidden',[])||[]; if(!h.includes(key))h.push(key); ls.set('tuf_padel_hidden',h); renderPadel(); }
 function padelRestorePayments(){ ls.set('tuf_padel_hidden',[]); renderPadel(); }
+// Transfer Stripe payments (already pulled into the app on the Padel page) into the
+// Event CRM. No webhook, no extra setup: runs on app load and after every
+// "Update from Stripe". Each charge is processed once (tuf_stripe_synced), so
+// deleting someone from the Event CRM does not resurrect them on the next load.
+function stripeSyncToCRM(){
+  try{
+    if(!sbLoadOK) return 0;
+    const snap=ls.get('tuf_padel_stripe',null)||(typeof PADEL_STRIPE_SNAPSHOT!=='undefined'?PADEL_STRIPE_SNAPSHOT:{payments:[]});
+    const payments=snap.payments||[]; if(!payments.length) return 0;
+    const key=p=>p.charge||((p.created||0)+'_'+(p.amount||0));
+    const hidden=new Set(ls.get('tuf_padel_hidden',[])||[]);
+    const synced=ls.get('tuf_stripe_synced',[])||[]; const syncedSet=new Set(synced);
+    const att=ls.get('tuf_event_attendees',[])||[];
+    let added=0, marked=false;
+    payments.forEach(p=>{
+      const k=key(p);
+      if(syncedSet.has(k)) return;
+      if(hidden.has(k)){ synced.push(k); syncedSet.add(k); marked=true; return; } // test trials: never import
+      const email=(p.email||'').trim().toLowerCase();
+      const name=((p.payer&&p.payer!=='Guest checkout')?p.payer:'').trim()||email;
+      synced.push(k); syncedSet.add(k); marked=true;
+      if(!name) return; // nothing usable
+      const dup=att.some(a=>(email&&(a.email||'').trim().toLowerCase()===email)||profileKey(a.name)===profileKey(name));
+      if(dup) return;
+      const paid=new Date((p.created||0)*1000).toISOString().slice(0,10);
+      att.push({id:uid(),name,co:'',email:p.email||'',phone:'',event:'Padel Event',eventDate:paid,score:null,owner:'Danny',notes:'Paid £'+(((p.amount||0)/100).toLocaleString('en-GB'))+' via Stripe on '+fmtDate(paid)+'.',addedDate:new Date().toISOString().slice(0,10),source:'Stripe',stripeCharge:p.charge||''});
+      personTag(att);
+      journeyLog(name,'Entered the system: Event CRM (Stripe payment)');
+      added++;
+    });
+    if(added) ls.set('tuf_event_attendees',att);
+    if(marked) ls.set('tuf_stripe_synced',synced);
+    if(added) addNotif(added+' Stripe payer'+(added>1?'s':'')+' added to the Event CRM');
+    return added;
+  }catch(e){ console.warn('stripeSyncToCRM failed',e); return 0; }
+}
 async function padelRefreshStripe(){
   const btn=document.getElementById('padel-refresh'); if(btn){btn.disabled=true;btn.textContent='Updating…';}
   try{
@@ -4546,6 +4583,7 @@ async function padelRefreshStripe(){
     if(!Array.isArray(payments)) throw new Error('badshape');
     ls.set('tuf_padel_stripe',{updated:new Date().toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'}),currency:'£',payments});
     addNotif('Padel Stripe payments updated');
+    stripeSyncToCRM();
     renderPadel();
   }catch(e){
     if(btn){btn.disabled=false;btn.textContent='Update from Stripe';}
@@ -7381,7 +7419,10 @@ function brxMonthCells(y,m){
 }
 function brxCalendarView(){
   const sessions=(ls.get('tuf_sessions',[])||[]).slice().sort((a,b)=>(a.date||'').localeCompare(b.date||''));
-  const months=brxMonths(12,2);
+  let span=12;
+  const last=sessions.length?sessions[sessions.length-1].date:'';
+  if(last){ const now=new Date(); const ld=new Date(last+'T00:00:00'); const diff=(ld.getFullYear()-now.getFullYear())*12+(ld.getMonth()-now.getMonth())+3; span=Math.max(12,Math.min(18,diff)); }
+  const months=brxMonths(span,2);
   const todayY=new Date().toISOString().slice(0,10);
   const next=sessions.find(s=>(s.date||'')>=todayY);
   const byDate={}; sessions.forEach(s=>{ if(s.date) (byDate[s.date]=byDate[s.date]||[]).push(s); });
