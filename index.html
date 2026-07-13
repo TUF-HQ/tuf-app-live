@@ -412,6 +412,25 @@ details>summary::-webkit-details-marker{display:none}
 .brx-tag.o{border:1px solid #3A3A42;color:#C9CBD1}
 .brx-tag.g{background:#12241A;color:#5AC98E}
 .brx-tag.r{background:#2A1414;color:#F27D72}
+.brx-acc{background:#131316;border:1px solid #26262B;border-radius:14px;margin-bottom:12px;overflow:hidden}
+.brx-acc-h{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:13px 18px;cursor:pointer;user-select:none}
+.brx-acc-h:hover{background:#17171A}
+.brx-acc-h .t{font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#D9D9DE}
+.brx-acc-h .chev{color:var(--y);font-size:12px}
+.brx-acc-b{padding:2px 18px 16px}
+.brx-group{font-size:12px;font-weight:800;letter-spacing:.16em;text-transform:uppercase;color:var(--y);margin:4px 0 12px;padding-bottom:8px;border-bottom:1px solid #26262B}
+.brx-cal{background:#131316;border:1px solid #26262B;border-radius:12px;padding:12px 14px}
+.brx-cal.now{border-color:var(--y)}
+.brx-cal .m{font-size:11px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:#9BA0A8;margin-bottom:8px}
+.brx-cal.now .m{color:var(--y)}
+.brx-cal-g{display:grid;grid-template-columns:repeat(7,1fr);gap:2px}
+.brx-cal-g .wd{font-size:8.5px;font-weight:800;color:#54545C;text-align:center;padding-bottom:3px}
+.brx-cal-d{font-size:9.5px;color:#7A7A83;text-align:center;padding:3px 0;border-radius:5px;font-variant-numeric:tabular-nums;min-height:16px}
+.brx-cal-d.today{outline:1px solid #54545C}
+.brx-cal-d.bd{background:var(--y);color:#0A0A0B;font-weight:800;cursor:pointer}
+.brx-cal-d.imp{border:1px solid var(--y);color:#fff;font-weight:800;cursor:pointer}
+.brx-cal-s{font-size:10.5px;margin-top:8px;color:#C9CBD1;cursor:pointer;display:flex;gap:6px;align-items:center}
+.brx-cal-s:hover{color:var(--y)}
 @media(max-width:768px){#page-boardroom{margin:-16px -14px;padding:16px 14px 40px}.brx-hero{padding:24px 20px}.brx-hero h1{font-size:26px}}
 </style>
 </head>
@@ -3198,13 +3217,13 @@ function memberFormsHtml(m){
   };
   return sec('prep','Prep forms')+sec('feedback','Feedback forms');
 }
-function memberFormModal(memberId,type,who){
+function memberFormModal(memberId,type,who,sid){
   who=who||'m';
   const label=type==='prep'?'Prep form':'Feedback form';
   showModal('File a '+label,`
     <div style="font-size:11px;color:var(--mut);margin-bottom:10px">Paste the form content below, or attach a file. It is saved to this ${who==='ba'?'attendee':'member'}'s record with a dated pointer in their notes. Forms are never deleted.</div>
     <div class="grid-2"><div class="form-row"><label class="form-label">Session or title</label><input class="form-input" id="mf-title" placeholder="e.g. Boardroom Session 2"></div><div class="form-row"><label class="form-label">Date</label><input class="form-input" type="date" id="mf-date" value="${new Date().toISOString().slice(0,10)}"></div></div>
-    <div class="form-row"><label class="form-label">Link to a session <span style="font-weight:400;color:var(--mut)">(optional, shows it on that session in the Boardroom calendar)</span></label>${baSessionSelect('mf-session','')}</div>
+    <div class="form-row"><label class="form-label">Link to a session <span style="font-weight:400;color:var(--mut)">(optional, shows it on that session in the Boardroom calendar)</span></label>${baSessionSelect('mf-session',sid||'')}</div>
     <div class="form-row"><label class="form-label">Paste the form content ${typeof micBtnHtml==='function'?micBtnHtml('mf-text'):''}</label><textarea class="form-textarea" id="mf-text" style="min-height:120px" placeholder="Paste the whole form here"></textarea></div>
     <div class="form-row"><label class="form-label">Or attach a file <span style="font-weight:400;color:var(--mut)">(needs the Documents storage setup)</span></label><input class="form-input" type="file" id="mf-file"></div>
     <div id="mf-status" style="font-size:12px;margin-top:6px"></div>
@@ -3620,7 +3639,7 @@ function baEditModal(id){ const a=baStore().find(x=>x.id===id); if(!a)return; sh
 function baUpdate(id){ const f=baReadForm(); const l=baStore(); const i=l.findIndex(x=>x.id===id); if(i<0)return; l[i]={...l[i],...f}; ls.set('tuf_boardroom_attendees',l); closeModal(); renderMembers(); brxRefresh(); }
 function baDelete(id){ if(!confirm('Remove this attendee?'))return; ls.set('tuf_boardroom_attendees',baStore().filter(x=>x.id!==id)); closeModal(); renderMembers(); brxRefresh(); }
 function baToPipeline(id){ const a=baStore().find(x=>x.id===id); if(!a)return; const list=ls.get('tuf_prospects',[]); if(list.some(p=>(p.name||'').toLowerCase()===(a.name||'').toLowerCase())&&!confirm(a.name+' may already be in the pipeline. Add again?')) return; const today=new Date().toISOString().slice(0,10); list.push({id:uid(),name:a.name||'',co:a.co||'',email:a.email||'',phone:a.phone||'',stage:'Prospect',temp:'Warm',score:null,nextAction:'Follow up after Boardroom event',nextActionDate:today,notes:('From Boardroom event'+(a.sessionName?': '+a.sessionName:'')+(a.notes?'\n'+a.notes:'')),lastContact:today,sourceEvent:a.sessionName||'Boardroom event'}); ls.set('tuf_prospects',list); addNotif(`${a.name} added to Sales Pipeline`); journeyLog(a.name,'Boardroom event attendee → Sales Pipeline'+(a.sessionName?' (from '+a.sessionName+')':'')); }
-function baAddFromModal(){
+function baAddFromModal(sid){
   const members=ls.get('tuf_members',[])||[]; const prospects=ls.get('tuf_prospects',[])||[];
   const row=(p,src)=>`<label style="display:flex;align-items:center;gap:8px;padding:5px 0;cursor:pointer;font-size:12.5px;border-bottom:1px solid var(--bdr)"><input type="checkbox" class="ba-pick" data-src="${src}" data-id="${p.id}"><span style="flex:1">${escHtml(p.name||'(no name)')}${p.co?` <span style="color:var(--mut)">· ${escHtml(p.co)}</span>`:''}</span><span style="font-size:9px;color:${(p.email||p.phone)?'var(--grn)':'var(--amb)'}">${(p.email||p.phone)?'has contact':'no contact'}</span></label>`;
   const group=(label,arr,src)=>arr.length?`<div style="font-size:11px;font-weight:700;color:var(--mut);margin:10px 0 2px">${label} (${arr.length})</div>`+arr.map(p=>row(p,src)).join(''):'';
@@ -3630,7 +3649,7 @@ function baAddFromModal(){
   const any=bMembers.length+clients.length+guests.length+prospects.length;
   showModal('Add existing people as Boardroom attendees',`
     <div style="font-size:11px;color:var(--mut);margin-bottom:8px">Pick the session, then tick everyone who attended. Their contact details are copied across.</div>
-    <div class="grid-2"><div class="form-row"><label class="form-label">Boardroom session</label>${baSessionSelect('baf-session','')}</div><div class="form-row"><label class="form-label">Owner</label><select class="form-select" id="baf-owner">${['Danny','Joe','Jasper','James'].map(o=>`<option${o===CURRENT_USER?' selected':''}>${o}</option>`).join('')}</select></div></div>
+    <div class="grid-2"><div class="form-row"><label class="form-label">Boardroom session</label>${baSessionSelect('baf-session',sid||'')}</div><div class="form-row"><label class="form-label">Owner</label><select class="form-select" id="baf-owner">${['Danny','Joe','Jasper','James'].map(o=>`<option${o===CURRENT_USER?' selected':''}>${o}</option>`).join('')}</select></div></div>
     <div style="max-height:250px;overflow-y:auto;border:1px solid var(--bdr);border-radius:8px;padding:4px 12px;margin-top:4px">${any?group('Boardroom members',bMembers,'m')+group('Private clients',clients,'m')+group('Guests',guests,'m')+group('Pipeline prospects',prospects,'p'):'<div style="font-size:12px;color:var(--mut);padding:10px 0">No existing people found yet.</div>'}</div>
   `,`<button class="btn btn-ghost" onclick="closeModal()">Cancel</button><button class="btn btn-k" onclick="baAddFromSave()">Add selected</button>`);
 }
@@ -3644,7 +3663,7 @@ function baAddFromSave(){
     l.push({id:uid(),name:p.name||'',co:p.co||'',email:p.email||'',phone:p.phone||'',sessionId:sid,sessionName:meta.sessionName,sessionDate:meta.sessionDate,owner,notes:'',addedDate:new Date().toISOString().slice(0,10),fromMemberId:src==='m'?id:'',fromProspectId:src==='p'?id:''}); n++;
     journeyLog(p.name,'Logged as Boardroom event attendee'+(meta.sessionName?' ('+meta.sessionName+')':''));
   });
-  ls.set('tuf_boardroom_attendees',l); closeModal(); renderMembers(); addNotif(`${n} added as Boardroom attendees${dup?` (${dup} already logged, skipped)`:''}`);
+  ls.set('tuf_boardroom_attendees',l); closeModal(); renderMembers(); brxRefresh(); addNotif(`${n} added as Boardroom attendees${dup?` (${dup} already logged, skipped)`:''}`);
 }
 function editELModal(id){
   const a=ls.get('tuf_event_attendees',[]).find(x=>x.id===id);if(!a)return;
@@ -6896,27 +6915,134 @@ function brTplCopy(id,btn){
   else { fallback(); done(); }
 }
 
-// ═══ BOARDROOM SECTION — four areas: Service Model / Session Calendar / Member CRM / Leads & Guests ═══
-let brxView='model', brxMemberId=null, brxSessionId=null;
+// ═══ BOARDROOM SECTION — six areas: What's Next / Service Model / Session Calendar / Member CRM / Leads & Guests / IP ═══
+let brxView='next', brxMemberId=null, brxSessionId=null;
+let brxOpenSecs=new Set(['sess-agenda','ip-P&L']);
+let brxAISugs=null, brxAIBusy=false;
 function brxNav(v){ brxView=v; brxMemberId=null; brxSessionId=null; renderBoardroom(); }
 function brxRefresh(){ const p=document.getElementById('page-boardroom'); if(p&&p.classList.contains('active')) renderBoardroom(); }
+function brxToggleSec(k){ if(brxOpenSecs.has(k)) brxOpenSecs.delete(k); else brxOpenSecs.add(k); renderBoardroom(); }
+function brxSec(key,title,body,actionsHtml){
+  const open=brxOpenSecs.has(key);
+  return `<div class="brx-acc">
+    <div class="brx-acc-h" onclick="brxToggleSec('${key}')">
+      <span class="t">${title}</span>
+      <span style="display:flex;gap:6px;align-items:center;flex-shrink:0" onclick="event.stopPropagation()">${actionsHtml||''}<span class="chev" onclick="brxToggleSec('${key}')" style="cursor:pointer;padding:2px 6px">${open?'▾':'▸'}</span></span>
+    </div>
+    ${open?`<div class="brx-acc-b">${body}</div>`:''}
+  </div>`;
+}
 function brxService(){ return ls.get('tuf_boardroom_service',{name:'The Boardroom',promise:'A private boardroom of ambitious founders, chaired by Danny Wicks. Real numbers on the table, honest challenge from peers who run businesses of their own, and clear commitments to walk out with. Founders building with founders.',who:'Owner managed businesses, typically £1m to £20m turnover, led by founders who want to scale with structure and honesty.',format:'Bimonthly in person Boardroom Days plus a monthly online implementation session in between',term:'12 month engagement'}); }
+function brxNextSession(){ const today=new Date().toISOString().slice(0,10); return (ls.get('tuf_sessions',[])||[]).filter(s=>(s.date||'')>=today).sort((a,b)=>a.date.localeCompare(b.date))[0]||null; }
 
 function renderBoardroom(){
   const root=document.getElementById('brx-root'); if(!root) return;
-  const pills=[['model','Service Model'],['calendar','Session Calendar'],['members','Member CRM'],['leads','Leads & Guests']];
+  const pills=[['next',"What's Next"],['model','Service Model'],['calendar','Session Calendar'],['members','Member CRM'],['leads','Leads & Guests'],['ip','IP']];
   let body='';
   if(brxView==='calendar') body=brxSessionId?brxSessionView(brxSessionId):brxCalendarView();
   else if(brxView==='members') body=brxMemberId?brxMemberProfile(brxMemberId):brxMembersView();
   else if(brxView==='leads') body=brxLeadsView();
-  else body=brxModelView();
+  else if(brxView==='ip') body=brxIPView();
+  else if(brxView==='model') body=brxModelView();
+  else body=brxNextView();
   root.innerHTML=`<div class="brx-nav">${pills.map(p=>`<button class="brx-pill${brxView===p[0]?' on':''}" onclick="brxNav('${p[0]}')">${p[1]}</button>`).join('')}</div>`+body;
-  if(brxView==='model') renderBoardroomTemplates();
-  if(brxView==='calendar'&&brxSessionId) renderBoardroomChecklist();
+  if(document.getElementById('boardroom-templates')) renderBoardroomTemplates();
+  if(document.getElementById('boardroom-checklist')) renderBoardroomChecklist();
   const ta=document.getElementById('topbar-actions'); if(ta) ta.innerHTML=`<button class="btn btn-ghost btn-sm" onclick="goPage('sessions')">Session Planner</button><button class="btn btn-ghost btn-sm" onclick="goPage('members')">All Members</button>`;
 }
 
-// ── Area 1: Service Model ──
+// ── Area: WHAT'S NEXT (landing) ──
+const BRX_ESSENTIALS={
+  'Boardroom Day':['Venue confirmed and room set up booked','Catering ordered','Agenda finalised and timings locked','Guest speaker confirmed and briefed','Prep forms sent to all attendees','Prep forms chased and reviewed','Print packs, name cards and materials','Feedback forms printed','Send joining instructions to attendees','Book follow up calls for the week after'],
+  'Implementation Session':['Send the online meeting link to members','Agenda and focus topic agreed','Reminder message the day before','Review last session actions before the call','Log actions and send the recap after']
+};
+function brxNextView(){
+  const next=brxNextSession();
+  const focuses=ls.get('tuf_boardroom_focuses',[])||[];
+  const fRows=focuses.length?focuses.map(f=>`<div class="chk-row${f.done?' done':''}">
+      <div class="chk-box" onclick="brxFocusToggle('${f.id}')">${f.done?'✓':''}</div>
+      <span class="chk-text" style="flex:1;font-size:13px" onclick="brxFocusToggle('${f.id}')">${escHtml(f.text)}</span>
+      <button class="btn btn-ghost btn-sm" style="padding:2px 8px" onclick="brxFocusDelete('${f.id}')">✕</button>
+    </div>`).join(''):'<div style="font-size:12px;color:var(--mut);padding:8px 0">Nothing logged yet. Add the bigger things to consider, e.g. build a P&L sheet.</div>';
+  const sugs=brxAISugs;
+  return `
+  <div class="brx-hero" style="padding:24px 30px 20px;margin-bottom:20px">
+    <div class="brx-kicker">What's next</div>
+    <h1 style="font-size:24px;margin-bottom:6px">${next?escHtml(next.name):'No session booked'}</h1>
+    <div style="font-size:13px;color:var(--mut)">${next?`${escHtml(next.type)} · ${fmtDate(next.date)} · in ${daysUntil(next.date)} days`:'Add the next session in the Session Calendar so the to do list has a target.'}</div>
+  </div>
+  <div class="grid-2" style="align-items:start">
+    <div>
+      <div class="brx-group">1 · To do for upcoming events</div>
+      <div style="display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap">
+        <button class="btn btn-ghost btn-sm" onclick="brxSeedEssentials()" title="Adds the standard must do items for the next session type">+ Seed the essentials</button>
+        <button class="btn btn-ghost btn-sm" onclick="brxAISuggest()" ${brxAIBusy?'disabled':''}>${brxAIBusy?'Thinking…':'✨ AI suggestions'}</button>
+      </div>
+      ${sugs&&sugs.length?`<div class="brx-card" style="margin-bottom:12px;border-color:#3A3520">
+        <div style="font-size:10.5px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--y);margin-bottom:6px">AI suggested · tap + to add</div>
+        ${sugs.map((s,i)=>`<div class="brx-row"><span style="font-size:12.5px">${escHtml(s)}</span><button class="btn btn-ghost btn-sm" onclick="brxAddSuggestion(${i})">+</button></div>`).join('')}
+        <button class="btn btn-ghost btn-sm" style="margin-top:8px" onclick="brxAISugs=null;renderBoardroom()">Dismiss</button>
+      </div>`:''}
+      <div id="boardroom-checklist"></div>
+    </div>
+    <div>
+      <div class="brx-group">2 · General focuses</div>
+      <div class="brx-card">
+        <div style="font-size:11px;color:var(--mut);margin-bottom:10px">The bigger pieces to keep in view. These stay here (not synced to the Tasks board).</div>
+        <div style="display:flex;gap:8px;margin-bottom:10px">
+          <input class="form-input" id="brx-focus-new" placeholder="e.g. Build a P&L sheet" style="flex:1" onkeydown="if(event.key==='Enter')brxFocusAdd()">
+          <button class="btn btn-k btn-sm" onclick="brxFocusAdd()">+ Add</button>
+        </div>
+        ${fRows}
+      </div>
+    </div>
+  </div>`;
+}
+function brxFocusAdd(){ const inp=document.getElementById('brx-focus-new'); const v=(inp?.value||'').trim(); if(!v) return; const l=ls.get('tuf_boardroom_focuses',[])||[]; l.push({id:uid(),text:v,done:false,addedDate:new Date().toISOString().slice(0,10)}); ls.set('tuf_boardroom_focuses',l); renderBoardroom(); }
+function brxFocusToggle(id){ const l=ls.get('tuf_boardroom_focuses',[])||[]; const i=l.findIndex(x=>x.id===id); if(i<0)return; l[i].done=!l[i].done; ls.set('tuf_boardroom_focuses',l); renderBoardroom(); }
+function brxFocusDelete(id){ ls.set('tuf_boardroom_focuses',(ls.get('tuf_boardroom_focuses',[])||[]).filter(x=>x.id!==id)); renderBoardroom(); }
+function brxSeedEssentials(){
+  const next=brxNextSession();
+  const type=next?next.type:'Boardroom Day';
+  const wants=BRX_ESSENTIALS[type]||BRX_ESSENTIALS['Boardroom Day'];
+  const list=ls.get('tuf_boardroom_checklist',[])||[];
+  const have=new Set(list.map(i=>(i.text||'').trim().toLowerCase()));
+  let n=0;
+  wants.forEach(t=>{ if(have.has(t.trim().toLowerCase())) return; const item={id:uid(),text:t,done:false,owner:'',date:next?next.date:''}; list.push(item); brLinkedTask(item,true); n++; });
+  ls.set('tuf_boardroom_checklist',list);
+  addNotif(n?`${n} essentials added for the ${type}`:'All the essentials are already on the list');
+  renderBoardroom();
+}
+async function brxAISuggest(){
+  if(brxAIBusy) return; brxAIBusy=true; renderBoardroom();
+  try{
+    const next=brxNextSession();
+    const list=(ls.get('tuf_boardroom_checklist',[])||[]).map(i=>i.text);
+    const fb=(ls.get('tuf_session_feedback',[])||[]).slice(-2).map(f=>`${f.session}: improvements noted - ${f.improvements||'none'}`).join('\n');
+    const prompt=`You help run The Boardroom, a peer boardroom for founders run by The Ultimate Founder team.
+Next event: ${next?`${next.name} (${next.type}) on ${next.date}`:'not scheduled yet'}.
+Current to do list:\n${list.map(t=>'- '+t).join('\n')||'(empty)'}
+Recent debrief notes:\n${fb||'(none)'}
+Suggest up to 6 NEW, specific preparation or follow up tasks that are missing from the list. UK business context. Reply with ONLY a JSON array of short task strings, no other text.`;
+    const data=await claudeCall({model:OKR_MODEL,max_tokens:500,messages:[{role:'user',content:prompt}]});
+    const text=data.content?.[0]?.text||'';
+    const m=text.match(/\[[\s\S]*\]/);
+    const arr=m?JSON.parse(m[0]):[];
+    brxAISugs=(Array.isArray(arr)?arr:[]).filter(x=>typeof x==='string'&&x.trim()).slice(0,6);
+    if(!brxAISugs.length){ alert('The AI came back empty. Try again in a moment.'); brxAISugs=null; }
+  }catch(e){ alert('AI suggestion failed: '+String((e&&e.message)||e)); }
+  brxAIBusy=false; renderBoardroom();
+}
+function brxAddSuggestion(i){
+  const s=brxAISugs&&brxAISugs[i]; if(!s) return;
+  const next=brxNextSession();
+  const list=ls.get('tuf_boardroom_checklist',[])||[];
+  const item={id:uid(),text:s,done:false,owner:'',date:next?next.date:''};
+  list.push(item); ls.set('tuf_boardroom_checklist',list); brLinkedTask(item,true);
+  brxAISugs.splice(i,1); renderBoardroom();
+}
+
+// ── Area: SERVICE MODEL ──
 function brxModelView(){
   const s=brxService();
   const model=ls.get('tuf_boardroom_model',{items:['Bi-monthly Boardroom Days (full day, in person)','Bi-monthly Implementation Sessions (online)','Private WhatsApp Boardroom Group','Direct access to Danny between sessions','Annual 1-2-1 strategy session with Danny','Access to all UF Network events','Guest expert sessions each Boardroom Day']});
@@ -6935,18 +7061,14 @@ function brxModelView(){
     <div style="font-size:12.5px;color:#C9CBD1;margin-top:16px;max-width:720px"><b style="color:var(--y)">Who it serves:</b> ${escHtml(s.who)}</div>
     <button class="btn btn-ghost btn-sm" style="margin-top:18px" onclick="brxEditService()">Edit the one pager</button>
   </div>
-  <div class="brx-sec">What members get</div>
-  <div class="brx-card">
-    ${model.items.map(i=>`<div style="display:flex;gap:10px;align-items:flex-start;padding:7px 0;border-bottom:1px solid #1F1F24;font-size:13px"><span style="color:var(--y);flex-shrink:0;font-weight:800">✓</span>${escHtml(i)}</div>`).join('')}
-    <button class="btn btn-ghost btn-sm" style="margin-top:12px" onclick="editBoardroomModel()">Edit list</button>
-  </div>
-  <div class="brx-sec">WhatsApp community</div>
-  <div class="brx-card">
-    <div style="display:flex;gap:10px;align-items:center;margin-bottom:8px;flex-wrap:wrap"><span class="brx-tag ${wa.launched?'g':'o'}">${wa.launched?'Live':'Not launched'}</span>${!wa.launched?`<span style="font-size:11.5px;color:var(--mut)">Launch trigger: 12 paying members (currently ${paying.length})</span>`:''}</div>
-    <div style="font-size:12px;color:var(--mut);margin-bottom:10px">${escHtml(wa.rules)}</div>
-    <button class="btn btn-ghost btn-sm" onclick="toggleWALaunch()">Mark as ${wa.launched?'Not Live':'Launched'}</button>
-  </div>
-  <div id="boardroom-templates" style="margin-top:26px"></div>`;
+  ${brxSec('model-benefits','What members get',
+    model.items.map(i=>`<div style="display:flex;gap:10px;align-items:flex-start;padding:7px 0;border-bottom:1px solid #1F1F24;font-size:13px"><span style="color:var(--y);flex-shrink:0;font-weight:800">✓</span>${escHtml(i)}</div>`).join(''),
+    `<button class="btn btn-ghost btn-sm" onclick="editBoardroomModel()">Edit</button>`)}
+  ${brxSec('model-wa','WhatsApp community',
+    `<div style="display:flex;gap:10px;align-items:center;margin-bottom:8px;flex-wrap:wrap"><span class="brx-tag ${wa.launched?'g':'o'}">${wa.launched?'Live':'Not launched'}</span>${!wa.launched?`<span style="font-size:11.5px;color:var(--mut)">Launch trigger: 12 paying members (currently ${paying.length})</span>`:''}</div>
+     <div style="font-size:12px;color:var(--mut);margin-bottom:10px">${escHtml(wa.rules)}</div>
+     <button class="btn btn-ghost btn-sm" onclick="toggleWALaunch()">Mark as ${wa.launched?'Not Live':'Launched'}</button>`)}
+  <div id="boardroom-templates" style="margin-top:20px"></div>`;
 }
 function brxEditService(){
   const s=brxService();
@@ -6960,30 +7082,51 @@ function brxEditService(){
 }
 function brxSaveService(){ const g=id=>document.getElementById(id).value.trim(); ls.set('tuf_boardroom_service',{name:g('bs-name')||'The Boardroom',promise:g('bs-promise'),who:g('bs-who'),format:g('bs-format'),term:g('bs-term')}); closeModal(); renderBoardroom(); }
 
-// ── Area 2: Session Calendar Map ──
+// ── Area: SESSION CALENDAR (12 mini month grids) ──
 function brxMonths(count,backMonths){
   const out=[]; const now=new Date(); const start=new Date(now.getFullYear(),now.getMonth()-(backMonths==null?2:backMonths),1);
-  for(let i=0;i<(count||12);i++){ const d=new Date(start.getFullYear(),start.getMonth()+i,1); out.push({key:d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'),label:d.toLocaleDateString('en-GB',{month:'short',year:'numeric'}),now:d.getFullYear()===now.getFullYear()&&d.getMonth()===now.getMonth()}); }
+  for(let i=0;i<(count||12);i++){ const d=new Date(start.getFullYear(),start.getMonth()+i,1); out.push({y:d.getFullYear(),m:d.getMonth(),key:d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'),label:d.toLocaleDateString('en-GB',{month:'long',year:'numeric'}),now:d.getFullYear()===now.getFullYear()&&d.getMonth()===now.getMonth()}); }
   return out;
+}
+function brxMonthCells(y,m){
+  const first=new Date(y,m,1); const lead=(first.getDay()+6)%7; // Monday start
+  const days=new Date(y,m+1,0).getDate();
+  const cells=[]; for(let i=0;i<lead;i++) cells.push(null); for(let d=1;d<=days;d++) cells.push(d);
+  return cells;
 }
 function brxCalendarView(){
   const sessions=(ls.get('tuf_sessions',[])||[]).slice().sort((a,b)=>(a.date||'').localeCompare(b.date||''));
   const months=brxMonths(12,2);
-  const today=new Date().toISOString().slice(0,10);
-  const next=sessions.find(s=>(s.date||'')>=today);
-  const cell=mo=>{ const list=sessions.filter(s=>(s.date||'').slice(0,7)===mo.key);
-    return `<div class="brx-month${mo.now?' now':''}"><div class="m">${mo.label}</div>
-      ${list.length?list.map(s=>`<button class="brx-sess ${s.type==='Boardroom Day'?'bd':'imp'}" onclick="brxOpenSession('${s.id}')">${escHtml(s.name||'Session')}<span style="display:block;font-weight:500;font-size:10px;opacity:.75">${s.date?fmtShort(s.date):''} · ${s.type==='Boardroom Day'?'In person':'Online'}</span></button>`).join(''):'<div style="font-size:11px;color:#54545C">—</div>'}
-    </div>`; };
+  const todayY=new Date().toISOString().slice(0,10);
+  const next=sessions.find(s=>(s.date||'')>=todayY);
+  const byDate={}; sessions.forEach(s=>{ if(s.date) (byDate[s.date]=byDate[s.date]||[]).push(s); });
+  const monthCard=mo=>{
+    const cells=brxMonthCells(mo.y,mo.m);
+    const monthSessions=sessions.filter(s=>(s.date||'').slice(0,7)===mo.key);
+    const dayCell=d=>{
+      if(d===null) return '<div></div>';
+      const key=mo.key+'-'+String(d).padStart(2,'0');
+      const list=byDate[key]||[];
+      const isToday=key===todayY;
+      if(!list.length) return `<div class="brx-cal-d${isToday?' today':''}">${d}</div>`;
+      const s=list[0];
+      return `<div class="brx-cal-d ${s.type==='Boardroom Day'?'bd':'imp'}${isToday?' today':''}" title="${escAttr(list.map(x=>x.name).join(', '))}" onclick="brxOpenSession('${s.id}')">${d}</div>`;
+    };
+    return `<div class="brx-cal${mo.now?' now':''}">
+      <div class="m">${mo.label}</div>
+      <div class="brx-cal-g">${['M','T','W','T','F','S','S'].map(w=>`<div class="wd">${w}</div>`).join('')}${cells.map(dayCell).join('')}</div>
+      ${monthSessions.map(s=>`<div class="brx-cal-s" onclick="brxOpenSession('${s.id}')"><span style="display:inline-block;width:8px;height:8px;border-radius:2px;flex-shrink:0;${s.type==='Boardroom Day'?'background:var(--y)':'border:1px solid var(--y)'}"></span>${escHtml(s.name)} · ${fmtShort(s.date)}</div>`).join('')}
+    </div>`;
+  };
   return `
   <div class="brx-sec">The 12 month journey ${next?`<span style="color:var(--mut);text-transform:none;letter-spacing:0;font-weight:600">Next: ${escHtml(next.name)} · ${fmtDate(next.date)} (${daysUntil(next.date)}d)</span>`:''}</div>
   <div style="display:flex;gap:16px;align-items:center;margin-bottom:12px;font-size:11px;color:var(--mut);flex-wrap:wrap">
     <span><span style="display:inline-block;width:10px;height:10px;background:var(--y);border-radius:3px;margin-right:6px;vertical-align:-1px"></span>Boardroom Day · in person, bimonthly</span>
-    <span><span style="display:inline-block;width:10px;height:10px;border:1px solid #3A3A42;border-radius:3px;margin-right:6px;vertical-align:-1px"></span>Implementation session · online, monthly</span>
+    <span><span style="display:inline-block;width:10px;height:10px;border:1px solid var(--y);border-radius:3px;margin-right:6px;vertical-align:-1px"></span>Implementation session · online, monthly</span>
     <button class="btn btn-k btn-sm" style="margin-left:auto" onclick="brxAddSessionModal()">+ Add session</button>
   </div>
-  <div class="brx-months">${months.map(cell).join('')}</div>
-  <div style="font-size:11px;color:#54545C;margin-top:12px">Click a session for prep, agenda, feedback and attendance. Build the day itself in the Session Planner.</div>`;
+  <div class="brx-months" style="grid-template-columns:repeat(auto-fill,minmax(215px,1fr))">${months.map(monthCard).join('')}</div>
+  <div style="font-size:11px;color:#54545C;margin-top:12px">Click a marked day or a session name for prep, agenda, feedback and attendance.</div>`;
 }
 function brxOpenSession(id){ brxView='calendar'; brxSessionId=id; renderBoardroom(); }
 function brxAddSessionModal(){
@@ -7002,6 +7145,8 @@ function brxAddSession(){
   ls.set('tuf_sessions',sessions); closeModal(); addNotif('Session added: '+name); renderBoardroom();
 }
 function brxOpenPlanner(id){ sessSelectedId=id; sessExpanded=null; goPage('sessions'); }
+
+// ── SESSION DETAIL (collapsible PRE / POST, everything editable) ──
 function brxNearDate(a,b,days){ if(!a||!b) return false; return Math.abs(new Date(a+'T00:00:00')-new Date(b+'T00:00:00'))/86400000<=days; }
 function brxFormsForSession(s,type){
   return (ls.get('tuf_files',[])||[]).filter(f=>f.formType===type&&(f.sessionId?f.sessionId===s.id:(brxNearDate(f.updated,s.date,14)||((s.name||'').length>3&&(f.name||'').toLowerCase().includes((s.name||'').toLowerCase())))));
@@ -7016,9 +7161,19 @@ function brxSessionView(id){
   const fbs=ls.get('tuf_session_feedback',[])||[];
   const fb=fbs.find(f=>s.name&&f.session&&(s.name.includes(f.session)||f.session.includes(s.name)));
   const past=(s.date||'')<new Date().toISOString().slice(0,10)||s.status==='Complete';
-  const sub=t=>`<div style="font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--mut);margin-bottom:8px">${t}</div>`;
   const formRow=f=>`<div class="brx-row"><span style="font-size:12.5px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">📝 <b>${escHtml(f.memberName||'')}</b> <span style="color:var(--mut)">· ${escHtml(f.name)}</span></span><button class="btn btn-ghost btn-sm" onclick="memberFormOpen('${f.id}')">Open</button></div>`;
   const blocks=(s.blocks||[]).slice().sort((a,b)=>(a.start||'').localeCompare(b.start||''));
+  const agendaBody=(blocks.length?blocks.map(b=>`<div class="brx-row"><span style="font-size:12.5px"><b style="color:var(--y);font-variant-numeric:tabular-nums">${escHtml(b.start||'')}</b>&nbsp; ${escHtml(b.title||'')}${b.fields&&b.fields.speaker?` <span style="color:var(--mut)">· ${escHtml(b.fields.speaker)}</span>`:''}</span><span style="display:flex;gap:5px;align-items:center;flex-shrink:0"><span style="font-size:11px;color:var(--mut)">${b.dur?b.dur+'min':''}</span><button class="btn btn-ghost btn-sm" style="padding:2px 8px" onclick="brxBlockModal('${s.id}','${b.id}')">✏️</button><button class="btn btn-ghost btn-sm" style="padding:2px 8px" onclick="brxBlockDelete('${s.id}','${b.id}')">✕</button></span></div>`).join(''):'<div style="font-size:12px;color:var(--mut)">No agenda yet. Add rows here or build the full day in the Session Planner.</div>')
+    +`<div style="font-size:10.5px;color:#54545C;margin-top:8px">Fuller builder with drag and drop lives in the Session Planner.</div>`;
+  const debriefBody=fb?`<table class="tbl"><tbody>
+      ${fb.attendees?`<tr><td style="color:var(--mut);font-size:11px;padding-right:12px">Attendees</td><td style="font-size:12px">${escHtml(String(fb.attendees))}</td></tr>`:''}
+      ${fb.avgScore?`<tr><td style="color:var(--mut);font-size:11px;padding-right:12px">Avg score</td><td style="font-size:12px">${escHtml(String(fb.avgScore))}/10</td></tr>`:''}
+      ${(fb.nps!=null&&fb.nps!=='')?`<tr><td style="color:var(--mut);font-size:11px;padding-right:12px">NPS</td><td style="font-size:12px">${escHtml(String(fb.nps))}</td></tr>`:''}
+      ${fb.commitRate?`<tr><td style="color:var(--mut);font-size:11px;padding-right:12px">Commit rate</td><td style="font-size:12px">${escHtml(String(fb.commitRate))}%</td></tr>`:''}
+    </tbody></table>
+    ${fb.highlights?`<div style="font-size:10.5px;font-weight:800;color:var(--mut);margin:10px 0 3px;letter-spacing:.06em">HIGHLIGHTS</div><div style="font-size:12.5px">${escHtml(fb.highlights)}</div>`:''}
+    ${fb.improvements?`<div style="font-size:10.5px;font-weight:800;color:var(--mut);margin:10px 0 3px;letter-spacing:.06em">IMPROVE NEXT TIME</div><div style="font-size:12.5px">${escHtml(fb.improvements)}</div>`:''}`
+    :'<div style="font-size:12px;color:var(--mut)">No internal debrief logged for this session yet.</div>';
   return `
   <span class="brx-back" onclick="brxSessionId=null;renderBoardroom()">← Session calendar</span>
   <div class="brx-hero" style="padding:26px 30px">
@@ -7030,55 +7185,119 @@ function brxSessionView(id){
       ${fb&&fb.nps!=null&&fb.nps!==''?`<span class="brx-chip"><b>NPS</b>&nbsp; ${escHtml(String(fb.nps))}</span>`:''}
       ${att.length?`<span class="brx-chip"><b>${att.length}</b>&nbsp; attendees logged</span>`:''}
     </div>
-    <button class="btn btn-ghost btn-sm" style="margin-top:16px" onclick="brxOpenPlanner('${s.id}')">Open in Session Planner →</button>
+    <div style="display:flex;gap:6px;margin-top:16px;flex-wrap:wrap">
+      <button class="btn btn-ghost btn-sm" onclick="brxSessEdit('${s.id}')">Edit session</button>
+      <button class="btn btn-ghost btn-sm" onclick="brxOpenPlanner('${s.id}')">Open in Session Planner →</button>
+    </div>
   </div>
   <div class="grid-2" style="align-items:start">
     <div>
-      <div class="brx-sec" style="margin-top:6px">Before the day</div>
-      <div class="brx-card" style="margin-bottom:14px">
-        ${sub('Day structure')}
-        ${blocks.length?blocks.map(b=>`<div class="brx-row"><span style="font-size:12.5px"><b style="color:var(--y);font-variant-numeric:tabular-nums">${escHtml(b.start||'')}</b>&nbsp; ${escHtml(b.title||'')}${b.fields&&b.fields.speaker?` <span style="color:var(--mut)">· ${escHtml(b.fields.speaker)}</span>`:''}</span><span style="font-size:11px;color:var(--mut)">${b.dur?b.dur+'min':''}</span></div>`).join(''):'<div style="font-size:12px;color:var(--mut)">No agenda yet. Build it in the Session Planner.</div>'}
-      </div>
-      <div class="brx-card" style="margin-bottom:14px">
-        ${sub('Prep forms in ('+preForms.length+')')}
-        ${preForms.length?preForms.map(formRow).join(''):'<div style="font-size:12px;color:var(--mut)">None matched to this session yet. File them from a member profile.</div>'}
-      </div>
-      <div id="boardroom-checklist"></div>
+      <div class="brx-group">Pre · before the day</div>
+      ${brxSec('sess-agenda','Day structure',agendaBody,`<button class="btn btn-ghost btn-sm" onclick="brxBlockModal('${s.id}','')">+ Add</button>`)}
+      ${brxSec('sess-checklist','Event checklist','<div id="boardroom-checklist"></div>')}
+      ${brxSec('sess-prep','Prep forms ('+preForms.length+')',(preForms.length?preForms.map(formRow).join(''):'<div style="font-size:12px;color:var(--mut)">None matched to this session yet.</div>'),`<button class="btn btn-ghost btn-sm" onclick="brxFileFormPicker('${s.id}','prep')">+ File one</button>`)}
     </div>
     <div>
-      <div class="brx-sec" style="margin-top:6px">After the day</div>
-      <div class="brx-card" style="margin-bottom:14px">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><div style="font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--mut)">Team debrief</div><button class="btn btn-ghost btn-sm" onclick="addSessionFeedbackModal()">${fb?'Log another':'+ Log debrief'}</button></div>
-        ${fb?`<table class="tbl"><tbody>
-          ${fb.attendees?`<tr><td style="color:var(--mut);font-size:11px;padding-right:12px">Attendees</td><td style="font-size:12px">${escHtml(String(fb.attendees))}</td></tr>`:''}
-          ${fb.avgScore?`<tr><td style="color:var(--mut);font-size:11px;padding-right:12px">Avg score</td><td style="font-size:12px">${escHtml(String(fb.avgScore))}/10</td></tr>`:''}
-          ${(fb.nps!=null&&fb.nps!=='')?`<tr><td style="color:var(--mut);font-size:11px;padding-right:12px">NPS</td><td style="font-size:12px">${escHtml(String(fb.nps))}</td></tr>`:''}
-          ${fb.commitRate?`<tr><td style="color:var(--mut);font-size:11px;padding-right:12px">Commit rate</td><td style="font-size:12px">${escHtml(String(fb.commitRate))}%</td></tr>`:''}
-        </tbody></table>
-        ${fb.highlights?`<div style="font-size:10.5px;font-weight:800;color:var(--mut);margin:10px 0 3px;letter-spacing:.06em">HIGHLIGHTS</div><div style="font-size:12.5px">${escHtml(fb.highlights)}</div>`:''}
-        ${fb.improvements?`<div style="font-size:10.5px;font-weight:800;color:var(--mut);margin:10px 0 3px;letter-spacing:.06em">IMPROVE NEXT TIME</div><div style="font-size:12.5px">${escHtml(fb.improvements)}</div>`:''}`
-        :'<div style="font-size:12px;color:var(--mut)">No internal debrief logged for this session yet.</div>'}
-      </div>
-      <div class="brx-card" style="margin-bottom:14px">
-        ${sub('Feedback forms ('+fbForms.length+')'+(avg!=null?' · avg '+avg.toFixed(1)+'/10':''))}
-        ${fbForms.length?fbForms.map(formRow).join(''):'<div style="font-size:12px;color:var(--mut)">None matched to this session yet.</div>'}
-      </div>
-      <div class="brx-card" style="margin-bottom:14px">
-        ${sub('Attendance ('+att.length+')')}
-        ${att.length?att.map(a=>`<div class="brx-row"><span style="font-size:12.5px">${escHtml(a.name)}${a.co?` <span style="color:var(--mut)">· ${escHtml(a.co)}</span>`:''}</span><span class="brx-tag g">Attended</span></div>`).join(''):'<div style="font-size:12px;color:var(--mut)">No attendees logged yet. Log them from Leads & Guests, or the Event Attendees tab.</div>'}
-      </div>
-      <div class="brx-card">
-        ${sub('Internal notes · themes covered')}
-        <textarea class="form-textarea" id="brx-sess-notes" style="min-height:80px" placeholder="Themes covered, what landed, follow ups…">${escHtml(s.notes||'')}</textarea>
-        <button class="btn btn-k btn-sm" style="margin-top:8px" onclick="brxSaveSessNotes('${s.id}')">Save notes</button>
-      </div>
+      <div class="brx-group">Post · after the day</div>
+      ${brxSec('sess-debrief','Team debrief'+(fb&&fb.nps!=null&&fb.nps!==''?' · NPS '+fb.nps:''),debriefBody,fb?`<button class="btn btn-ghost btn-sm" onclick="brxDebriefEdit('${fb.id}')">Edit</button>`:`<button class="btn btn-ghost btn-sm" onclick="addSessionFeedbackModal()">+ Log</button>`)}
+      ${brxSec('sess-feedback','Feedback forms ('+fbForms.length+')'+(avg!=null?' · avg '+avg.toFixed(1)+'/10':''),(fbForms.length?fbForms.map(formRow).join(''):'<div style="font-size:12px;color:var(--mut)">None matched to this session yet.</div>'),`<button class="btn btn-ghost btn-sm" onclick="brxFileFormPicker('${s.id}','feedback')">+ File one</button>`)}
+      ${brxSec('sess-att','Attendance ('+att.length+')',(att.length?att.map(a=>`<div class="brx-row"><span style="font-size:12.5px">${escHtml(a.name)}${a.co?` <span style="color:var(--mut)">· ${escHtml(a.co)}</span>`:''}</span><span style="display:flex;gap:5px;align-items:center"><span class="brx-tag g">Attended</span><button class="btn btn-ghost btn-sm" style="padding:2px 8px" onclick="baDelete('${a.id}')">✕</button></span></div>`).join(''):'<div style="font-size:12px;color:var(--mut)">No attendees logged for this session yet.</div>'),`<button class="btn btn-ghost btn-sm" onclick="baAddFromModal('${s.id}')">+ Add</button>`)}
+      ${brxSec('sess-notes','Internal notes · themes covered',`<textarea class="form-textarea" id="brx-sess-notes" style="min-height:80px" placeholder="Themes covered, what landed, follow ups…">${escHtml(s.notes||'')}</textarea>
+        <button class="btn btn-k btn-sm" style="margin-top:8px" onclick="brxSaveSessNotes('${s.id}')">Save notes</button>`)}
     </div>
   </div>`;
 }
 function brxSaveSessNotes(id){ const v=document.getElementById('brx-sess-notes')?.value||''; sessSetField(id,'notes',v); addNotif('Session notes saved'); }
+function brxSessEdit(id){
+  const s=(ls.get('tuf_sessions',[])||[]).find(x=>x.id===id); if(!s) return;
+  showModal('Edit session',`
+    <div class="form-row"><label class="form-label">Name</label><input class="form-input" id="bse-name" value="${escAttr(s.name||'')}"></div>
+    <div class="grid-2">
+      <div class="form-row"><label class="form-label">Date</label><input class="form-input" type="date" id="bse-date" value="${s.date||''}"></div>
+      <div class="form-row"><label class="form-label">Type</label><select class="form-select" id="bse-type"><option${s.type==='Boardroom Day'?' selected':''}>Boardroom Day</option><option${s.type==='Implementation Session'?' selected':''}>Implementation Session</option></select></div>
+    </div>
+    <div class="form-row"><label class="form-label">Status</label><select class="form-select" id="bse-status"><option${s.status!=='Complete'?' selected':''}>Upcoming</option><option${s.status==='Complete'?' selected':''}>Complete</option></select></div>
+  `,`<button class="btn btn-red btn-sm" onclick="closeModal();sessDelete('${id}');brxSessionId=null;brxRefresh()">Delete</button><button class="btn btn-ghost" onclick="closeModal()">Cancel</button><button class="btn btn-k" onclick="brxSessEditSave('${id}')">Save</button>`);
+}
+function brxSessEditSave(id){
+  const sess=ls.get('tuf_sessions',[]); const s=sess.find(x=>x.id===id); if(!s){closeModal();return;}
+  s.name=document.getElementById('bse-name').value.trim()||s.name;
+  s.date=document.getElementById('bse-date').value||s.date;
+  s.type=document.getElementById('bse-type').value;
+  s.status=document.getElementById('bse-status').value;
+  ls.set('tuf_sessions',sess); closeModal(); renderBoardroom();
+}
+function brxBlockModal(sid,bid){
+  const s=(ls.get('tuf_sessions',[])||[]).find(x=>x.id===sid); if(!s) return;
+  const b=bid?(s.blocks||[]).find(x=>x.id===bid):null;
+  showModal(b?'Edit agenda item':'Add agenda item',`
+    <div class="form-row"><label class="form-label">Title</label><input class="form-input" id="bb-title" value="${escAttr(b?b.title:'')}" placeholder="e.g. Guest speaker: pricing power"></div>
+    <div class="grid-2">
+      <div class="form-row"><label class="form-label">Start time</label><input class="form-input" type="time" id="bb-start" value="${b&&b.start?b.start:'09:30'}"></div>
+      <div class="form-row"><label class="form-label">Minutes</label><input class="form-input" type="number" min="5" step="5" id="bb-dur" value="${b&&b.dur?b.dur:30}"></div>
+    </div>
+    <div class="form-row"><label class="form-label">Speaker or lead <span style="font-weight:400;color:var(--mut)">(optional)</span></label><input class="form-input" id="bb-speaker" value="${escAttr(b&&b.fields&&b.fields.speaker?b.fields.speaker:'')}"></div>
+  `,`<button class="btn btn-ghost" onclick="closeModal()">Cancel</button><button class="btn btn-k" onclick="brxBlockSave('${sid}','${bid||''}')">Save</button>`);
+}
+function brxBlockSave(sid,bid){
+  const sess=ls.get('tuf_sessions',[]); const s=sess.find(x=>x.id===sid); if(!s){closeModal();return;}
+  const title=document.getElementById('bb-title').value.trim(); if(!title){ alert('Add a title.'); return; }
+  const start=document.getElementById('bb-start').value||'09:00';
+  const dur=parseInt(document.getElementById('bb-dur').value)||30;
+  const speaker=document.getElementById('bb-speaker').value.trim();
+  s.blocks=s.blocks||[];
+  if(bid){ const b=s.blocks.find(x=>x.id===bid); if(b){ b.title=title; b.start=start; b.dur=dur; b.fields=b.fields||{}; b.fields.speaker=speaker; } }
+  else s.blocks.push({id:uid(),key:'custom',title,start,dur,fields:{speaker}});
+  ls.set('tuf_sessions',sess); closeModal(); renderBoardroom();
+}
+function brxBlockDelete(sid,bid){
+  if(!confirm('Remove this agenda item?')) return;
+  const sess=ls.get('tuf_sessions',[]); const s=sess.find(x=>x.id===sid); if(!s) return;
+  s.blocks=(s.blocks||[]).filter(x=>x.id!==bid);
+  ls.set('tuf_sessions',sess); renderBoardroom();
+}
+function brxDebriefEdit(fbid){
+  const all=ls.get('tuf_session_feedback',[])||[]; const f=all.find(x=>x.id===fbid); if(!f) return;
+  showModal('Edit team debrief',`
+    <div class="grid-2">
+      <div class="form-row"><label class="form-label">Attendees</label><input class="form-input" type="number" id="bde-att" value="${f.attendees||''}"></div>
+      <div class="form-row"><label class="form-label">Avg score /10</label><input class="form-input" type="number" step="0.1" id="bde-score" value="${f.avgScore||''}"></div>
+    </div>
+    <div class="grid-2">
+      <div class="form-row"><label class="form-label">NPS</label><input class="form-input" type="number" id="bde-nps" value="${f.nps!=null?f.nps:''}"></div>
+      <div class="form-row"><label class="form-label">Commit rate %</label><input class="form-input" type="number" id="bde-commit" value="${f.commitRate||''}"></div>
+    </div>
+    <div class="form-row"><label class="form-label">Highlights</label><textarea class="form-textarea" id="bde-hi" style="min-height:60px">${escHtml(f.highlights||'')}</textarea></div>
+    <div class="form-row"><label class="form-label">Improvements</label><textarea class="form-textarea" id="bde-imp" style="min-height:60px">${escHtml(f.improvements||'')}</textarea></div>
+  `,`<button class="btn btn-ghost" onclick="closeModal()">Cancel</button><button class="btn btn-k" onclick="brxDebriefSave('${fbid}')">Save</button>`);
+}
+function brxDebriefSave(fbid){
+  const all=ls.get('tuf_session_feedback',[])||[]; const f=all.find(x=>x.id===fbid); if(!f){closeModal();return;}
+  f.attendees=parseInt(document.getElementById('bde-att').value)||0;
+  f.avgScore=parseFloat(document.getElementById('bde-score').value)||0;
+  f.nps=parseInt(document.getElementById('bde-nps').value)||0;
+  f.commitRate=parseInt(document.getElementById('bde-commit').value)||0;
+  f.highlights=document.getElementById('bde-hi').value.trim();
+  f.improvements=document.getElementById('bde-imp').value.trim();
+  ls.set('tuf_session_feedback',all); closeModal(); renderBoardroom();
+}
+function brxFileFormPicker(sid,type){
+  const people=(ls.get('tuf_members',[])||[]).filter(m=>m.status==='active').sort((a,b)=>(a.name||'').localeCompare(b.name||''));
+  if(!people.length){ alert('No active people in the CRM yet.'); return; }
+  showModal('File a '+(type==='prep'?'prep':'feedback')+' form — whose is it?',`
+    <div class="form-row"><label class="form-label">Person</label><select class="form-select" id="bfp-person">${people.map(m=>`<option value="${m.id}">${escHtml(m.name)}${m.co?' — '+escHtml(m.co):''}</option>`).join('')}</select></div>
+  `,`<button class="btn btn-ghost" onclick="closeModal()">Cancel</button><button class="btn btn-k" onclick="memberFormModal(document.getElementById('bfp-person').value,'${type}','m','${sid}')">Next →</button>`);
+}
 
-// ── Area 3: Member CRM ──
+// ── Area: MEMBER CRM ──
 function brxRoomMembers(){ return (ls.get('tuf_members',[])||[]).filter(m=>m.status==='active'&&((!m.type||m.type==='boardroom')||(m.type==='existing_client'&&m.boardroomAccess))); }
+function brxFee(m){ return (!m.type||m.type==='boardroom')?bFee(m):(m.clientFee||0); }
+function brxFeeTag(m){
+  const fee=brxFee(m);
+  if(fee>0) return `<span class="brx-tag y">£${fee.toLocaleString()}/mo</span>`;
+  return `<span class="brx-tag o">${(m.freeLabel==='Guest')?'Guest':'Client'}</span>`;
+}
+function brxSetFreeLabel(id,val){ const members=ls.get('tuf_members',[]); const i=members.findIndex(x=>x.id===id); if(i<0)return; members[i].freeLabel=val; ls.set('tuf_members',members); renderBoardroom(); }
 function brxContractInfo(m){
   if(!m.contractStart) return null;
   const start=new Date(m.contractStart+'T00:00:00'); const end=new Date(start); end.setFullYear(end.getFullYear()+1);
@@ -7093,14 +7312,13 @@ function brxMembersView(){
   const room=brxRoomMembers().slice().sort((a,b)=>(a.name||'').localeCompare(b.name||''));
   const paying=room.filter(m=>!m.type||m.type==='boardroom');
   const mrr=boardroomMRRof(paying);
-  const today=new Date().toISOString().slice(0,10);
-  const next=(ls.get('tuf_sessions',[])||[]).filter(s=>(s.date||'')>=today).sort((a,b)=>a.date.localeCompare(b.date))[0];
+  const next=brxNextSession();
   const rets=room.map(m=>m.retention).filter(Boolean);
   const avgRet=rets.length?(rets.reduce((a,b)=>a+b,0)/rets.length).toFixed(1):null;
   const stat=(n,l)=>`<div class="brx-card"><div style="font-size:26px;font-weight:800;color:#fff;font-variant-numeric:tabular-nums">${n}</div><div style="font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--mut);margin-top:5px">${l}</div></div>`;
-  const card=m=>{ const c=brxContractInfo(m); const isPay=!m.type||m.type==='boardroom';
+  const card=m=>{ const c=brxContractInfo(m);
     return `<div class="brx-mcard" onclick="brxOpenMember('${m.id}')">
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:4px"><div style="font-weight:800;font-size:14.5px;color:#fff">${escHtml(m.name)}</div><span class="brx-tag ${isPay?'y':'o'}">${isPay?'£'+bFee(m).toLocaleString()+'/mo':'Client'}</span></div>
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:4px"><div style="font-weight:800;font-size:14.5px;color:#fff">${escHtml(m.name)}</div>${brxFeeTag(m)}</div>
       <div style="font-size:11.5px;color:var(--mut);margin-bottom:12px;min-height:15px">${escHtml(m.co||'')}</div>
       <div style="display:flex;align-items:center;gap:8px;font-size:10.5px;color:var(--mut)"><span style="width:62px;flex-shrink:0">Retention</span><div class="brx-bar" style="flex:1"><div style="width:${((m.retention||0)/10)*100}%;background:${(m.retention||0)>=7?'#5AC98E':(m.retention?'#E8B33C':'#3A3A42')}"></div></div><span style="width:34px;text-align:right">${m.retention||'–'}/10</span></div>
       <div style="display:flex;align-items:center;gap:8px;font-size:10.5px;color:var(--mut);margin-top:7px"><span style="width:62px;flex-shrink:0">Contract</span>${c?`<div class="brx-bar" style="flex:1"><div style="width:${c.pct}%"></div></div><span style="width:34px;text-align:right;white-space:nowrap">${c.monthsLeft}mo</span>`:'<span style="color:#54545C">start date not set</span>'}</div>
@@ -7111,7 +7329,7 @@ function brxMembersView(){
   </div>
   <div class="brx-sec">Members (${room.length}) <span><button class="btn btn-k btn-sm" onclick="brAddRosterModal()">+ Add member</button></span></div>
   <div class="brx-grid">${room.map(card).join('')||'<div style="color:var(--mut);font-size:12px">No members yet.</div>'}</div>
-  <div style="font-size:11px;color:#54545C;margin-top:12px">Yellow = paying Boardroom member. Client = private client with Boardroom access included in their existing service.</div>`;
+  <div style="font-size:11px;color:#54545C;margin-top:12px">The tag shows each member's monthly fee. Free places show as Client or Guest, set from their profile.</div>`;
 }
 function brxOpenMember(id){ brxView='members'; brxMemberId=id; renderBoardroom(); }
 function brxSetContract(id,val){ const members=ls.get('tuf_members',[]); const i=members.findIndex(x=>x.id===id); if(i<0)return; members[i].contractStart=val||''; ls.set('tuf_members',members); renderBoardroom(); }
@@ -7125,6 +7343,7 @@ function brxMemberProfile(id){
   const m=(ls.get('tuf_members',[])||[]).find(x=>x.id===id);
   if(!m){ brxMemberId=null; return brxMembersView(); }
   const c=brxContractInfo(m); const isPay=!m.type||m.type==='boardroom';
+  const fee=brxFee(m);
   const attRows=brxAttendanceRows(m);
   const attended=attRows.filter(r=>r.went).length;
   const sub=t=>`<div style="font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--mut);margin-bottom:10px">${t}</div>`;
@@ -7134,7 +7353,7 @@ function brxMemberProfile(id){
   <div class="brx-hero" style="padding:26px 30px;margin-bottom:20px">
     <div style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:flex-start">
       <div>
-        <div class="brx-kicker">${isPay?'Boardroom member · £'+bFee(m).toLocaleString()+'/month':'Private client · Boardroom access included'}</div>
+        <div class="brx-kicker" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">${fee>0?`Boardroom · £${fee.toLocaleString()}/month`:`Free place · <select class="form-select" style="width:auto;padding:3px 26px 3px 8px;font-size:11px" onchange="brxSetFreeLabel('${m.id}',this.value)"><option${(m.freeLabel||'Client')==='Client'?' selected':''}>Client</option><option${m.freeLabel==='Guest'?' selected':''}>Guest</option></select>`}</div>
         <h1 style="font-size:26px;margin-bottom:4px">${escHtml(m.name)}</h1>
         <div style="font-size:13px;color:var(--mut)">${escHtml(m.co||'')}</div>
         <div style="display:flex;gap:16px;flex-wrap:wrap;margin-top:12px;font-size:12.5px">
@@ -7229,20 +7448,31 @@ async function brxActionsRefresh(){
   }catch(e){ alert('Could not load the Sheet: '+String((e&&e.message)||e)+'. Check it is the published CSV link (File → Share → Publish to web).'); }
 }
 
-// ── Area 4: Leads & Guests ──
+// ── Area: LEADS & GUESTS ──
+function brxLeads(){ return ls.get('tuf_boardroom_leads',[])||[]; }
 function brxLeadsView(){
   const members=ls.get('tuf_members',[])||[];
-  const guests=members.filter(m=>(m.boardroomGuest||m.type==='guest')&&m.status==='active');
+  const leads=brxLeads();
+  const activeLeads=leads.filter(l=>l.stage!=='lost');
+  const guests=members.filter(m=>(m.boardroomGuest||m.type==='guest')&&m.status==='active'&&!m.lostLead);
   const memberKeys=new Set(members.map(m=>profileKey(m.name)));
   const ba=baStore().filter(a=>!memberKeys.has(profileKey(a.name)));
+  const lostGuests=members.filter(m=>(m.boardroomGuest||m.type==='guest')&&m.lostLead);
+  const lostLeads=leads.filter(l=>l.stage==='lost');
   const files=ls.get('tuf_files',[])||[];
+  const stageTag=st=>st==='attended'?'<span class="brx-tag g">Attended</span>':st==='lost'?'<span class="brx-tag r">Lost</span>':'<span class="brx-tag o">Invited</span>';
+  const leadRow=l=>`<div class="brx-row">
+      <div style="min-width:0"><div style="font-weight:700;font-size:13px;color:#fff">${escHtml(l.name)}${l.co?` <span style="font-weight:500;color:var(--mut)">· ${escHtml(l.co)}</span>`:''}</div>
+      <div style="font-size:11px;color:var(--mut);margin-top:2px">${l.source?`Source: ${escHtml(l.source)} · `:''}${(l.custom||[]).length?`${l.custom.length} custom field${l.custom.length>1?'s':''} · `:''}${l.notes?'has notes':''}</div></div>
+      <span style="display:flex;gap:6px;flex-shrink:0;align-items:center">${stageTag(l.stage)}<button class="btn btn-ghost btn-sm" onclick="brxLeadModal('${l.id}')">Open</button><button class="btn btn-k btn-sm" onclick="brxLeadToGuest('${l.id}')">→ Guest</button><button class="btn btn-ghost btn-sm" onclick="brxLeadLost('${l.id}')">Lost</button></span>
+    </div>`;
   const guestRow=m=>{ const dl=m.guestUntil?daysUntil(m.guestUntil):null;
     const lbl=dl===null?'Trial':(dl<0?`Trial ended ${-dl}d ago`:`Trial ends in ${dl}d`);
     const fCount=files.filter(f=>f.memberId===m.id).length;
     return `<div class="brx-row">
       <div style="min-width:0"><div style="font-weight:700;font-size:13px;color:#fff">${escHtml(m.name)}${m.co?` <span style="font-weight:500;color:var(--mut)">· ${escHtml(m.co)}</span>`:''}</div>
       <div style="font-size:11px;color:var(--mut);margin-top:2px">${m.sourceEvent?`From ${escHtml(m.sourceEvent)} · `:''}<span style="color:${dl!==null&&dl<0?'#F27D72':(dl!==null&&dl<=7?'#E8B33C':'var(--mut)')}">${lbl}</span>${fCount?` · ${fCount} form${fCount>1?'s':''} on file`:''}</div></div>
-      <span style="display:flex;gap:6px;flex-shrink:0"><button class="btn btn-ghost btn-sm" onclick="brxLeadNotes('${m.id}')">Notes</button><button class="btn btn-ghost btn-sm" onclick="editMemberModal('${m.id}')">Edit</button><button class="btn btn-k btn-sm" onclick="brConvertGuest('${m.id}')">Convert →</button><button class="btn btn-ghost btn-sm" onclick="brRemoveGuest('${m.id}')">✕</button></span>
+      <span style="display:flex;gap:6px;flex-shrink:0"><button class="btn btn-ghost btn-sm" onclick="brxLeadNotes('${m.id}')">Notes</button><button class="btn btn-ghost btn-sm" onclick="editMemberModal('${m.id}')">Edit</button><button class="btn btn-k btn-sm" onclick="brConvertGuest('${m.id}')">Convert →</button><button class="btn btn-ghost btn-sm" onclick="brxGuestLost('${m.id}')">Lost</button></span>
     </div>`; };
   const baRow=a=>{ const inPipe=(ls.get('tuf_prospects',[])||[]).some(p=>profileKey(p.name)===profileKey(a.name));
     const fCount=files.filter(f=>f.baId===a.id).length;
@@ -7251,12 +7481,76 @@ function brxLeadsView(){
       <div style="font-size:11px;color:var(--mut);margin-top:2px">${a.sessionName?`Attended ${escHtml(a.sessionName)}${a.sessionDate?' · '+fmtShort(a.sessionDate):''}`:'Invited · not attended yet'}${a.owner?` · owner ${escHtml(a.owner)}`:''}${fCount?` · ${fCount} form${fCount>1?'s':''} on file`:''}</div></div>
       <span style="display:flex;gap:6px;flex-shrink:0"><button class="btn btn-ghost btn-sm" onclick="baEditModal('${a.id}')">Open</button>${inPipe?'<span class="brx-tag o" style="align-self:center">In pipeline</span>':`<button class="btn btn-ghost btn-sm" onclick="baToPipeline('${a.id}');renderBoardroom()">→ Pipeline</button>`}</span>
     </div>`; };
+  const lostRows=[...lostGuests.map(m=>`<div class="brx-row"><span style="font-size:12.5px;color:var(--mut)">${escHtml(m.name)}${m.co?' · '+escHtml(m.co):''} <span class="brx-tag r">Lost guest</span></span><button class="btn btn-ghost btn-sm" onclick="brxGuestRestore('${m.id}')">Restore</button></div>`),
+    ...lostLeads.map(l=>`<div class="brx-row"><span style="font-size:12.5px;color:var(--mut)">${escHtml(l.name)}${l.co?' · '+escHtml(l.co):''} <span class="brx-tag r">Lost lead</span></span><span style="display:flex;gap:6px"><button class="btn btn-ghost btn-sm" onclick="brxLeadModal('${l.id}')">Open</button><button class="btn btn-ghost btn-sm" onclick="brxLeadRestore('${l.id}')">Restore</button></span></div>`)];
   return `
-  <div class="brx-sec">Guests on a free session (${guests.length}) <span><button class="btn btn-k btn-sm" onclick="brAddGuestModal()">+ Add guest</button></span></div>
-  <div class="brx-card" style="margin-bottom:22px">${guests.length?guests.map(guestRow).join(''):'<div style="font-size:12px;color:var(--mut)">No guests right now. Add referrals and event contacts invited to try a session.</div>'}</div>
+  <div class="brx-sec">Leads · invited or referred (${activeLeads.length}) <span><button class="btn btn-k btn-sm" onclick="brxLeadModal('')">+ Add lead</button></span></div>
+  <div class="brx-card" style="margin-bottom:22px">${activeLeads.length?activeLeads.map(leadRow).join(''):'<div style="font-size:12px;color:var(--mut)">No leads yet. Add referrals and people invited to try a free session. Their profiles take any custom fields you want.</div>'}</div>
+  <div class="brx-sec">Guests on a free trial (${guests.length}) <span><button class="btn btn-k btn-sm" onclick="brAddGuestModal()">+ Add guest</button></span></div>
+  <div class="brx-card" style="margin-bottom:22px">${guests.length?guests.map(guestRow).join(''):'<div style="font-size:12px;color:var(--mut)">No guests right now.</div>'}</div>
   <div class="brx-sec">Session attendees · not yet members (${ba.length}) <span><button class="btn btn-ghost btn-sm" onclick="baAddModal()">+ Log attendee</button></span></div>
-  <div class="brx-card">${ba.length?ba.map(baRow).join(''):'<div style="font-size:12px;color:var(--mut)">Everyone who attended a session is already a member or guest.</div>'}
-  <div style="font-size:10px;color:#54545C;margin-top:10px">This pipeline stays separate from the Member CRM until someone converts. Open a person to log impressions, business stage and their forms.</div></div>`;
+  <div class="brx-card" style="margin-bottom:22px">${ba.length?ba.map(baRow).join(''):'<div style="font-size:12px;color:var(--mut)">Everyone who attended a session is already a member or guest.</div>'}</div>
+  ${brxSec('leads-lost','Lost leads ('+lostRows.length+')',lostRows.length?lostRows.join(''):'<div style="font-size:12px;color:var(--mut)">No lost leads. Long may it continue.</div>')}`;
+}
+// Lead CRUD (fully customisable profile)
+function brxLeadModal(id){
+  const l=id?brxLeads().find(x=>x.id===id):null;
+  const custom=(l&&l.custom)||[];
+  const cRow=(k,v)=>`<div style="display:flex;gap:6px;margin-bottom:6px" class="blx-crow"><input class="form-input" placeholder="Field name" value="${escAttr(k)}" style="flex:1"><input class="form-input" placeholder="Value" value="${escAttr(v)}" style="flex:2"><button class="btn btn-ghost btn-sm" onclick="this.parentElement.remove()">✕</button></div>`;
+  showModal(l?'Lead · '+escHtml(l.name):'Add a lead',`
+    <div class="grid-2"><div class="form-row"><label class="form-label">Name</label><input class="form-input" id="blx-name" value="${escAttr(l?l.name:'')}"></div><div class="form-row"><label class="form-label">Business</label><input class="form-input" id="blx-co" value="${escAttr(l?l.co:'')}"></div></div>
+    <div class="grid-2"><div class="form-row"><label class="form-label">Email</label><input class="form-input" type="email" id="blx-email" value="${escAttr(l?l.email:'')}"></div><div class="form-row"><label class="form-label">Phone</label><input class="form-input" type="tel" id="blx-phone" value="${escAttr(l?l.phone:'')}"></div></div>
+    <div class="grid-2"><div class="form-row"><label class="form-label">Source</label><input class="form-input" id="blx-source" value="${escAttr(l?l.source:'')}" placeholder="e.g. Referral from Kieran, Padel event"></div><div class="form-row"><label class="form-label">Status</label><select class="form-select" id="blx-stage"><option value="invited"${(!l||l.stage==='invited')?' selected':''}>Invited</option><option value="attended"${l&&l.stage==='attended'?' selected':''}>Attended a session</option><option value="lost"${l&&l.stage==='lost'?' selected':''}>Lost</option></select></div></div>
+    <div class="form-row"><label class="form-label">Custom fields <span style="font-weight:400;color:var(--mut)">(anything you like: business stage, turnover, referred by…)</span></label>
+      <div id="blx-custom">${custom.map(c=>cRow(c.k,c.v)).join('')}</div>
+      <button class="btn btn-ghost btn-sm" onclick="brxLeadAddField()">+ Add field</button>
+    </div>
+    <div class="form-row"><label class="form-label">Notes ${typeof micBtnHtml==='function'?micBtnHtml('blx-notes'):''}</label><textarea class="form-textarea" id="blx-notes" style="min-height:70px">${escHtml(l?l.notes||'':'')}</textarea></div>
+  `,`${l?`<button class="btn btn-red btn-sm" onclick="brxLeadDelete('${id}')">Delete</button>`:''}<button class="btn btn-ghost" onclick="closeModal()">Cancel</button><button class="btn btn-k" onclick="brxLeadSave('${id||''}')">Save</button>`);
+}
+function brxLeadAddField(){
+  const host=document.getElementById('blx-custom'); if(!host) return;
+  const div=document.createElement('div'); div.className='blx-crow'; div.style.cssText='display:flex;gap:6px;margin-bottom:6px';
+  div.innerHTML='<input class="form-input" placeholder="Field name" style="flex:1"><input class="form-input" placeholder="Value" style="flex:2"><button class="btn btn-ghost btn-sm" onclick="this.parentElement.remove()">✕</button>';
+  host.appendChild(div);
+}
+function brxLeadSave(id){
+  const name=document.getElementById('blx-name').value.trim(); if(!name){ alert('Add a name.'); return; }
+  const custom=[...document.querySelectorAll('#blx-custom .blx-crow')].map(r=>{ const ins=r.querySelectorAll('input'); return {k:ins[0].value.trim(),v:ins[1].value.trim()}; }).filter(c=>c.k||c.v);
+  const rec={name,co:document.getElementById('blx-co').value.trim(),email:document.getElementById('blx-email').value.trim(),phone:document.getElementById('blx-phone').value.trim(),source:document.getElementById('blx-source').value.trim(),stage:document.getElementById('blx-stage').value,custom,notes:document.getElementById('blx-notes').value.trim()};
+  const leads=brxLeads();
+  if(id){ const i=leads.findIndex(x=>x.id===id); if(i>=0) leads[i]={...leads[i],...rec}; }
+  else {
+    if(!dupCheckWarn(name,rec.email)) return;
+    leads.push({id:uid(),...rec,addedDate:new Date().toISOString().slice(0,10)});
+    journeyLog(name,'Added as a Boardroom lead'+(rec.source?' ('+rec.source+')':''));
+  }
+  ls.set('tuf_boardroom_leads',leads); closeModal(); renderBoardroom();
+}
+function brxLeadDelete(id){ if(!confirm('Delete this lead completely? Mark them Lost instead if you want to keep the record.')) return; ls.set('tuf_boardroom_leads',brxLeads().filter(x=>x.id!==id)); closeModal(); renderBoardroom(); }
+function brxLeadLost(id){ const leads=brxLeads(); const l=leads.find(x=>x.id===id); if(!l) return; if(!confirm('Mark '+l.name+' as a lost lead?')) return; l.stage='lost'; ls.set('tuf_boardroom_leads',leads); journeyLog(l.name,'Boardroom lead marked as lost'); renderBoardroom(); }
+function brxLeadRestore(id){ const leads=brxLeads(); const l=leads.find(x=>x.id===id); if(!l) return; l.stage='invited'; ls.set('tuf_boardroom_leads',leads); journeyLog(l.name,'Lost lead restored'); renderBoardroom(); }
+function brxLeadToGuest(id){
+  const leads=brxLeads(); const l=leads.find(x=>x.id===id); if(!l) return;
+  if(!confirm('Move '+l.name+' onto a one month free guest trial?')) return;
+  const members=ls.get('tuf_members',[]);
+  members.push({id:uid(),name:l.name,co:l.co||'',email:l.email||'',phone:l.phone||'',type:'guest',boardroomGuest:true,guestUntil:guestDefaultUntil(),status:'active',stage:3,notes:('Boardroom guest, one month free trial. From lead'+(l.source?' ('+l.source+')':'')+'.'+(l.notes?'\n'+l.notes:'')).trim(),clientFee:0,sessions:[],touchpoint:new Date().toISOString().slice(0,10),retention:null,onboardingComplete:true,sourceEvent:l.source||''});
+  ls.set('tuf_members',members);
+  ls.set('tuf_boardroom_leads',leads.filter(x=>x.id!==id));
+  journeyLog(l.name,'Boardroom lead → guest trial');
+  addNotif(l.name+' moved from lead to guest trial');
+  renderBoardroom();
+}
+function brxGuestLost(id){
+  const members=ls.get('tuf_members',[]); const i=members.findIndex(x=>x.id===id); if(i<0) return;
+  if(!confirm('Mark '+members[i].name+' as a lost lead? They keep their record and can be restored.')) return;
+  members[i].lostLead=true; members[i].status='churned';
+  ls.set('tuf_members',members); journeyLog(members[i].name,'Guest marked as a lost lead'); renderBoardroom();
+}
+function brxGuestRestore(id){
+  const members=ls.get('tuf_members',[]); const i=members.findIndex(x=>x.id===id); if(i<0) return;
+  members[i].lostLead=false; members[i].status='active';
+  ls.set('tuf_members',members); journeyLog(members[i].name,'Lost guest restored to the trial list'); renderBoardroom();
 }
 function brxLeadNotes(id){
   const m=(ls.get('tuf_members',[])||[]).find(x=>x.id===id); if(!m) return;
@@ -7271,6 +7565,91 @@ function brxLeadNoteSave(id){
   const stamp='['+new Date().toISOString().slice(0,10)+' · '+CURRENT_USER+'] ';
   members[i].notes=((members[i].notes||'')+(members[i].notes?'\n':'')+stamp+v).trim();
   ls.set('tuf_members',members); closeModal(); addNotif('Note added for '+members[i].name); brxRefresh();
+}
+
+// ── Area: IP (Boardroom document vault over tuf_files) ──
+const BRX_IP_CATS=['P&L','Service model','One pager','Actions tracker','Presentations','Other'];
+function brxIPView(){
+  const files=(ls.get('tuf_files',[])||[]);
+  const ip=files.filter(f=>f.ip);
+  const forms=files.filter(f=>f.formType==='prep'||f.formType==='feedback');
+  const row=f=>{
+    const open=f.kind==='upload'?`<button class="btn btn-ghost btn-sm" onclick="docOpen('${f.id}')">Open ↗</button>`:f.kind==='text'?`<button class="btn btn-ghost btn-sm" onclick="memberFormOpen('${f.id}')">Open</button>`:(f.link?`<a href="${escHtml(f.link)}" target="_blank" class="btn btn-ghost btn-sm">Open ↗</a>`:'');
+    return `<div class="brx-row"><span style="font-size:12.5px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${docIcon(f.type)} ${escHtml(f.name)} <span style="color:var(--mut);font-size:10.5px">${f.updated?'· '+fmtDate(f.updated):''}${f.by?' · '+escHtml(f.by):''}</span></span><span style="display:flex;gap:5px;flex-shrink:0">${open}<button class="btn btn-ghost btn-sm" style="padding:2px 8px" title="Remove from IP (stays in Documents)" onclick="brxIPUntag('${f.id}')">✕</button></span></div>`;
+  };
+  const group=cat=>{
+    const list=ip.filter(f=>(f.ipCat||'Other')===cat).sort((a,b)=>(b.updated||'').localeCompare(a.updated||''));
+    return brxSec('ip-'+cat,cat+' ('+list.length+')',
+      (list.length?list.map(row).join(''):'<div style="font-size:12px;color:var(--mut)">Nothing here yet.</div>'),
+      `<button class="btn btn-ghost btn-sm" onclick="brxIPUploadModal('${cat}')">⬆</button><button class="btn btn-ghost btn-sm" onclick="brxIPLinkModal('${cat}')">+ Link</button><button class="btn btn-ghost btn-sm" onclick="brxIPAttachModal('${cat}')">Attach</button>`);
+  };
+  const prepN=forms.filter(f=>f.formType==='prep').length, fbN=forms.filter(f=>f.formType==='feedback').length;
+  const formsBody=forms.length?forms.slice().sort((a,b)=>(b.updated||'').localeCompare(a.updated||'')).map(f=>`<div class="brx-row"><span style="font-size:12.5px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">📝 <b>${escHtml(f.memberName||'')}</b> <span style="color:var(--mut)">· ${escHtml(f.name)}</span></span><button class="btn btn-ghost btn-sm" onclick="memberFormOpen('${f.id}')">Open</button></div>`).join(''):'<div style="font-size:12px;color:var(--mut)">No forms filed yet.</div>';
+  return `
+  <div class="brx-sec">Boardroom IP · the important documents <span style="color:var(--mut);text-transform:none;letter-spacing:0;font-weight:600">Stored with the Documents hub, organised here</span></div>
+  ${BRX_IP_CATS.map(group).join('')}
+  ${brxSec('ip-forms','Forms · prep ('+prepN+') and feedback ('+fbN+')',formsBody)}
+  <div style="font-size:11px;color:#54545C;margin-top:10px">Uploads need the one time Supabase storage setup (STORAGE_SETUP.md). Links and pasted forms work right away.</div>`;
+}
+function brxIPUntag(id){ const files=ls.get('tuf_files',[])||[]; const f=files.find(x=>x.id===id); if(!f) return; f.ip=false; ls.set('tuf_files',files); renderBoardroom(); }
+function brxIPLinkModal(cat){
+  showModal('Add a link to '+escHtml(cat),`
+    <div class="form-row"><label class="form-label">Name</label><input class="form-input" id="ipl-name" placeholder="e.g. Actions tracker (Google Sheet)"></div>
+    <div class="form-row"><label class="form-label">Link</label><input class="form-input" id="ipl-link" placeholder="https://…"></div>
+  `,`<button class="btn btn-ghost" onclick="closeModal()">Cancel</button><button class="btn btn-k" onclick="brxIPLinkSave('${cat}')">Save</button>`);
+}
+function brxIPLinkSave(cat){
+  const name=document.getElementById('ipl-name').value.trim(); const link=document.getElementById('ipl-link').value.trim();
+  if(!name||!link){ alert('Add a name and a link.'); return; }
+  const files=ls.get('tuf_files',[])||[];
+  files.push({id:uid(),name,cat:'Boardroom Reports',type:'other',kind:'link',link,by:CURRENT_USER,updated:new Date().toISOString().slice(0,10),ip:true,ipCat:cat});
+  ls.set('tuf_files',files); closeModal(); renderBoardroom();
+}
+function brxIPUploadModal(cat){
+  showModal('Upload to '+escHtml(cat),`
+    <div class="form-row"><label class="form-label">File</label><input class="form-input" type="file" id="ipu-file"></div>
+    <div style="font-size:11px;color:var(--mut)">Up to 25MB, stored securely for the whole team. Needs the one time storage setup, use + Link until then.</div>
+    <div id="ipu-status" style="font-size:12px;margin-top:8px"></div>
+  `,`<button class="btn btn-ghost" onclick="closeModal()">Cancel</button><button class="btn btn-k" id="ipu-btn" onclick="brxIPUpload('${cat}')">Upload</button>`);
+}
+async function brxIPUpload(cat){
+  const inp=document.getElementById('ipu-file'); const f=inp&&inp.files&&inp.files[0];
+  const status=document.getElementById('ipu-status'); const btn=document.getElementById('ipu-btn');
+  const say=m=>{ if(status) status.innerHTML='<span style="color:var(--red)">'+m+'</span>'; };
+  if(!f){ say('Choose a file first.'); return; }
+  if(!sb){ say('No connection, cannot upload right now.'); return; }
+  if(f.size>25*1024*1024){ say('That file is over 25MB. Add it as a link instead.'); return; }
+  if(btn){ btn.disabled=true; btn.textContent='Uploading…'; }
+  const safe=(f.name||'file').replace(/[^A-Za-z0-9.\-_]/g,'_');
+  const path=uid()+'_'+safe;
+  try{
+    const {error}=await sb.storage.from(DOCS_BUCKET).upload(path,f,{upsert:false,contentType:f.type||undefined});
+    if(error) throw error;
+    const list=ls.get('tuf_files',[])||[];
+    list.push({id:uid(),name:f.name,cat:'Boardroom Reports',type:docType(f.name),kind:'upload',path,size:f.size,by:CURRENT_USER,updated:new Date().toISOString().slice(0,10),ip:true,ipCat:cat});
+    ls.set('tuf_files',list);
+    addNotif('📄 Added to Boardroom IP: '+f.name);
+    closeModal(); renderBoardroom();
+  }catch(e){
+    const msg=String((e&&e.message)||e);
+    const notReady=/not found|bucket|does not exist|violates|permission|not authoriz|row-level|403|404/i.test(msg);
+    if(btn){ btn.disabled=false; btn.textContent='Upload'; }
+    say(notReady?'File uploads need the one time storage setup (see STORAGE_SETUP.md). Use + Link for now.':'Upload failed: '+escHtml(msg));
+  }
+}
+function brxIPAttachModal(cat){
+  const files=(ls.get('tuf_files',[])||[]).filter(f=>!f.ip&&!f.formType);
+  if(!files.length){ showModal('Attach from Documents','<div style="font-size:12px;color:var(--mut)">Everything in Documents is already attached, or there are no documents yet.</div>','<button class="btn btn-k" onclick="closeModal()">Close</button>'); return; }
+  showModal('Attach existing documents to '+escHtml(cat),`
+    <div style="max-height:280px;overflow-y:auto;border:1px solid var(--bdr);border-radius:8px;padding:4px 12px">${files.map(f=>`<label style="display:flex;align-items:center;gap:8px;padding:6px 0;cursor:pointer;font-size:12.5px;border-bottom:1px solid var(--bdr)"><input type="checkbox" class="ipa-pick" value="${f.id}"><span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${docIcon(f.type)} ${escHtml(f.name)}</span><span style="font-size:10px;color:var(--mut)">${escHtml(f.cat||'')}</span></label>`).join('')}</div>
+  `,`<button class="btn btn-ghost" onclick="closeModal()">Cancel</button><button class="btn btn-k" onclick="brxIPAttach('${cat}')">Attach selected</button>`);
+}
+function brxIPAttach(cat){
+  const picks=[...document.querySelectorAll('.ipa-pick:checked')].map(x=>x.value);
+  if(!picks.length){ alert('Tick at least one document.'); return; }
+  const files=ls.get('tuf_files',[])||[];
+  files.forEach(f=>{ if(picks.includes(f.id)){ f.ip=true; f.ipCat=cat; } });
+  ls.set('tuf_files',files); closeModal(); renderBoardroom();
 }
 
 // ── Boardroom event checklist (one ongoing editable list) ──
@@ -7427,27 +7806,47 @@ function brPrevDetail(o){
 }
 function brSelectPrev(key){ brPrevSel=key; renderBoardroom(); }
 function brAddRosterModal(){
-  const eligible=ls.get('tuf_members',[]).filter(m=>m.status==='active'&&!(m.type==='boardroom'||!m.type)&&!m.boardroomAccess&&m.type!=='guest');
-  if(!eligible.length){ showModal('Add to Boardroom from CRM',`<div style="font-size:12px;color:var(--mut)">Everyone in your CRM is already in the Boardroom roster. Add a brand new member with the New Member button on the Onboarding page, or change a person's type in Clients.</div>`,`<button class="btn btn-k" onclick="closeModal()">Close</button>`); return; }
-  showModal('Add to Boardroom from CRM',`
-    <div class="form-row"><label class="form-label">Person</label><select class="form-select" id="br-person">${eligible.map(m=>`<option value="${m.id}">${escHtml(m.name)}${m.co?' — '+escHtml(m.co):''}</option>`).join('')}</select></div>
+  const members=ls.get('tuf_members',[])||[];
+  const seen=new Set();
+  const opts=[];
+  const add=(label,name,co,email,phone,ref)=>{ const k=(name||'').trim().toLowerCase(); if(!k||seen.has(k)) return; seen.add(k); opts.push({label,name,co:co||'',email:email||'',phone:phone||'',ref}); };
+  const room=new Set(brxRoomMembers().map(m=>(m.name||'').trim().toLowerCase()));
+  members.forEach(m=>{ const k=(m.name||'').trim().toLowerCase(); if(room.has(k)) {seen.add(k); return;} add('CRM · '+(m.type==='guest'||m.boardroomGuest?'guest':(m.type==='existing_client'?'private client':'member'))+(m.status!=='active'?' ('+m.status+')':''),m.name,m.co,m.email,m.phone,'m:'+m.id); });
+  (ls.get('tuf_prospects',[])||[]).forEach(p=>add('Sales Pipeline · '+(p.stage||''),p.name,p.co,p.email,p.phone,'p:'+p.id));
+  (typeof brxLeads==='function'?brxLeads():[]).forEach(l=>add('Boardroom lead',l.name,l.co,l.email,l.phone,'bl:'+l.id));
+  (ls.get('tuf_boardroom_attendees',[])||[]).forEach(a=>add('Session attendee',a.name,a.co,a.email,a.phone,'ba:'+a.id));
+  (ls.get('tuf_event_attendees',[])||[]).forEach(a=>add('Event CRM'+(a.event?' · '+a.event:''),a.name,a.co,a.email,a.phone,'ea:'+a.id));
+  (ls.get('tuf_inbound_leads',[])||[]).forEach(l=>add('Website signup',l.name,l.company,l.email,l.phone,'in:'+l.id));
+  if(!opts.length){ showModal('Add to the Boardroom','<div style="font-size:12px;color:var(--mut)">Everyone across the whole system is already in the Boardroom.</div>','<button class="btn btn-k" onclick="closeModal()">Close</button>'); return; }
+  opts.sort((a,b)=>a.name.localeCompare(b.name));
+  window.__brxRosterOpts=opts;
+  showModal('Add to the Boardroom · anyone in the system',`
+    <div style="font-size:11px;color:var(--mut);margin-bottom:8px">Pick anyone from the CRM, pipeline, leads, attendees or website signups. If they are not a client yet, a member record is created with their contact details.</div>
+    <div class="form-row"><label class="form-label">Person (${opts.length} available)</label><select class="form-select" id="br-person">${opts.map((o,i)=>`<option value="${i}">${escHtml(o.name)}${o.co?' — '+escHtml(o.co):''} · ${escHtml(o.label)}</option>`).join('')}</select></div>
     <div class="form-row"><label class="form-label">Access type</label>
       <select class="form-select" id="br-access">
+        <option value="boardroom">Boardroom member — paying £1,000/month (counts to MRR)</option>
         <option value="comp">Private client — free access (no MRR)</option>
-        <option value="boardroom">Boardroom client — paying £1,000/month (counts to MRR)</option>
       </select>
     </div>
-    <div style="font-size:11px;color:var(--mut)">Boardroom clients pay £1,000/month plus VAT and contribute to Boardroom MRR. Private clients get access as part of their existing service.</div>
   `,`<button class="btn btn-ghost" onclick="closeModal()">Cancel</button><button class="btn btn-k" onclick="brSaveRoster()">Add to Boardroom</button>`);
 }
 function brSaveRoster(){
-  const id=document.getElementById('br-person').value; const access=document.getElementById('br-access').value;
-  const members=ls.get('tuf_members',[]); const i=members.findIndex(x=>x.id===id); if(i<0)return;
-  if(access==='boardroom'){ members[i].type='boardroom'; members[i].boardroomAccess=false; }
-  else { members[i].boardroomAccess=true; if(!members[i].type) members[i].type='existing_client'; }
+  const opts=window.__brxRosterOpts||[]; const o=opts[parseInt(document.getElementById('br-person').value)]; if(!o) return;
+  const access=document.getElementById('br-access').value;
+  const members=ls.get('tuf_members',[]);
+  const i=o.ref.startsWith('m:')?members.findIndex(x=>x.id===o.ref.slice(2)):members.findIndex(x=>(x.name||'').trim().toLowerCase()===(o.name||'').trim().toLowerCase());
+  if(i>=0){
+    members[i].status='active';
+    if(access==='boardroom'){ members[i].type='boardroom'; members[i].boardroomAccess=false; members[i].boardroomGuest=false; delete members[i].guestUntil; if(!members[i].boardroomFee) members[i].boardroomFee=1000; }
+    else { members[i].type='existing_client'; members[i].boardroomAccess=true; members[i].boardroomGuest=false; }
+  } else {
+    members.push({id:uid(),name:o.name,co:o.co,email:o.email,phone:o.phone,stage:3,notes:'Added to the Boardroom from '+o.label+'.',status:'active',type:access==='boardroom'?'boardroom':'existing_client',clientFee:0,boardroomFee:access==='boardroom'?1000:0,boardroomAccess:access!=='boardroom',sessions:[],touchpoint:new Date().toISOString().slice(0,10),retention:null,onboardingComplete:true});
+  }
   ls.set('tuf_members',members);
-  addNotif(`${members[i].name} added to the Boardroom (${access==='boardroom'?'paying':'complimentary'})`);
-  closeModal(); renderBoardroom();
+  journeyLog(o.name,access==='boardroom'?'Became a Boardroom member':'Given Boardroom access as a private client');
+  addNotif(`${o.name} added to the Boardroom (${access==='boardroom'?'paying':'complimentary'})`);
+  closeModal(); brxRefresh(); try{ if(document.getElementById('members-list')) renderMembers(); }catch(_){}
 }
 function brRemoveAccess(id){
   const members=ls.get('tuf_members',[]); const i=members.findIndex(x=>x.id===id); if(i<0)return;
