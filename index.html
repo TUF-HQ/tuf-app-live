@@ -1445,6 +1445,7 @@ function initApp(user){
   // Seed default tasks once, only when the server load succeeded and there are genuinely none.
   seedTasksOnce();
   peopleBuild();
+  peopleSweep();
   updateInboundBadge();
   renderHome();
   renderCapSidebar();
@@ -3212,6 +3213,19 @@ function peopleBuild(){
     if(ppl.length){ ls.set('tuf_people',ppl); addNotif('People database built: '+ppl.length+' people linked across every section'); }
   }catch(e){ console.warn('peopleBuild failed',e); }
 }
+// Self-heal: link any record that arrived without a personId (e.g. created server-side
+// by the Stripe webhook or the website lead-intake function). Idempotent and cheap.
+function peopleSweep(){
+  try{
+    if(!sbLoadOK) return;
+    if(!peopleAll().length) return; // nothing to link against until the one-time build has run
+    PEOPLE_LINK_STORES.forEach(st=>{
+      const arr=ls.get(st,[])||[]; let ch=false;
+      arr.forEach(r=>{ if(!r.personId&&(r.name||'').trim()){ const p=personEnsure(r.name,r); if(p){ r.personId=p.id; ch=true; } } });
+      if(ch) ls.set(st,arr);
+    });
+  }catch(e){ console.warn('peopleSweep failed',e); }
+}
 // Find or create the core person for a name; fills empty core fields from the given record.
 function personEnsure(name,fields){
   const nm=(name||'').trim(); if(!nm) return null;
@@ -3776,7 +3790,7 @@ function elRow(a){
     <td><div style="display:flex;gap:4px;flex-wrap:wrap;justify-content:flex-end">
       <button class="btn btn-ghost btn-sm" onclick="elToggleNotes('${a.id}')" title="Notes">Notes</button>
       <button class="btn btn-ghost btn-sm" onclick="editELModal('${a.id}')">Edit</button>
-      ${a.promotedToProspectId?'<span class="tag tag-g" style="font-size:9px">In pipeline</span>':`<button class="btn btn-ghost btn-sm" onclick="convertELtoPipeline('${a.id}')" title="Send to Sales Pipeline">→ Pipeline</button>`}
+      ${a.source==='Stripe'?'<span class="tag tag-b" style="font-size:9px" title="Added automatically from a Stripe checkout">💳 Stripe</span>':''}${a.promotedToProspectId?'<span class="tag tag-g" style="font-size:9px">In pipeline</span>':`<button class="btn btn-ghost btn-sm" onclick="convertELtoPipeline('${a.id}')" title="Send to Sales Pipeline">→ Pipeline</button>`}
     </div></td>
   </tr>
   <tr id="elnotes-${a.id}" style="display:none"><td colspan="8" style="background:var(--bg)">
@@ -3936,6 +3950,7 @@ function editELModal(id){
   const evNames=elEventNameOpts();
   showModal('Edit attendee',`
     <datalist id="el-evnames">${evNames.map(n=>`<option value="${escHtml(n)}">`).join('')}</datalist>
+    ${a.source==='Stripe'?`<div style="font-size:11px;color:var(--mut);margin-bottom:8px">Origin: 💳 <strong>Stripe checkout</strong>${a.stripeSessionId?' · session '+escHtml(a.stripeSessionId.slice(0,18))+'…':''}</div>`:''}
     <div class="grid-2"><div class="form-row"><label class="form-label">Name</label><input class="form-input" id="eel-name" value="${escHtml(a.name||'')}"></div><div class="form-row"><label class="form-label">Business</label><input class="form-input" id="eel-co" value="${escHtml(a.co||'')}"></div></div>
     <div class="grid-2"><div class="form-row"><label class="form-label">Email</label><input class="form-input" type="email" id="eel-email" value="${escHtml(a.email||'')}"></div><div class="form-row"><label class="form-label">Phone</label><input class="form-input" type="tel" id="eel-phone" value="${escHtml(a.phone||'')}"></div></div>
     <div class="grid-2"><div class="form-row"><label class="form-label">Event attended</label><input class="form-input" id="eel-event" list="el-evnames" value="${escHtml(a.event||'')}" onchange="elFillEventDate('eel-event','eel-evdate')"></div><div class="form-row"><label class="form-label">Date of event</label><input class="form-input" type="date" id="eel-evdate" value="${a.eventDate||''}"></div></div>
