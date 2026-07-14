@@ -4537,10 +4537,13 @@ function padelSeedJasper(){
 function padelAddLead(){ const inp=document.getElementById('padel-add'); const n=(inp?.value||'').trim(); if(!n)return; const l=ls.get('tuf_event_leads',[]); l.push({id:uid(),name:n,co:'',email:'',phone:'',event:'Padel',assignedTo:CURRENT_USER,notes:'',status:'New Lead',lastContact:new Date().toISOString().slice(0,10),addedDate:new Date().toISOString().slice(0,10)}); ls.set('tuf_event_leads',l); addNotif('Padel lead added: '+n); renderPadel(); }
 function padelHidePayment(key){ const h=ls.get('tuf_padel_hidden',[])||[]; if(!h.includes(key))h.push(key); ls.set('tuf_padel_hidden',h); renderPadel(); }
 function padelRestorePayments(){ ls.set('tuf_padel_hidden',[]); renderPadel(); }
+// Payments at or above this are Boardroom membership money, not event tickets.
+const BRX_BOARDROOM_MIN_PENCE=50000; // £500
 // Transfer Stripe payments (already pulled into the app on the Padel page) into the
-// Event CRM. No webhook, no extra setup: runs on app load and after every
-// "Update from Stripe". Each charge is processed once (tuf_stripe_synced), so
-// deleting someone from the Event CRM does not resurrect them on the next load.
+// right place: ticket-sized payments (< £500) become Event CRM attendees, Boardroom
+// sized payments (>= £500) go onto the Boardroom payments board instead. No webhook,
+// no extra setup: runs on app load and after every "Update from Stripe". Each charge
+// is processed once (tuf_stripe_synced), so deleting a record never resurrects it.
 function stripeSyncToCRM(){
   try{
     if(!sbLoadOK) return 0;
@@ -4550,7 +4553,8 @@ function stripeSyncToCRM(){
     const hidden=new Set(ls.get('tuf_padel_hidden',[])||[]);
     const synced=ls.get('tuf_stripe_synced',[])||[]; const syncedSet=new Set(synced);
     const att=ls.get('tuf_event_attendees',[])||[];
-    let added=0, marked=false;
+    const bpay=ls.get('tuf_boardroom_payments',[])||[];
+    let added=0, addedBP=0, marked=false;
     payments.forEach(p=>{
       const k=key(p);
       if(syncedSet.has(k)) return;
@@ -4559,18 +4563,28 @@ function stripeSyncToCRM(){
       const name=((p.payer&&p.payer!=='Guest checkout')?p.payer:'').trim()||email;
       synced.push(k); syncedSet.add(k); marked=true;
       if(!name) return; // nothing usable
+      const paid=new Date((p.created||0)*1000).toISOString().slice(0,10);
+      if((p.amount||0)>=BRX_BOARDROOM_MIN_PENCE){
+        // Boardroom membership payment → payments board, NOT the Event CRM.
+        const person=personEnsure(name,{email:p.email||''});
+        bpay.push({id:uid(),name,email:p.email||'',amount:p.amount||0,paidDate:paid,charge:p.charge||'',manual:false,personId:person?person.id:'',addedDate:new Date().toISOString().slice(0,10)});
+        journeyLog(name,'Boardroom payment received (£'+(((p.amount||0)/100).toLocaleString('en-GB'))+')');
+        addedBP++;
+        return;
+      }
       const dup=att.some(a=>(email&&(a.email||'').trim().toLowerCase()===email)||profileKey(a.name)===profileKey(name));
       if(dup) return;
-      const paid=new Date((p.created||0)*1000).toISOString().slice(0,10);
       att.push({id:uid(),name,co:'',email:p.email||'',phone:'',event:'Padel Event',eventDate:paid,score:null,owner:'Danny',notes:'Paid £'+(((p.amount||0)/100).toLocaleString('en-GB'))+' via Stripe on '+fmtDate(paid)+'.',addedDate:new Date().toISOString().slice(0,10),source:'Stripe',stripeCharge:p.charge||''});
       personTag(att);
       journeyLog(name,'Entered the system: Event CRM (Stripe payment)');
       added++;
     });
     if(added) ls.set('tuf_event_attendees',att);
+    if(addedBP) ls.set('tuf_boardroom_payments',bpay);
     if(marked) ls.set('tuf_stripe_synced',synced);
     if(added) addNotif(added+' Stripe payer'+(added>1?'s':'')+' added to the Event CRM');
-    return added;
+    if(addedBP) addNotif(addedBP+' Boardroom payment'+(addedBP>1?'s':'')+' logged from Stripe');
+    return added+addedBP;
   }catch(e){ console.warn('stripeSyncToCRM failed',e); return 0; }
 }
 async function padelRefreshStripe(){
@@ -4595,8 +4609,9 @@ function renderPadel(){
   const allPay=snap.payments||[];
   const padelKey=p=>p.charge||((p.created||0)+'_'+(p.amount||0));
   const hidden=ls.get('tuf_padel_hidden',[])||[];
-  const pay=allPay.filter(p=>!hidden.includes(padelKey(p)));
-  const hiddenCount=allPay.length-pay.length;
+  const ticketPay=allPay.filter(p=>(p.amount||0)<(typeof BRX_BOARDROOM_MIN_PENCE!=='undefined'?BRX_BOARDROOM_MIN_PENCE:50000));
+  const pay=ticketPay.filter(p=>!hidden.includes(padelKey(p)));
+  const hiddenCount=ticketPay.length-pay.length;
   const total=pay.reduce((s,p)=>s+(p.amount||0),0);
   const leads=padelLeads();
   const confirmedCount=leads.filter(l=>l.attendance==='Confirmed'||l.attendance==='Attended').length;
@@ -7635,6 +7650,48 @@ function brxContractInfo(m){
   const left=daysUntil(endYMD);
   return {endYMD,pct,left,monthsLeft:Math.max(0,Math.round(left/30.44))};
 }
+// ── Boardroom payments board (Stripe auto + manual) ──
+function brxPayments(){ return (ls.get('tuf_boardroom_payments',[])||[]).slice().sort((a,b)=>(b.paidDate||'').localeCompare(a.paidDate||'')); }
+function brxPaymentsFor(m){ const k=profileKey(m.name); const em=(m.email||'').trim().toLowerCase(); return brxPayments().filter(p=>(m.personId&&p.personId===m.personId)||profileKey(p.name)===k||(em&&(p.email||'').trim().toLowerCase()===em)); }
+function brxPaidThisMonth(m){ const mo=new Date().toISOString().slice(0,7); return brxPaymentsFor(m).some(p=>(p.paidDate||'').slice(0,7)===mo); }
+function brxPaymentsBoard(){
+  const pays=brxPayments();
+  const mo=new Date().toISOString().slice(0,7);
+  const thisMonth=pays.filter(p=>(p.paidDate||'').slice(0,7)===mo);
+  const total=p=>'£'+((p.amount||0)/100).toLocaleString('en-GB');
+  const row=p=>`<div class="brx-row"><span style="font-size:12.5px;min-width:0"><b>${escHtml(p.name)}</b> <span style="color:var(--mut)">· ${p.paidDate?fmtDate(p.paidDate):''}</span></span><span style="display:flex;gap:8px;align-items:center;flex-shrink:0"><b style="color:#5AC98E;font-variant-numeric:tabular-nums">${total(p)}</b><span class="brx-tag ${p.manual?'o':'y'}">${p.manual?'Manual':'💳 Stripe'}</span><button class="btn btn-ghost btn-sm" style="padding:2px 8px" onclick="brxPayDelete('${p.id}')">✕</button></span></div>`;
+  const sum=thisMonth.reduce((s,p)=>s+(p.amount||0),0);
+  const body=`<div style="font-size:11.5px;color:var(--mut);margin-bottom:8px">${thisMonth.length?`<b style="color:#5AC98E">${thisMonth.length} payment${thisMonth.length>1?'s':''} this month · £${(sum/100).toLocaleString('en-GB')}</b>`:'No Boardroom payments logged this month yet.'} Stripe payments of £${(BRX_BOARDROOM_MIN_PENCE/100).toLocaleString('en-GB')}+ land here automatically; smaller ones stay with the events.</div>`
+    +(pays.length?pays.slice(0,30).map(row).join(''):'<div style="font-size:12px;color:var(--mut)">Nothing yet. Boardroom Stripe payments appear here on their own, or log a bank transfer manually.</div>');
+  return brxSec('members-pay','Boardroom payments ('+pays.length+')',body,`<button class="btn btn-ghost btn-sm" onclick="brxPayModal()">+ Log payment</button>`);
+}
+function brxPayModal(){
+  const room=brxRoomMembers().slice().sort((a,b)=>(a.name||'').localeCompare(b.name||''));
+  showModal('Log a Boardroom payment',`
+    <div style="font-size:11px;color:var(--mut);margin-bottom:10px">For payments made outside Stripe (bank transfer etc). Stripe payments log themselves.</div>
+    <div class="form-row"><label class="form-label">Member</label><select class="form-select" id="bpx-person">${room.map(m=>`<option value="${m.id}">${escHtml(m.name)}${m.co?' — '+escHtml(m.co):''}</option>`).join('')}</select></div>
+    <div class="grid-2">
+      <div class="form-row"><label class="form-label">Amount (£)</label><input class="form-input" type="number" id="bpx-amount" value="1000"></div>
+      <div class="form-row"><label class="form-label">Date paid</label><input class="form-input" type="date" id="bpx-date" value="${new Date().toISOString().slice(0,10)}"></div>
+    </div>
+  `,`<button class="btn btn-ghost" onclick="closeModal()">Cancel</button><button class="btn btn-k" onclick="brxPaySave()">Log payment</button>`);
+}
+function brxPaySave(){
+  const m=(ls.get('tuf_members',[])||[]).find(x=>x.id===document.getElementById('bpx-person').value); if(!m){closeModal();return;}
+  const amount=Math.round((parseFloat(document.getElementById('bpx-amount').value)||0)*100); if(!amount){ alert('Enter the amount.'); return; }
+  const paidDate=document.getElementById('bpx-date').value||new Date().toISOString().slice(0,10);
+  const pays=ls.get('tuf_boardroom_payments',[])||[];
+  pays.push({id:uid(),name:m.name,email:m.email||'',amount,paidDate,charge:'',manual:true,personId:m.personId||'',addedDate:new Date().toISOString().slice(0,10)});
+  ls.set('tuf_boardroom_payments',pays);
+  journeyLog(m.name,'Boardroom payment received (£'+(amount/100).toLocaleString('en-GB')+')');
+  addNotif('Boardroom payment logged: '+m.name+' £'+(amount/100).toLocaleString('en-GB'));
+  closeModal(); renderBoardroom();
+}
+function brxPayDelete(id){
+  if(!confirm('Remove this payment from the board? (Stripe itself is not affected, and it will not re-import.)')) return;
+  ls.set('tuf_boardroom_payments',(ls.get('tuf_boardroom_payments',[])||[]).filter(x=>x.id!==id));
+  renderBoardroom();
+}
 function brxMembersView(){
   const room=brxRoomMembers().slice().sort((a,b)=>(a.name||'').localeCompare(b.name||''));
   const paying=room.filter(m=>!m.type||m.type==='boardroom');
@@ -7643,9 +7700,9 @@ function brxMembersView(){
   const rets=room.map(m=>m.retention).filter(Boolean);
   const avgRet=rets.length?(rets.reduce((a,b)=>a+b,0)/rets.length).toFixed(1):null;
   const stat=(n,l)=>`<div class="brx-card"><div style="font-size:26px;font-weight:800;color:#fff;font-variant-numeric:tabular-nums">${n}</div><div style="font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--mut);margin-top:5px">${l}</div></div>`;
-  const card=m=>{ const c=brxContractInfo(m);
+  const card=m=>{ const c=brxContractInfo(m); const isPay=(!m.type||m.type==='boardroom');
     return `<div class="brx-mcard" onclick="brxOpenMember('${m.id}')">
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:4px"><div style="font-weight:800;font-size:14.5px;color:#fff">${escHtml(m.name)}</div>${brxFeeTag(m)}</div>
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:4px"><div style="font-weight:800;font-size:14.5px;color:#fff">${escHtml(m.name)}</div><span style="display:flex;gap:4px">${(isPay&&brxPaidThisMonth(m))?'<span class="brx-tag g" title="Boardroom payment received this month">Paid</span>':''}${brxFeeTag(m)}</span></div>
       <div style="font-size:11.5px;color:var(--mut);margin-bottom:12px;min-height:15px">${escHtml(m.co||'')}</div>
       <div style="display:flex;align-items:center;gap:8px;font-size:10.5px;color:var(--mut)"><span style="width:62px;flex-shrink:0">Retention</span><div class="brx-bar" style="flex:1"><div style="width:${((m.retention||0)/10)*100}%;background:${(m.retention||0)>=7?'#5AC98E':(m.retention?'#E8B33C':'#3A3A42')}"></div></div><span style="width:34px;text-align:right">${m.retention||'–'}/10</span></div>
       <div style="display:flex;align-items:center;gap:8px;font-size:10.5px;color:var(--mut);margin-top:7px"><span style="width:62px;flex-shrink:0">Contract</span>${c?`<div class="brx-bar" style="flex:1"><div style="width:${c.pct}%"></div></div><span style="width:34px;text-align:right;white-space:nowrap">${c.monthsLeft}mo</span>`:'<span style="color:#54545C">start date not set</span>'}</div>
@@ -7654,6 +7711,7 @@ function brxMembersView(){
   <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:6px">
     ${stat(room.length,'Confirmed members')}${stat('£'+mrr.toLocaleString(),'Boardroom MRR')}${stat(next?daysUntil(next.date)+'d':'—',next?'To '+escHtml(next.name):'No session booked')}${stat(avgRet||'—','Avg retention')}
   </div>
+  <div style="margin-bottom:6px">${brxPaymentsBoard()}</div>
   <div class="brx-sec">Members (${room.length}) <span><button class="btn btn-k btn-sm" onclick="brAddRosterModal()">+ Add member</button></span></div>
   <div class="brx-grid">${room.map(card).join('')||'<div style="color:var(--mut);font-size:12px">No members yet.</div>'}</div>
   <div style="font-size:11px;color:#54545C;margin-top:12px">The tag shows what each member pays for the Boardroom itself. Existing clients attend free, their own service fees live on their People profile.</div>`;
@@ -7712,6 +7770,10 @@ function brxMemberProfile(id){
       <div class="brx-card" style="margin-bottom:14px">
         ${sub('Journey with us')}
         ${journey.length?`<div style="border-left:2px solid #26262B;padding-left:12px;margin-left:4px">${journey.map(x=>`<div style="font-size:12px;padding:4px 0"><span style="color:var(--mut);font-variant-numeric:tabular-nums">${fmtDate(x.date)}</span> · ${escHtml(x.entry)}</div>`).join('')}</div>`:'<div style="font-size:12px;color:var(--mut)">No journey entries yet. Stage moves are logged automatically from now on.</div>'}
+      </div>
+      <div class="brx-card" style="margin-bottom:14px">
+        ${sub('Boardroom payments')}
+        ${(()=>{const ps=brxPaymentsFor(m);return ps.length?ps.map(p=>`<div class="brx-row"><span style="font-size:12.5px">${p.paidDate?fmtDate(p.paidDate):''}</span><span style="display:flex;gap:8px;align-items:center"><b style="color:#5AC98E">£${((p.amount||0)/100).toLocaleString('en-GB')}</b><span class="brx-tag ${p.manual?'o':'y'}">${p.manual?'Manual':'💳 Stripe'}</span></span></div>`).join(''):'<div style="font-size:12px;color:var(--mut)">No Boardroom payments recorded yet. Stripe payments appear automatically.</div>';})()}
       </div>
       ${brxActionsPanel(m)}
     </div>
