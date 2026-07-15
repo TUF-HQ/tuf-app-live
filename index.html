@@ -1447,6 +1447,7 @@ function initApp(user){
   peopleBuild();
   peopleSweep();
   stripeSyncToCRM();
+  pipelineSweep();
   updateInboundBadge();
   renderHome();
   renderCapSidebar();
@@ -3142,9 +3143,12 @@ function profileAddTo(name,target){
   const f=profileFind(name);
   const co=(f.member&&f.member.co)||(f.prospect&&f.prospect.co)||(f.lead&&f.lead.co)||(f.warm&&f.warm.co)||'';
   const email=(f.member&&f.member.email)||(f.prospect&&f.prospect.email)||(f.lead&&f.lead.email)||'';
+  const phone=(f.member&&f.member.phone)||(f.prospect&&f.prospect.phone)||(f.lead&&f.lead.phone)||'';
   if(target==='pipeline'){ const l=ls.get('tuf_prospects',[]); l.push({id:uid(),name,co,email,phone:'',stage:'Prospect',temp:'Warm',score:null,nextAction:'',notes:'',lastContact:new Date().toISOString().slice(0,10)}); personTag(l); ls.set('tuf_prospects',l); try{ if(document.getElementById('pipeline-tab-content')) renderPipeline(); }catch(e){} addNotif(name+' added to Sales Pipeline'); journeyLog(name,'Added to the Sales Pipeline (from profile)'); }
   else if(target==='padel'){ const l=ls.get('tuf_event_leads',[]); l.push({id:uid(),name,co,email,phone:'',event:'Padel',assignedTo:CURRENT_USER,notes:'',status:'New Lead',attendance:'Invited',score:'',lastContact:new Date().toISOString().slice(0,10),addedDate:new Date().toISOString().slice(0,10)}); personTag(l); ls.set('tuf_event_leads',l); try{ if(document.getElementById('padel-pipeline')) renderPadel(); }catch(e){} addNotif(name+' added to Padel pipeline'); journeyLog(name,'Added to the Padel pipeline (from profile)'); }
   else if(target==='member'){ const m=ls.get('tuf_members',[]); m.push({id:uid(),name,co,email,phone:'',stage:3,notes:'',status:'active',type:'boardroom',clientFee:0,boardroomFee:1000,sessions:[],touchpoint:new Date().toISOString().slice(0,10),retention:null,onboardingComplete:true}); personTag(m); ls.set('tuf_members',m); try{ if(document.getElementById('members-list')) renderMembers(); }catch(e){} addNotif(name+' added as a Boardroom member'); journeyLog(name,'Became a Boardroom member (from profile)'); }
+  else if(target==='event'){ const l=ls.get('tuf_event_attendees',[]); if(!l.some(x=>profileKey(x.name)===profileKey(name))){ l.push({id:uid(),name,co,email,phone,event:'',eventDate:'',score:null,owner:CURRENT_USER,notes:'',addedDate:new Date().toISOString().slice(0,10)}); personTag(l); ls.set('tuf_event_attendees',l); addNotif(name+' added to the Event CRM'); journeyLog(name,'Added to the Event CRM (from profile)'); } try{ refreshAttendees(); }catch(e){} }
+  else if(target==='blead'){ const l=ls.get('tuf_boardroom_leads',[])||[]; if(!l.some(x=>profileKey(x.name)===profileKey(name))){ l.push({id:uid(),name,co,email,phone,source:'Added from pipeline',stage:'invited',custom:[],notes:'',addedDate:new Date().toISOString().slice(0,10)}); personTag(l); ls.set('tuf_boardroom_leads',l); addNotif(name+' added as a Boardroom lead'); journeyLog(name,'Added as a Boardroom lead (from profile)'); } if(typeof brxRefresh==='function') brxRefresh(); }
   else if(target==='onboarding'){ const m=ls.get('tuf_members',[]); const i=m.findIndex(x=>profileKey(x.name)===profileKey(name)); if(i>=0){ m[i].onboardingComplete=false; m[i].status='active'; } else { m.push({id:uid(),name,co,email,phone:'',stage:3,notes:'',status:'active',type:'boardroom',clientFee:0,boardroomFee:1000,sessions:[],touchpoint:new Date().toISOString().slice(0,10),retention:null,onboardingComplete:false,onboardingType:'new'}); personTag(m); } ls.set('tuf_members',m); try{ if(document.getElementById('ob-member-list')) renderOnboarding(); }catch(e){} addNotif(name+' added to Onboarding'); journeyLog(name,'Entered Onboarding'); }
   openProfile(name,co);
 }
@@ -3421,6 +3425,8 @@ function renderPersonProfile(id){
     !L.prospects.length?`<button class="btn btn-ghost btn-sm" onclick="profileAddTo('${na}','pipeline');renderPeople()">+ Sales Pipeline</button>`:'',
     !L.padel.length?`<button class="btn btn-ghost btn-sm" onclick="profileAddTo('${na}','padel');renderPeople()">+ Padel</button>`:'',
     !L.members.length?`<button class="btn btn-ghost btn-sm" onclick="profileAddTo('${na}','member');renderPeople()">+ Boardroom member</button>`:'',
+    !L.bleads.length?`<button class="btn btn-ghost btn-sm" onclick="profileAddTo('${na}','blead');renderPeople()">+ Boardroom lead</button>`:'',
+    !L.ea.length?`<button class="btn btn-ghost btn-sm" onclick="profileAddTo('${na}','event');renderPeople()">+ Event CRM</button>`:'',
   ].filter(Boolean).join('');
   host.innerHTML=`
   <span style="display:inline-block;font-size:12px;font-weight:700;color:var(--mut);cursor:pointer;margin-bottom:12px" onclick="personSelId=null;renderPeople()">← All people</span>
@@ -3571,6 +3577,39 @@ function memberFormOpen(id){
 }
 
 // ═══ SALES PIPELINE ══════════════════════════════════════════════════════════
+// Every CRM profile starts in the Sales Pipeline: any person without an active
+// member/client record and without a prospect record gets one at the Prospect stage.
+// Ledger tuf_pipeline_swept means deleting someone from the pipeline sticks.
+function pipelineSweep(){
+  try{
+    if(!sbLoadOK) return 0;
+    const ppl=peopleAll(); if(!ppl.length) return 0;
+    const swept=ls.get('tuf_pipeline_swept',[])||[]; const sweptSet=new Set(swept);
+    const prospects=ls.get('tuf_prospects',[])||[];
+    const members=ls.get('tuf_members',[])||[];
+    const inPipe=new Set(prospects.map(p=>p.personId).filter(Boolean));
+    const pipeNames=new Set(prospects.map(p=>profileKey(p.name)));
+    const activeMember=new Set(members.filter(m=>m.status==='active').map(m=>m.personId).filter(Boolean));
+    const activeNames=new Set(members.filter(m=>m.status==='active').map(m=>profileKey(m.name)));
+    const today=new Date().toISOString().slice(0,10);
+    let added=0, marked=false;
+    ppl.forEach(p=>{
+      if(sweptSet.has(p.id)) return;
+      const k=profileKey(p.name);
+      if(inPipe.has(p.id)||pipeNames.has(k)||activeMember.has(p.id)||activeNames.has(k)){ swept.push(p.id); sweptSet.add(p.id); marked=true; return; }
+      // best known origin for context
+      let src='';
+      try{ const L=personLinks(p); src=(L.ea[0]&&L.ea[0].event)||(L.ba[0]&&L.ba[0].sessionName)||(L.padel[0]&&'Padel')||(L.inbound[0]&&'Website signup')||''; }catch(_){ }
+      prospects.push({id:uid(),name:p.name,co:p.co||'',email:p.email||'',phone:p.phone||'',stage:'Prospect',temp:'Warm',score:null,nextAction:'',notes:'Every CRM profile starts in the pipeline.'+(src?' Origin: '+src+'.':''),lastContact:today,personId:p.id,sourceEvent:src&&src!=='Website signup'?src:'',auto:true});
+      journeyLog(p.name,'Entered the Sales Pipeline (every profile starts here)');
+      swept.push(p.id); sweptSet.add(p.id); marked=true; added++;
+    });
+    if(added) ls.set('tuf_prospects',prospects);
+    if(marked) ls.set('tuf_pipeline_swept',swept);
+    if(added) addNotif(added+' CRM profile'+(added>1?'s':'')+' added to the Sales Pipeline pool');
+    return added;
+  }catch(e){ console.warn('pipelineSweep failed',e); return 0; }
+}
 function renderPipeline(){
   const tabBar = document.getElementById('pipeline-tabs');
   const tabContent = document.getElementById('pipeline-tab-content');
@@ -3588,6 +3627,7 @@ function setPipelineTab(t){pipelineTab=t;renderPipeline();}
 let pipelineTab='followups';
 function prospectDue(p, today){
   if(p.stage==='Won'||p.stage==='Lost'||p.convertedToMemberId) return null;
+  if(p.auto&&!p.nextActionDate&&!p.nextAction) return null; // pool prospects only chase once engaged
   if(p.nextActionDate && p.nextActionDate < today) return 'overdue';
   if(!p.nextActionDate && p.lastContact && daysUntil(p.lastContact) < -7) return 'overdue';
   if(p.nextActionDate === today) return 'today';
@@ -3699,16 +3739,23 @@ Output only the message body, ready to paste (${channel==='Email'?'4-6 short lin
 function fuCopy(){ const ta=document.getElementById('fu-draft'); if(!ta||!ta.value.trim()){ alert('Nothing to copy yet — generate or write a draft first.'); return; } const done=()=>{ const s=document.getElementById('fu-status'); if(s) s.textContent='Copied ✓'; }; if(navigator.clipboard){ navigator.clipboard.writeText(ta.value).then(done).catch(()=>{ta.select();document.execCommand('copy');done();}); } else { ta.select(); document.execCommand('copy'); done(); } }
 function fuSaveNote(id){ const ta=document.getElementById('fu-draft'); const v=(ta?.value||'').trim(); if(!v) return; const list=ls.get('tuf_prospects',[])||[]; const i=list.findIndex(x=>x.id===id); if(i<0) return; const stamp=new Date().toISOString().slice(0,10); list[i].notes=((list[i].notes||'')+`\n[${stamp} follow-up draft]\n`+v).trim(); ls.set('tuf_prospects',list); const s=document.getElementById('fu-status'); if(s) s.textContent='Saved to notes ✓'; }
 
+let pipelineSearch='';
 function renderKanban(){
-  const prospects=ls.get('tuf_prospects',[]);
-  const won=prospects.filter(p=>p.stage==='Won').length;
-  const active=prospects.filter(p=>p.stage!=='Won'&&p.stage!=='Lost').length;
+  const all=ls.get('tuf_prospects',[]);
+  const q=pipelineSearch.trim().toLowerCase();
+  const prospects=q?all.filter(p=>(((p.name||'')+' '+(p.co||''))).toLowerCase().includes(q)):all;
+  const won=all.filter(p=>p.stage==='Won').length;
+  const active=all.filter(p=>p.stage!=='Won'&&p.stage!=='Lost').length;
   document.getElementById('pipeline-tab-content').innerHTML=`
+    <div style="display:flex;gap:10px;align-items:center;margin-bottom:12px;flex-wrap:wrap">
+      <input class="form-input" id="pipe-search" placeholder="Search the pipeline…" value="${escAttr(pipelineSearch)}" style="max-width:260px" oninput="pipelineSearch=this.value;renderKanban();const s=document.getElementById('pipe-search');if(s){s.focus();s.setSelectionRange(s.value.length,s.value.length);}">
+      <span style="font-size:11.5px;color:var(--mut)">${q?prospects.length+' match'+(prospects.length!==1?'es':''):'Every CRM profile lives here. Search, open a card, and add them to Padel, Boardroom leads or the Event CRM.'}</span>
+    </div>
     <div class="grid-4" style="margin-bottom:14px">
       <div class="stat y"><div class="n">${active}</div><div class="l">Active</div></div>
-      <div class="stat r"><div class="n">${prospects.filter(p=>p.temp==='Hot').length}</div><div class="l">Hot</div></div>
+      <div class="stat r"><div class="n">${all.filter(p=>p.temp==='Hot').length}</div><div class="l">Hot</div></div>
       <div class="stat g"><div class="n">${won}</div><div class="l">Won</div></div>
-      <div class="stat"><div class="n">${prospects.length}</div><div class="l">Total</div></div>
+      <div class="stat"><div class="n">${all.length}</div><div class="l">Total</div></div>
     </div>
     <div class="kanban" style="grid-template-columns:repeat(${STAGES.length},1fr)">
       ${STAGES.map(stage=>{
@@ -4077,6 +4124,12 @@ function editProspectModal(id){
     ${p.sourceEvent?`<div style="font-size:11px;color:var(--mut);margin-bottom:8px">Origin: event lead from <strong>${escHtml(p.sourceEvent)}</strong></div>`:''}
     ${p.source==='Website'?`<div style="font-size:11px;color:var(--mut);margin-bottom:8px">Origin: 🌐 <strong>Website signup</strong></div>`:''}
     ${p.convertedToMemberId?`<div style="font-size:11px;color:var(--grn);font-weight:600;margin-bottom:8px">✓ Converted to a member.</div>`:''}
+    ${(()=>{ try{ const per=personOf(p); if(!per) return ''; const L=personLinks(per); const na=escAttr(p.name);
+      const chips=personSectionChips(per).map(c=>`<span class="tag ${c.cls}" style="font-size:9px">${escHtml(c.label)}</span>`).join(' ');
+      const btns=[ L.padel.length?'':`<button class="btn btn-ghost btn-sm" onclick="profileAddTo('${na}','padel');closeModal();renderPipeline()">+ Padel attendee</button>`,
+        L.bleads.length?'':`<button class="btn btn-ghost btn-sm" onclick="profileAddTo('${na}','blead');closeModal();renderPipeline()">+ Boardroom lead</button>`,
+        L.ea.length?'':`<button class="btn btn-ghost btn-sm" onclick="profileAddTo('${na}','event');closeModal();renderPipeline()">+ Event CRM</button>`].filter(Boolean).join('');
+      return `<div style="background:var(--bg);border:1px solid var(--bdr);border-radius:8px;padding:8px 10px;margin-bottom:12px"><div style="font-size:10px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--mut);margin-bottom:5px">Also sits in</div><div style="display:flex;gap:4px;flex-wrap:wrap">${chips||'<span style="font-size:11px;color:var(--mut)">Pipeline only so far</span>'}</div>${btns?`<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">${btns}</div>`:''}</div>`; }catch(_){ return ''; } })()}
     <div class="grid-2">
       <div class="form-row"><label class="form-label">Email</label><input class="form-input" type="email" id="ep-email" value="${escHtml(p.email||'')}"></div>
       <div class="form-row"><label class="form-label">Phone</label><input class="form-input" type="tel" id="ep-phone" value="${escHtml(p.phone||'')}"></div>
