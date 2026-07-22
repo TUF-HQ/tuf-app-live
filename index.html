@@ -525,6 +525,7 @@ details>summary::-webkit-details-marker{display:none}
     <div class="sb-item" data-page="dannycal" onclick="nav('dannycal',this)"><span class="ico">📆</span>Danny's Calendar</div>
     <div class="sb-item" data-page="roles" onclick="nav('roles',this)"><span class="ico">👥</span>Roles & Responsibilities</div>
     <div class="sb-item" data-page="reviews" onclick="nav('reviews',this)"><span class="ico">📝</span>Weekly Review</div>
+    <div class="sb-item" data-page="teamtasks" onclick="nav('teamtasks',this)"><span class="ico">🗒</span>Team Tasks</div>
     <div class="sb-item" data-page="daily" onclick="nav('daily',this)"><span class="ico">☀️</span>Daily Progress</div>
     <div class="sb-item" data-page="holidays" onclick="nav('holidays',this)"><span class="ico">🏖</span>Holidays</div>
     <div class="sb-item" data-page="kpis" onclick="nav('kpis',this)"><span class="ico">📈</span>KPIs</div>
@@ -851,6 +852,8 @@ details>summary::-webkit-details-marker{display:none}
     <div class="page" id="page-teamoverview">
       <div id="teamoverview-render"></div>
     </div>
+
+    <div class="page" id="page-teamtasks"><div id="teamtasks-render"></div></div>
 
     <div class="page" id="page-daily">
       <div id="daily-render"></div>
@@ -1753,7 +1756,7 @@ const PAGE_TITLES = {
   onboarding:'Onboarding',sessions:'Session Planner',events:'Event CRM',padel:'Padel Event',
   calendar:'Content Calendar',podcast:'Podcast Pipeline',ip:'IP Register',files:'Documents',
   capmap:'Capability Map',goals:'Goals & OKRs',fourbox:'The 4 Box Model',budget:'Budget',
-  roles:'Roles',reviews:'Weekly Review',kb:'Knowledge Base',notifs:'Notifications',
+  teamtasks:'Team Tasks',roles:'Roles',reviews:'Weekly Review',kb:'Knowledge Base',notifs:'Notifications',
   csuite:'C-Suite',holidays:'Holidays',daily:'Daily Progress',
 };
 function toggleSidebar(force){
@@ -1789,7 +1792,7 @@ function renderPage(page){
     onboarding:renderOnboarding, sessions:renderSessions, events:renderEventCRM, padel:renderPadel,
     calendar:renderCalendar, podcast:renderPodcast, ip:renderIP, files:renderFiles,
     capmap:renderCapMap, goals:renderGoals, fourbox:renderFourBox, budget:renderBudget,
-    roles:renderRoles, reviews:renderReviews, kb:renderKB, notifs:renderNotifs,
+    teamtasks:renderTeamTasks, roles:renderRoles, reviews:renderReviews, kb:renderKB, notifs:renderNotifs,
     csuite:renderCSuite, holidays:renderHolidays, daily:renderDaily, teamoverview:renderTeamOverview, myday:renderMyDay,
   };
   if(fns[page]) fns[page]();
@@ -8977,6 +8980,130 @@ ${buildHQContext()}`;
 }
 
 // ═══ DAILY PROGRESS ══════════════════════════════════════════════════════════
+// ═══ TEAM TASKS — each person's daily / weekly / monthly lists, visible to the whole team ═══
+let cmView='mine'; let cmOffset=0; // team-view day offset (0 = today)
+function cmDailyKey(off){ const d=new Date(); d.setDate(d.getDate()+(off||0)); return ymdLocal(d); }
+function cmWeekKey(off){ const m=mondayOf(new Date()); m.setDate(m.getDate()+7*(off||0)); return ymdLocal(m); }
+function cmMonthKey(off){ const d=new Date(); const x=new Date(d.getFullYear(),d.getMonth()+(off||0),1); return x.getFullYear()+'-'+String(x.getMonth()+1).padStart(2,'0'); }
+function cmKeysAt(off){ const d=new Date(); d.setDate(d.getDate()+(off||0)); const m=mondayOf(d); return {daily:ymdLocal(d),weekly:ymdLocal(m),monthly:d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'),label:fmtDate(ymdLocal(d))}; }
+function cmGet(person,cad,key){ const s=ls.get('tuf_commitments',{})||{}; return (((s[person]||{})[cad]||{})[key]||[]).slice(); }
+function cmMutate(person,cad,key,fn){
+  const s=ls.get('tuf_commitments',{})||{};
+  s[person]=s[person]||{}; s[person][cad]=s[person][cad]||{};
+  s[person][cad][key]=fn((s[person][cad][key]||[]).slice());
+  ls.set('tuf_commitments',s);
+}
+function cmAdd(cad,key){
+  const inp=document.getElementById('cm-add-'+cad); const v=(inp?.value||'').trim(); if(!v) return;
+  cmMutate(CURRENT_USER,cad,key,l=>{ l.push({id:uid(),text:v,done:false}); return l; });
+  renderTeamTasks();
+  const again=document.getElementById('cm-add-'+cad); if(again) again.focus();
+}
+function cmToggle(cad,key,id){ cmMutate(CURRENT_USER,cad,key,l=>{ const i=l.findIndex(x=>x.id===id); if(i>=0) l[i].done=!l[i].done; return l; }); renderTeamTasks(); }
+function cmDelete(cad,key,id){ cmMutate(CURRENT_USER,cad,key,l=>l.filter(x=>x.id!==id)); renderTeamTasks(); }
+function cmCarry(cad){
+  const prevKey=cad==='daily'?cmDailyKey(-1):cad==='weekly'?cmWeekKey(-1):cmMonthKey(-1);
+  const curKey=cad==='daily'?cmDailyKey(0):cad==='weekly'?cmWeekKey(0):cmMonthKey(0);
+  const prev=cmGet(CURRENT_USER,cad,prevKey).filter(x=>!x.done);
+  if(!prev.length){ addNotif('Nothing unfinished to carry over'); return; }
+  let n=0;
+  cmMutate(CURRENT_USER,cad,curKey,l=>{
+    const have=new Set(l.map(x=>(x.text||'').trim().toLowerCase()));
+    prev.forEach(p=>{ const k=(p.text||'').trim().toLowerCase(); if(k&&!have.has(k)){ l.push({id:uid(),text:p.text,done:false}); have.add(k); n++; } });
+    return l;
+  });
+  addNotif(n+' item'+(n===1?'':'s')+' carried over');
+  renderTeamTasks();
+}
+// This week's completion rate: daily lists Monday..today + this week's weekly list.
+function cmRate(person){
+  const mon=mondayOf(new Date()); const today=new Date(); today.setHours(0,0,0,0);
+  let done=0,total=0;
+  for(let d=new Date(mon); d<=today; d.setDate(d.getDate()+1)){
+    cmGet(person,'daily',ymdLocal(d)).forEach(i=>{ total++; if(i.done) done++; });
+  }
+  cmGet(person,'weekly',cmWeekKey(0)).forEach(i=>{ total++; if(i.done) done++; });
+  return total?Math.round(done/total*100):null;
+}
+function cmDots(person){
+  const out=[];
+  for(let off=-13; off<=0; off++){
+    const l=cmGet(person,'daily',cmDailyKey(off));
+    out.push({t:l.length,d:l.filter(x=>x.done).length});
+  }
+  return out;
+}
+function renderTeamTasks(){
+  const host=document.getElementById('teamtasks-render'); if(!host) return;
+  const ta=document.getElementById('topbar-actions'); if(ta) ta.innerHTML='';
+  const pills=`<div style="display:flex;gap:6px;margin-bottom:14px">
+    <button class="btn ${cmView==='mine'?'btn-k':'btn-ghost'} btn-sm" onclick="cmView='mine';renderTeamTasks()">My lists</button>
+    <button class="btn ${cmView==='team'?'btn-k':'btn-ghost'} btn-sm" onclick="cmView='team';cmOffset=0;renderTeamTasks()">Whole team</button>
+  </div>`;
+  host.innerHTML=pills+(cmView==='mine'?cmMineView():cmTeamView());
+}
+function cmMineView(){
+  const monthLabel=new Date().toLocaleDateString('en-GB',{month:'long',year:'numeric'});
+  const cols=[['daily','Today',cmDailyKey(0),fmtDate(cmDailyKey(0))],['weekly','This Week',cmWeekKey(0),'Week of '+fmtShort(cmWeekKey(0))],['monthly','This Month',cmMonthKey(0),monthLabel]];
+  return `<div style="font-size:12px;color:var(--mut);margin-bottom:12px">Your working lists — the whole team (including Danny) can see them on the Whole team view. Fill Today each morning.</div>
+  <div class="grid-3">`+cols.map(c=>{
+    const cad=c[0],label=c[1],key=c[2],sub=c[3];
+    const list=cmGet(CURRENT_USER,cad,key);
+    const done=list.filter(x=>x.done).length;
+    return `<div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:baseline"><div class="card-title" style="margin:0">${label}</div><span style="font-size:11px;color:var(--mut)">${list.length?done+'/'+list.length+' done':''}</span></div>
+      <div style="font-size:11px;color:var(--mut);margin:2px 0 10px">${sub}</div>
+      <div style="display:flex;gap:6px;margin-bottom:10px">
+        <input class="form-input" id="cm-add-${cad}" placeholder="Add a task…" style="flex:1" onkeydown="if(event.key==='Enter')cmAdd('${cad}','${key}')">
+        <button class="btn btn-k btn-sm" onclick="cmAdd('${cad}','${key}')">+</button>
+      </div>
+      ${list.map(i=>`<div class="chk-row${i.done?' done':''}">
+        <div class="chk-box" onclick="cmToggle('${cad}','${key}','${i.id}')">${i.done?'✓':''}</div>
+        <span class="chk-text" style="flex:1;font-size:13px" onclick="cmToggle('${cad}','${key}','${i.id}')">${escHtml(i.text)}</span>
+        <button class="btn btn-ghost btn-sm" style="padding:2px 8px" onclick="cmDelete('${cad}','${key}','${i.id}')">✕</button>
+      </div>`).join('')||'<div style="font-size:12px;color:var(--mut);padding:6px 0">Nothing yet.</div>'}
+      <button class="btn btn-ghost btn-sm" style="margin-top:10px" onclick="cmCarry('${cad}')" title="Copy unfinished items from the previous ${cad==='daily'?'day':cad==='weekly'?'week':'month'}">↩ Carry over unfinished</button>
+    </div>`;
+  }).join('')+`</div>`;
+}
+function cmTeamView(){
+  const K=cmKeysAt(cmOffset);
+  const tasks=ls.get('tuf_tasks',[])||[];
+  const today=new Date().toISOString().slice(0,10);
+  const row=i=>`<div style="display:flex;gap:8px;align-items:flex-start;padding:4px 0;border-bottom:1px solid var(--bdr);font-size:12.5px"><span style="color:${i.done?'var(--grn)':'var(--mut)'};font-weight:800;flex-shrink:0">${i.done?'✓':'○'}</span><span style="${i.done?'text-decoration:line-through;color:var(--mut)':''}">${escHtml(i.text)}</span></div>`;
+  const sec=(t,extra)=>`<div style="font-size:10px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--mut);margin:12px 0 4px">${t}${extra?' <span style="font-weight:600;text-transform:none;letter-spacing:0">· '+extra+'</span>':''}</div>`;
+  const cnt=l=>l.length?l.filter(x=>x.done).length+'/'+l.length+' done':'';
+  const card=p=>{
+    const daily=cmGet(p,'daily',K.daily), weekly=cmGet(p,'weekly',K.weekly), monthly=cmGet(p,'monthly',K.monthly);
+    const rate=cmRate(p);
+    const dots=cmDots(p).map(x=>`<span title="${x.d} of ${x.t} done" style="display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:2px;background:${x.t===0?'var(--bg-2)':(x.d===x.t?'var(--grn)':(x.d>0?'var(--amb)':'var(--red)'))}"></span>`).join('');
+    const open=tasks.filter(t=>t.owner===p&&t.status!=='Done');
+    const over=open.filter(t=>t.dueDate&&t.dueDate<today);
+    return `<div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:4px">
+        <div style="display:flex;align-items:center;gap:8px"><span style="width:10px;height:10px;border-radius:50%;background:${USER_COLOURS[p]||'#888'}"></span><span style="font-weight:800;font-size:15px">${p}</span></div>
+        <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+          <span style="font-size:11px;color:var(--mut)">This week: <b style="color:${rate==null?'var(--mut)':rate>=70?'var(--grn)':rate>=40?'var(--amb)':'var(--red)'}">${rate==null?'no lists yet':rate+'%'}</b></span>
+          <span title="Last 14 days of daily lists">${dots}</span>
+        </div>
+      </div>
+      ${sec('Today',cnt(daily))}${daily.length?daily.map(row).join(''):'<div style="font-size:12px;color:var(--mut)">No list for this day.</div>'}
+      ${sec('This week',cnt(weekly))}${weekly.length?weekly.map(row).join(''):'<div style="font-size:12px;color:var(--mut)">No weekly list.</div>'}
+      ${sec('This month',cnt(monthly))}${monthly.length?monthly.map(row).join(''):'<div style="font-size:12px;color:var(--mut)">No monthly list.</div>'}
+      ${sec('Tasks board',open.length+' open'+(over.length?' · <b style="color:var(--red)">'+over.length+' overdue</b>':''))}
+      ${open.length?open.slice(0,8).map(t=>`<div style="font-size:12px;padding:3px 0;border-bottom:1px solid var(--bdr)">${escHtml(t.title)}${t.dueDate?` <span style="font-size:10px;font-weight:700;color:${t.dueDate<today?'var(--red)':'var(--mut)'}">· ${fmtShort(t.dueDate)}</span>`:''}</div>`).join('')+(open.length>8?`<div style="font-size:10px;color:var(--mut);margin-top:3px">+${open.length-8} more on the Tasks board</div>`:''):'<div style="font-size:12px;color:var(--mut)">Nothing open on the Tasks board.</div>'}
+    </div>`;
+  };
+  return `<div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap">
+    <button class="btn btn-ghost btn-sm" onclick="cmOffset--;renderTeamTasks()">◀</button>
+    <span style="font-family:'Montserrat',sans-serif;font-weight:700;font-size:14px">${cmOffset===0?'Today':K.label}</span>
+    <button class="btn btn-ghost btn-sm" onclick="cmOffset++;renderTeamTasks()" ${cmOffset>=0?'disabled style="opacity:.3"':''}>▶</button>
+    ${cmOffset!==0?`<button class="btn btn-ghost btn-sm" onclick="cmOffset=0;renderTeamTasks()">Jump to today</button>`:''}
+    <span style="font-size:11px;color:var(--mut);margin-left:auto">Rate covers this week's lists · dots are the last 14 days</span>
+  </div>
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:12px;align-items:start">${HOL_TEAM.map(card).join('')}</div>`;
+}
+
 let dailyDate = new Date().toISOString().slice(0,10);
 
 function dailyShift(n){
