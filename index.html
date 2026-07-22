@@ -7278,10 +7278,12 @@ function brTplCard(t){
 }
 function brTplAdd(){ brTplModal(null); }
 function brTplEdit(id){ brTplModal(id); }
-function brTplModal(id){
+function brTplModal(id,svcPreset){
   const t=(id?brTemplates().find(x=>x.id===id):null)||{};
+  const svcSel=t.service!=null?t.service:(svcPreset||'');
   showModal(id?'Edit template':'New template',
     `<div class="form-row"><label class="form-label">Title</label><input class="form-input" id="bt-title" value="${escHtml(t.title||'')}" placeholder="e.g. Welcome to the Boardroom"></div>
+     <div class="form-row"><label class="form-label">Service</label><select class="form-select" id="bt-service"><option value=""${!svcSel?' selected':''}>General</option><option value="bd"${svcSel==='bd'?' selected':''}>Boardroom Day</option><option value="li"${svcSel==='li'?' selected':''}>Leadership & Implementation Session</option><option value="iss"${svcSel==='iss'?' selected':''}>Introductory Strategy Session</option></select></div>
      <div class="form-row"><label class="form-label">Message ${micBtnHtml('bt-body')}</label><textarea class="form-textarea" id="bt-body" style="min-height:200px;line-height:1.5" placeholder="Write the message. Use [Name], [date], [link] as placeholders to fill in.">${escHtml(t.body||'')}</textarea></div>`,
     `${id?`<button class="btn btn-red btn-sm" onclick="brTplDelete('${id}')">Delete</button>`:''}<button class="btn btn-ghost" onclick="closeModal()">Cancel</button><button class="btn btn-k" onclick="brTplSave('${id||''}')">Save</button>`);
 }
@@ -7289,11 +7291,12 @@ function brTplSave(id){
   const title=(document.getElementById('bt-title').value||'').trim(); if(!title){ alert('Add a title.'); return; }
   const body=document.getElementById('bt-body').value;
   const list=brTemplates();
-  if(id){ const t=list.find(x=>x.id===id); if(t){ t.title=title; t.body=body; } }
-  else { list.push({id:uid(),title,body}); }
-  ls.set('tuf_boardroom_templates',list); closeModal(); renderBoardroomTemplates();
+  const service=document.getElementById('bt-service')?.value||'';
+  if(id){ const t=list.find(x=>x.id===id); if(t){ t.title=title; t.body=body; t.service=service; } }
+  else { list.push({id:uid(),title,body,service}); }
+  ls.set('tuf_boardroom_templates',list); closeModal(); renderBoardroomTemplates(); if(typeof brxRefresh==='function') brxRefresh();
 }
-function brTplDelete(id){ if(!confirm('Delete this template?'))return; ls.set('tuf_boardroom_templates',brTemplates().filter(x=>x.id!==id)); closeModal(); renderBoardroomTemplates(); }
+function brTplDelete(id){ if(!confirm('Delete this template?'))return; ls.set('tuf_boardroom_templates',brTemplates().filter(x=>x.id!==id)); closeModal(); renderBoardroomTemplates(); if(typeof brxRefresh==='function') brxRefresh(); }
 function brTplCopy(id,btn){
   const t=brTemplates().find(x=>x.id===id); if(!t)return;
   const done=()=>{ if(btn){ const o=btn.textContent; btn.textContent='Copied ✓'; setTimeout(()=>{ if(btn) btn.textContent=o; },1400); } };
@@ -7429,25 +7432,153 @@ function brxAddSuggestion(i){
   brxAISugs.splice(i,1); renderBoardroom();
 }
 
-// ── Area: SERVICE MODEL ──
+// ── Area: SERVICE MODEL (three services, everything collapsible and editable) ──
+const BRX_SVC_KEYS=['bd','li','iss'];
+function brxSvc(){
+  let s=ls.get('tuf_boardroom_services',null);
+  if(!s||!s.bd||!s.li||!s.iss){
+    s={
+      bd:{name:'Boardroom Day',rhythm:'Bimonthly · in person · full day · the whole room together',
+        structure:[
+          {id:uid(),start:'09:30',title:'Arrival, breakfast and catch up',dur:30},
+          {id:uid(),start:'10:00',title:'Guest expert session',dur:75},
+          {id:uid(),start:'11:15',title:'Danny: core session',dur:75},
+          {id:uid(),start:'12:30',title:'Lunch',dur:60},
+          {id:uid(),start:'13:30',title:'30 minute walk, time to think',dur:30},
+          {id:uid(),start:'14:00',title:'Curated mastermind pods',dur:90},
+          {id:uid(),start:'15:30',title:'Commitments and close',dur:60}],
+        weeklyItems:[{id:uid(),text:'Chase outstanding prep forms'},{id:uid(),text:'Check attendance confirmations'},{id:uid(),text:'Progress the next day agenda'}],
+        monthlyItems:[{id:uid(),text:'Confirm venue and catering for the next Boardroom Day'},{id:uid(),text:'Book and brief the guest speaker'},{id:uid(),text:'Print packs, name cards and feedback forms'},{id:uid(),text:'Review member retention scores'}],
+        ticks:{}},
+      li:{name:'Leadership & Implementation Session',rhythm:'Monthly · online · 90 minutes · keeps momentum between Boardroom Days',
+        structure:[
+          {id:uid(),start:'10:00',title:'Check in and wins',dur:15},
+          {id:uid(),start:'10:15',title:'Actions review from the last session',dur:20},
+          {id:uid(),start:'10:35',title:'Leadership focus topic',dur:35},
+          {id:uid(),start:'11:10',title:'Commitments for the month',dur:20}],
+        weeklyItems:[{id:uid(),text:'Nudge members on their open actions'}],
+        monthlyItems:[{id:uid(),text:'Send the meeting link and agenda'},{id:uid(),text:'Reminder message the day before'},{id:uid(),text:'Log actions and send the recap after'}],
+        ticks:{}},
+      iss:{name:'Introductory Strategy Session',rhythm:'One off · 1 to 1 with Danny · for new members and warm prospects',
+        structure:[
+          {id:uid(),start:'10:00',title:'Where the business is now',dur:20},
+          {id:uid(),start:'10:20',title:'The 12 month picture and blockers',dur:25},
+          {id:uid(),start:'10:45',title:'Priorities and first commitments',dur:20},
+          {id:uid(),start:'11:05',title:'How the Boardroom supports the plan',dur:10}],
+        weeklyItems:[{id:uid(),text:'Book intro sessions for new signups and hot leads'}],
+        monthlyItems:[{id:uid(),text:'Review intro session conversion into members'}],
+        ticks:{}}
+    };
+    ls.set('tuf_boardroom_services',s);
+  }
+  return s;
+}
+function brxSvcSave(s){ ls.set('tuf_boardroom_services',s); renderBoardroom(); }
+function brxSvcPeriodKey(cad){ return cad==='weekly'?cmWeekKey(0):cmMonthKey(0); }
+function brxSvcTick(k,cad,itemId){
+  const s=brxSvc(); const svc=s[k]; if(!svc) return;
+  svc.ticks=svc.ticks||{}; const pk=brxSvcPeriodKey(cad);
+  const arr=svc.ticks[pk]=svc.ticks[pk]||[];
+  const i=arr.indexOf(itemId);
+  if(i>=0) arr.splice(i,1); else arr.push(itemId);
+  brxSvcSave(s);
+}
+function brxSvcItemAdd(k,cad){
+  const inp=document.getElementById('svc-add-'+k+'-'+cad); const v=(inp?.value||'').trim(); if(!v) return;
+  const s=brxSvc(); s[k][cad+'Items']=s[k][cad+'Items']||[]; s[k][cad+'Items'].push({id:uid(),text:v});
+  brxSvcSave(s);
+}
+function brxSvcItemDelete(k,cad,id){
+  if(!confirm('Remove this checklist item for every future period?')) return;
+  const s=brxSvc(); s[k][cad+'Items']=(s[k][cad+'Items']||[]).filter(x=>x.id!==id);
+  brxSvcSave(s);
+}
+function brxSvcRhythmModal(k){
+  const s=brxSvc();
+  showModal('Operating rhythm · '+escHtml(s[k].name),`
+    <div class="form-row"><label class="form-label">How this service runs (cadence, format, length, who attends)</label><textarea class="form-textarea" id="svc-rhythm" style="min-height:70px">${escHtml(s[k].rhythm||'')}</textarea></div>
+  `,`<button class="btn btn-ghost" onclick="closeModal()">Cancel</button><button class="btn btn-k" onclick="brxSvcRhythmSave('${k}')">Save</button>`);
+}
+function brxSvcRhythmSave(k){ const s=brxSvc(); s[k].rhythm=document.getElementById('svc-rhythm').value.trim(); closeModal(); brxSvcSave(s); }
+function brxSvcStructModal(k,id){
+  const s=brxSvc(); const b=id?(s[k].structure||[]).find(x=>x.id===id):null;
+  showModal((b?'Edit':'Add')+' agenda item · '+escHtml(s[k].name),`
+    <div class="form-row"><label class="form-label">Title</label><input class="form-input" id="svs-title" value="${escAttr(b?b.title:'')}" placeholder="e.g. Guest expert session"></div>
+    <div class="grid-2">
+      <div class="form-row"><label class="form-label">Start time</label><input class="form-input" type="time" id="svs-start" value="${b&&b.start?b.start:'10:00'}"></div>
+      <div class="form-row"><label class="form-label">Minutes</label><input class="form-input" type="number" min="5" step="5" id="svs-dur" value="${b&&b.dur?b.dur:30}"></div>
+    </div>
+  `,`${b?`<button class="btn btn-red btn-sm" onclick="brxSvcStructDelete('${k}','${id}')">Delete</button>`:''}<button class="btn btn-ghost" onclick="closeModal()">Cancel</button><button class="btn btn-k" onclick="brxSvcStructSave('${k}','${id||''}')">Save</button>`);
+}
+function brxSvcStructSave(k,id){
+  const title=document.getElementById('svs-title').value.trim(); if(!title){ alert('Add a title.'); return; }
+  const start=document.getElementById('svs-start').value||'10:00';
+  const dur=parseInt(document.getElementById('svs-dur').value)||30;
+  const s=brxSvc(); s[k].structure=s[k].structure||[];
+  if(id){ const b=s[k].structure.find(x=>x.id===id); if(b){ b.title=title; b.start=start; b.dur=dur; } }
+  else s[k].structure.push({id:uid(),title,start,dur});
+  closeModal(); brxSvcSave(s);
+}
+function brxSvcStructDelete(k,id){ const s=brxSvc(); s[k].structure=(s[k].structure||[]).filter(x=>x.id!==id); closeModal(); brxSvcSave(s); }
+function brxSvcChecklistCol(k,svc,cad,label){
+  const items=svc[cad+'Items']||[];
+  const ticked=new Set((svc.ticks||{})[brxSvcPeriodKey(cad)]||[]);
+  const done=items.filter(i=>ticked.has(i.id)).length;
+  return `<div>
+    <div style="font-size:10px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--mut);margin-bottom:6px">${label} <span style="font-weight:600;text-transform:none;letter-spacing:0">· ${items.length?done+'/'+items.length+' done':'none yet'}</span></div>
+    ${items.map(i=>`<div class="chk-row${ticked.has(i.id)?' done':''}">
+      <div class="chk-box" onclick="brxSvcTick('${k}','${cad}','${i.id}')">${ticked.has(i.id)?'✓':''}</div>
+      <span class="chk-text" style="flex:1;font-size:12.5px" onclick="brxSvcTick('${k}','${cad}','${i.id}')">${escHtml(i.text)}</span>
+      <button class="btn btn-ghost btn-sm" style="padding:2px 7px" title="Remove for every future period" onclick="brxSvcItemDelete('${k}','${cad}','${i.id}')">✕</button>
+    </div>`).join('')||'<div style="font-size:12px;color:var(--mut);padding:4px 0">Nothing yet.</div>'}
+    <div style="display:flex;gap:6px;margin-top:8px">
+      <input class="form-input" id="svc-add-${k}-${cad}" placeholder="Add an item…" style="flex:1" onkeydown="if(event.key==='Enter')brxSvcItemAdd('${k}','${cad}')">
+      <button class="btn btn-ghost btn-sm" onclick="brxSvcItemAdd('${k}','${cad}')">+</button>
+    </div>
+  </div>`;
+}
+function brxSvcSection(k){
+  const s=brxSvc(); const svc=s[k];
+  const tpls=brTemplates().filter(t=>t.service===k);
+  const struct=(svc.structure||[]).slice().sort((a,b)=>(a.start||'').localeCompare(b.start||''));
+  const body=
+    brxSec('svc-'+k+'-rhythm','Operating rhythm',
+      `<div style="font-size:13px;line-height:1.6;color:#E8E8EC">${escHtml(svc.rhythm||'Not set yet.')}</div>`,
+      `<button class="btn btn-ghost btn-sm" onclick="brxSvcRhythmModal('${k}')">Edit</button>`)
+    +brxSec('svc-'+k+'-tpl','Message templates ('+tpls.length+')',
+      (tpls.length?`<div class="grid-2" style="gap:10px">${tpls.map(brTplCard).join('')}</div>`:'<div style="font-size:12px;color:var(--mut)">No templates for this service yet.</div>'),
+      `<button class="btn btn-ghost btn-sm" onclick="brTplModal(null,'${k}')">+ Add</button>`)
+    +brxSec('svc-'+k+'-chk','Weekly & monthly task checklist',
+      `<div style="font-size:11px;color:var(--mut);margin-bottom:10px">Ticks reset automatically each new week and month. Items stay on the checklist for every period until removed.</div>
+       <div class="grid-2">${brxSvcChecklistCol(k,svc,'weekly','This week')}${brxSvcChecklistCol(k,svc,'monthly','This month')}</div>`)
+    +brxSec('svc-'+k+'-struct','Session structure',
+      (struct.length?struct.map(b=>`<div class="brx-row"><span style="font-size:12.5px"><b style="color:var(--y);font-variant-numeric:tabular-nums">${escHtml(b.start||'')}</b>&nbsp; ${escHtml(b.title||'')}</span><span style="display:flex;gap:5px;align-items:center"><span style="font-size:11px;color:var(--mut)">${b.dur?b.dur+'min':''}</span><button class="btn btn-ghost btn-sm" style="padding:2px 8px" onclick="brxSvcStructModal('${k}','${b.id}')">✏️</button></span></div>`).join('')+'<div style="font-size:10.5px;color:#54545C;margin-top:8px">The standard running order for this service. Build a specific date in the Session Planner.</div>':'<div style="font-size:12px;color:var(--mut)">No structure yet.</div>'),
+      `<button class="btn btn-ghost btn-sm" onclick="brxSvcStructModal('${k}','')">+ Add</button>`);
+  const title=`<span style="font-size:14px;text-transform:none;letter-spacing:0;color:#fff">${escHtml(svc.name)}</span><span style="font-weight:600;color:var(--mut);text-transform:none;letter-spacing:0;font-size:11px"> — ${escHtml((svc.rhythm||'').split('·')[0].trim())}</span>`;
+  return brxSec('svc-'+k,title,`<div style="padding-top:2px">${body}</div>`);
+}
 function brxModelView(){
   const s=brxService();
+  brxSvc(); // seed the three services once
   const model=ls.get('tuf_boardroom_model',{items:['Bi-monthly Boardroom Days (full day, in person)','Bi-monthly Implementation Sessions (online)','Private WhatsApp Boardroom Group','Direct access to Danny between sessions','Annual 1-2-1 strategy session with Danny','Access to all UF Network events','Guest expert sessions each Boardroom Day']});
   const paying=(ls.get('tuf_members',[])||[]).filter(m=>m.status==='active'&&(!m.type||m.type==='boardroom'));
   const wa=ls.get('tuf_wa_status',{launched:false,members:0,rules:'Chatham House rules, no GIFs, business only. Launch when 12 paying members confirmed.'});
+  const generalTpls=brTemplates().filter(t=>!t.service);
   return `
-  <div class="brx-hero">
+  <div class="brx-hero" style="padding:26px 30px 24px">
     <div class="brx-kicker">The Ultimate Founder · Flagship offer</div>
-    <h1>${escHtml(s.name)}</h1>
-    <div class="brx-promise">${escHtml(s.promise)}</div>
+    <h1 style="font-size:28px">${escHtml(s.name)}</h1>
+    <div class="brx-promise" style="margin-bottom:14px">${escHtml(s.promise)}</div>
     <div class="brx-chips">
-      <span class="brx-chip"><b>Format</b>&nbsp; ${escHtml(s.format)}</span>
       <span class="brx-chip"><b>Term</b>&nbsp; ${escHtml(s.term)}</span>
       <span class="brx-chip"><b>Room</b>&nbsp; ${paying.length} paying members · capped at 20</span>
+      <span class="brx-chip"><b>Who</b>&nbsp; ${escHtml(s.who)}</span>
     </div>
-    <div style="font-size:12.5px;color:#C9CBD1;margin-top:16px;max-width:720px"><b style="color:var(--y)">Who it serves:</b> ${escHtml(s.who)}</div>
-    <button class="btn btn-ghost btn-sm" style="margin-top:18px" onclick="brxEditService()">Edit the one pager</button>
+    <button class="btn btn-ghost btn-sm" style="margin-top:16px" onclick="brxEditService()">Edit the one pager</button>
   </div>
+  <div class="brx-sec">The three services</div>
+  ${BRX_SVC_KEYS.map(brxSvcSection).join('')}
+  <div class="brx-sec" style="margin-top:26px">Everything else</div>
   ${brxSec('model-benefits','What members get',
     model.items.map(i=>`<div style="display:flex;gap:10px;align-items:flex-start;padding:7px 0;border-bottom:1px solid #1F1F24;font-size:13px"><span style="color:var(--y);flex-shrink:0;font-weight:800">✓</span>${escHtml(i)}</div>`).join(''),
     `<button class="btn btn-ghost btn-sm" onclick="editBoardroomModel()">Edit</button>`)}
@@ -7455,7 +7586,9 @@ function brxModelView(){
     `<div style="display:flex;gap:10px;align-items:center;margin-bottom:8px;flex-wrap:wrap"><span class="brx-tag ${wa.launched?'g':'o'}">${wa.launched?'Live':'Not launched'}</span>${!wa.launched?`<span style="font-size:11.5px;color:var(--mut)">Launch trigger: 12 paying members (currently ${paying.length})</span>`:''}</div>
      <div style="font-size:12px;color:var(--mut);margin-bottom:10px">${escHtml(wa.rules)}</div>
      <button class="btn btn-ghost btn-sm" onclick="toggleWALaunch()">Mark as ${wa.launched?'Not Live':'Launched'}</button>`)}
-  <div id="boardroom-templates" style="margin-top:20px"></div>`;
+  ${brxSec('model-gtpl','General message templates ('+generalTpls.length+')',
+    (generalTpls.length?`<div class="grid-2" style="gap:10px">${generalTpls.map(brTplCard).join('')}</div>`:'<div style="font-size:12px;color:var(--mut)">None yet.</div>'),
+    `<button class="btn btn-ghost btn-sm" onclick="brTplModal(null,'')">+ Add</button>`)}`;
 }
 function brxEditService(){
   const s=brxService();
