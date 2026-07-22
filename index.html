@@ -9033,7 +9033,50 @@ function cmDots(person){
   }
   return out;
 }
+// Repeating tasks: texts stored per person per cadence; seeded into the current
+// period's list once per period (marker repeatSeeded), so deleting today's copy
+// sticks today but it comes back next day/week/month.
+function cmRepeatArr(cad){ const s=ls.get('tuf_commitments',{})||{}; return ((((s[CURRENT_USER]||{}).repeat)||{})[cad]||[]).slice(); }
+function cmIsRepeat(cad,text){ const k=(text||'').trim().toLowerCase(); return cmRepeatArr(cad).some(x=>(x||'').trim().toLowerCase()===k); }
+function cmSeedRepeats(){
+  try{
+    if(typeof CURRENT_USER==='undefined'||!CURRENT_USER) return;
+    const s=ls.get('tuf_commitments',{})||{};
+    const me=s[CURRENT_USER]=s[CURRENT_USER]||{};
+    const repT=me.repeat||{};
+    const seeded=me.repeatSeeded||{};
+    const keys={daily:cmDailyKey(0),weekly:cmWeekKey(0),monthly:cmMonthKey(0)};
+    let ch=false;
+    ['daily','weekly','monthly'].forEach(cad=>{
+      const texts=(repT[cad]||[]).filter(Boolean);
+      if(!texts.length) return;
+      if(seeded[cad]===keys[cad]) return;
+      me[cad]=me[cad]||{}; const list=me[cad][keys[cad]]||[];
+      const have=new Set(list.map(x=>(x.text||'').trim().toLowerCase()));
+      texts.forEach(t=>{ const k=t.trim().toLowerCase(); if(k&&!have.has(k)){ list.push({id:uid(),text:t,done:false}); have.add(k); } });
+      me[cad][keys[cad]]=list;
+      me.repeatSeeded=me.repeatSeeded||{}; me.repeatSeeded[cad]=keys[cad];
+      ch=true;
+    });
+    if(ch) ls.set('tuf_commitments',s);
+  }catch(e){ console.warn('cmSeedRepeats failed',e); }
+}
+function cmToggleRepeat(cad,key,id){
+  const item=cmGet(CURRENT_USER,cad,key).find(x=>x.id===id); if(!item) return;
+  const t=(item.text||'').trim(); if(!t) return;
+  const s=ls.get('tuf_commitments',{})||{};
+  const me=s[CURRENT_USER]=s[CURRENT_USER]||{};
+  me.repeat=me.repeat||{daily:[],weekly:[],monthly:[]};
+  const arr=me.repeat[cad]=me.repeat[cad]||[];
+  const i=arr.findIndex(x=>(x||'').trim().toLowerCase()===t.toLowerCase());
+  const word=cad==='daily'?'day':cad==='weekly'?'week':'month';
+  if(i>=0){ arr.splice(i,1); addNotif('No longer repeats: '+t); }
+  else { arr.push(t); addNotif('Repeats every '+word+': '+t); }
+  ls.set('tuf_commitments',s);
+  renderTeamTasks();
+}
 function renderTeamTasks(){
+  cmSeedRepeats();
   const host=document.getElementById('teamtasks-render'); if(!host) return;
   const ta=document.getElementById('topbar-actions'); if(ta) ta.innerHTML='';
   const pills=`<div style="display:flex;gap:6px;margin-bottom:14px">
@@ -9045,7 +9088,7 @@ function renderTeamTasks(){
 function cmMineView(){
   const monthLabel=new Date().toLocaleDateString('en-GB',{month:'long',year:'numeric'});
   const cols=[['daily','Today',cmDailyKey(0),fmtDate(cmDailyKey(0))],['weekly','This Week',cmWeekKey(0),'Week of '+fmtShort(cmWeekKey(0))],['monthly','This Month',cmMonthKey(0),monthLabel]];
-  return `<div style="font-size:12px;color:var(--mut);margin-bottom:12px">Your working lists — the whole team (including Danny) can see them on the Whole team view. Fill Today each morning.</div>
+  return `<div style="font-size:12px;color:var(--mut);margin-bottom:12px">Your working lists — the whole team (including Danny) can see them on the Whole team view. Fill Today each morning. Tap ↻ on a task to make it come back automatically every day, week or month.</div>
   <div class="grid-3">`+cols.map(c=>{
     const cad=c[0],label=c[1],key=c[2],sub=c[3];
     const list=cmGet(CURRENT_USER,cad,key);
@@ -9057,11 +9100,12 @@ function cmMineView(){
         <input class="form-input" id="cm-add-${cad}" placeholder="Add a task…" style="flex:1" onkeydown="if(event.key==='Enter')cmAdd('${cad}','${key}')">
         <button class="btn btn-k btn-sm" onclick="cmAdd('${cad}','${key}')">+</button>
       </div>
-      ${list.map(i=>`<div class="chk-row${i.done?' done':''}">
+      ${list.map(i=>{const isRep=cmIsRepeat(cad,i.text);return `<div class="chk-row${i.done?' done':''}">
         <div class="chk-box" onclick="cmToggle('${cad}','${key}','${i.id}')">${i.done?'✓':''}</div>
         <span class="chk-text" style="flex:1;font-size:13px" onclick="cmToggle('${cad}','${key}','${i.id}')">${escHtml(i.text)}</span>
+        <button class="btn btn-ghost btn-sm" style="padding:2px 7px;${isRep?'color:var(--amb);font-weight:800;border-color:var(--amb)':''}" title="${isRep?'Repeats automatically — click to stop':'Repeat this every '+(cad==='daily'?'day':cad==='weekly'?'week':'month')}" onclick="cmToggleRepeat('${cad}','${key}','${i.id}')">↻</button>
         <button class="btn btn-ghost btn-sm" style="padding:2px 8px" onclick="cmDelete('${cad}','${key}','${i.id}')">✕</button>
-      </div>`).join('')||'<div style="font-size:12px;color:var(--mut);padding:6px 0">Nothing yet.</div>'}
+      </div>`;}).join('')||'<div style="font-size:12px;color:var(--mut);padding:6px 0">Nothing yet.</div>'}
       <button class="btn btn-ghost btn-sm" style="margin-top:10px" onclick="cmCarry('${cad}')" title="Copy unfinished items from the previous ${cad==='daily'?'day':cad==='weekly'?'week':'month'}">↩ Carry over unfinished</button>
     </div>`;
   }).join('')+`</div>`;
