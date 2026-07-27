@@ -1156,6 +1156,9 @@ const MILESTONES = [
   {date:"2026-06-20",t:"Onboarding playbook complete. Sales materials drafted. Padel logistics confirmed.",o:"Joe/Jasper"},
   {date:"2026-06-25",t:"Padel Event — testimonials captured within 24 hours.",o:"Jasper",key:true},
   {date:"2026-07-02",t:"SESSION 2 — target 10+ confirmed paying members.",o:"Danny/Team",key:true},
+  {date:"2026-07-30",t:"PADEL EVENT — capture testimonials within 24 hours, follow up every booking.",o:"Jasper",key:true},
+  {date:"2026-08-13",t:"Leadership & Implementation Session (online).",o:"Danny/Joe",key:true},
+  {date:"2026-09-10",t:"BOARDROOM SESSION 3 — next Boardroom Day.",o:"Danny/Team",key:true},
   {date:"2026-07-31",t:"Content calendar live. Website in progress. 3 podcast guests confirmed.",o:"Joe/James"},
   {date:"2026-08-31",t:"Service model complete. LinkedIn posting weekly.",o:"Joe/Jasper"},
   {date:"2026-09-01",t:"90-day capability map review.",o:"James"},
@@ -2744,20 +2747,23 @@ function renderHome(){
   const boardroomMRR = boardroomMRRof(boardroomMembers);
   const privateMRR = existingClients.reduce((sum,c)=>sum+(c.clientFee||0),0);
   const totalMRR = boardroomMRR + privateMRR;
-  const s2 = daysUntil('2026-07-02');
-  const padel = daysUntil('2026-06-25');
+  const _t0=new Date().toISOString().slice(0,10);
+  const nextPadelEv=(ls.get('tuf_events',[])||[]).filter(e=>e.type==='Padel'&&e.date&&e.date>=_t0).sort((a,b)=>a.date.localeCompare(b.date))[0]||null;
+  const nextSess=(ls.get('tuf_sessions',[])||[]).filter(x=>x.date&&x.date>=_t0).sort((a,b)=>a.date.localeCompare(b.date))[0]||null;
+  const padel=nextPadelEv?daysUntil(nextPadelEv.date):null;
+  const s2=nextSess?daysUntil(nextSess.date):null;
   document.getElementById('ns-strip').innerHTML = `
     <div class="ns-box key" onclick="goPage('boardroom')" title="Open Boardroom"><div class="ns-l">Boardroom Members</div><div class="ns-n" style="color:var(--grn)">${bCount}/20</div><div class="ns-t">Target: 20 × £1,000/mo</div><div class="ns-bar"><div class="ns-fill" style="width:${Math.min(100,(bCount/20)*100)}%"></div></div></div>
     <div class="ns-box" onclick="goPage('boardroom')" title="Open Boardroom"><div class="ns-l">Boardroom MRR</div><div class="ns-n" style="color:var(--grn)">£${boardroomMRR.toLocaleString()}</div><div class="ns-t">Target: £20,000</div><div class="ns-bar"><div class="ns-fill warn" style="width:${Math.min(100,(boardroomMRR/20000)*100)}%"></div></div></div>
     <div class="ns-box" onclick="goPage('members')" title="Open Existing Clients"><div class="ns-l">Private Client MRR</div><div class="ns-n" style="color:var(--blu)">£${privateMRR.toLocaleString()}</div><div class="ns-t">${existingClients.length} client${existingClients.length!==1?'s':''}</div></div>
     <div class="ns-box key" style="border-color:var(--blu)" onclick="goPage('kpis')" title="Open KPIs"><div class="ns-l">Total MRR</div><div class="ns-n" style="color:var(--blu)">£${totalMRR.toLocaleString()}</div><div class="ns-t">Boardroom + Private</div><div class="ns-bar"><div class="ns-fill" style="width:${Math.min(100,(totalMRR/20000)*100)}%;background:var(--blu)"></div></div></div>
-    <div class="ns-box" onclick="goPage('padel')" title="Open Padel Event"><div class="ns-l">Days to Padel</div><div class="ns-n" style="color:${padel<=7?'var(--red)':'var(--amb)'}">${padel>0?padel:'PAST'}</div><div class="ns-t">25 June 2026</div></div>
-    <div class="ns-box" onclick="goPage('sessions')" title="Open Session Planning"><div class="ns-l">Days to S2</div><div class="ns-n" style="color:${s2<=7?'var(--red)':'var(--amb)'}">${s2>0?s2:'TODAY'}</div><div class="ns-t">2 July 2026</div></div>
+    <div class="ns-box" onclick="goPage('padel')" title="Open Padel Event"><div class="ns-l">Days to Padel</div><div class="ns-n" style="color:${padel!=null&&padel<=7?'var(--red)':'var(--amb)'}">${padel==null?'—':(padel===0?'TODAY':(padel>0?padel:'PAST'))}</div><div class="ns-t">${nextPadelEv?fmtDate(nextPadelEv.date):'No padel event booked'}</div></div>
+    <div class="ns-box" onclick="goPage('boardroom')" title="Open the Boardroom calendar"><div class="ns-l">${nextSess?'Days to '+escHtml(nextSess.name):'Next session'}</div><div class="ns-n" style="color:${s2!=null&&s2<=7?'var(--red)':'var(--amb)'}">${s2==null?'—':(s2===0?'TODAY':s2)}</div><div class="ns-t">${nextSess?fmtDate(nextSess.date)+(nextSess.type==='Implementation Session'?' · online':''):'None booked'}</div></div>
   `;
   // Priorities
   const pis = [];
-  if(padel<=7&&padel>0) pis.push({type:'urgent',tag:'PADEL',text:`Event in ${padel} days — logistics SOP and invitations must be ready.`,owner:'Jasper'});
-  if(s2<=7&&s2>0) pis.push({type:'urgent',tag:'S2',text:`Session 2 in ${s2} days. Push all S1 conversions this week.`,owner:'Danny'});
+  if(padel!=null&&padel<=7&&padel>0) pis.push({type:'urgent',tag:'PADEL',text:`Padel event in ${padel} days. Logistics and invitations must be ready.`,owner:'Jasper'});
+  if(nextSess&&s2!=null&&s2<=7&&s2>0) pis.push({type:'urgent',tag:'SESSION',text:`${nextSess.name} in ${s2} days. Prep forms out and confirmations chased.`,owner:'Danny'});
   const notContacted = ls.get('tuf_warm',[]).filter(w=>w.status==='Not Contacted');
   if(notContacted.length) pis.push({type:'urgent',tag:'FOLLOW-UP',text:`Warm prospects not yet contacted: ${notContacted.map(w=>w.name).join(', ')}`,owner:'Danny'});
   // Stale lead alert
