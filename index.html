@@ -4621,7 +4621,7 @@ function stripeSyncToCRM(){
       const paid=new Date((p.created||0)*1000).toISOString().slice(0,10);
       if((p.amount||0)>=BRX_BOARDROOM_MIN_PENCE){
         // Boardroom membership payment → payments board, NOT the Event CRM.
-        const person=personEnsure(name,{email:p.email||''});
+        const person=personEnsure(name,{email:p.email||'',phone:p.phone||''});
         bpay.push({id:uid(),name,email:p.email||'',amount:p.amount||0,paidDate:paid,charge:p.charge||'',manual:false,personId:person?person.id:'',addedDate:new Date().toISOString().slice(0,10)});
         journeyLog(name,'Boardroom payment received (£'+(((p.amount||0)/100).toLocaleString('en-GB'))+')');
         addedBP++;
@@ -4629,15 +4629,32 @@ function stripeSyncToCRM(){
       }
       const dup=att.some(a=>(email&&(a.email||'').trim().toLowerCase()===email)||profileKey(a.name)===profileKey(name));
       if(dup) return;
-      att.push({id:uid(),name,co:'',email:p.email||'',phone:'',event:'Padel Event',eventDate:paid,score:null,owner:'Danny',notes:'Paid £'+(((p.amount||0)/100).toLocaleString('en-GB'))+' via Stripe on '+fmtDate(paid)+'.',addedDate:new Date().toISOString().slice(0,10),source:'Stripe',stripeCharge:p.charge||''});
+      att.push({id:uid(),name,co:'',email:p.email||'',phone:p.phone||'',event:'Padel Event',eventDate:paid,score:null,owner:'Danny',notes:'Paid £'+(((p.amount||0)/100).toLocaleString('en-GB'))+' via Stripe on '+fmtDate(paid)+'.',addedDate:new Date().toISOString().slice(0,10),source:'Stripe',stripeCharge:p.charge||''});
       personTag(att);
       journeyLog(name,'Entered the system: Event CRM (Stripe payment)');
       added++;
     });
-    if(added) ls.set('tuf_event_attendees',att);
+    // Backfill: if Stripe now has a phone number for someone already in the CRM
+    // without one, fill it in (attendee record + core person record). One save per
+    // store at the end — no per-record syncs (avoids competing upserts).
+    let filled=0;
+    const ppl=ls.get('tuf_people',[])||[]; let pplCh=false;
+    payments.forEach(p=>{
+      const ph=(p.phone||'').trim(); if(!ph) return;
+      const em=(p.email||'').trim().toLowerCase();
+      const nm=((p.payer&&p.payer!=='Guest checkout')?p.payer:'').trim();
+      const match=x=>((em&&(x.email||'').trim().toLowerCase()===em)||(nm&&profileKey(x.name)===profileKey(nm)));
+      const a=att.find(x=>match(x)&&!(x.phone||'').trim());
+      if(a){ a.phone=ph; filled++; }
+      const pr=ppl.find(x=>match(x)&&!(x.phone||'').trim());
+      if(pr){ pr.phone=ph; pplCh=true; }
+    });
+    if(added||filled) ls.set('tuf_event_attendees',att);
     if(addedBP) ls.set('tuf_boardroom_payments',bpay);
+    if(pplCh) ls.set('tuf_people',ppl);
     if(marked) ls.set('tuf_stripe_synced',synced);
     if(added) addNotif(added+' Stripe payer'+(added>1?'s':'')+' added to the Event CRM');
+    if(filled) addNotif(filled+' phone number'+(filled>1?'s':'')+' filled in from Stripe');
     if(addedBP) addNotif(addedBP+' Boardroom payment'+(addedBP>1?'s':'')+' logged from Stripe');
     return added+addedBP;
   }catch(e){ console.warn('stripeSyncToCRM failed',e); return 0; }
