@@ -3293,7 +3293,7 @@ function personSectionChips(p){
   L.padel.forEach(x=>out.push({label:'Padel · '+(x.status||''),cls:'tag-b'}));
   L.ea.forEach(x=>out.push({label:'Event · '+(x.event||'CRM'),cls:'tag-b'}));
   if(L.ba.length) out.push({label:'Session attendee ×'+L.ba.length,cls:'tag-g'});
-  if(L.inbound.length) out.push({label:'Website signup',cls:'tag-b'});
+  if(L.inbound.length) out.push({label:inbSrcName(L.inbound[0]),cls:'tag-b'});
   return out;
 }
 function renderPeople(){
@@ -3417,8 +3417,9 @@ function renderPersonProfile(id){
     L.ba.map(a=>`<div style="font-size:12px;padding:3px 0">🏛 ${escHtml(a.sessionName||'Session')}${a.sessionDate?' · '+fmtDate(a.sessionDate):''}</div>`).join(''),
     'Event Attendees',`navMembers('attendees',document.querySelector('[data-page=members][data-filter=attendees]'))`));
   L.inbound.forEach(x=>{
-    panels+=panel('Website signup',`<span class="tag tag-b" style="font-size:9px">${escHtml(x.status||'new')}</span>`,
-      `${kv('Submitted',x.submittedAt?fmtDate(x.submittedAt.slice(0,10)):'')}${kv('Challenge',escHtml(x.challenge||''))}`,
+    const d=x.diagnostic;
+    panels+=panel(inbSrcName(x),`<span class="tag tag-b" style="font-size:9px">${escHtml(x.status||'new')}</span>`,
+      `${kv('Submitted',x.submittedAt?fmtDate(x.submittedAt.slice(0,10)):'')}${d?kv('Result',escHtml('Stage '+d.stage+' of 5'+(d.stageName?' · '+d.stageName:'')+(d.persona?' · '+d.persona:''))):kv('Challenge',escHtml(x.challenge||''))}`,
       'Inbound',`goPage('inbound')`);
   });
   // Add-to-section buttons for sections they are not in
@@ -3601,8 +3602,8 @@ function pipelineSweep(){
       if(inPipe.has(p.id)||pipeNames.has(k)||activeMember.has(p.id)||activeNames.has(k)){ swept.push(p.id); sweptSet.add(p.id); marked=true; return; }
       // best known origin for context
       let src='';
-      try{ const L=personLinks(p); src=(L.ea[0]&&L.ea[0].event)||(L.ba[0]&&L.ba[0].sessionName)||(L.padel[0]&&'Padel')||(L.inbound[0]&&'Website signup')||''; }catch(_){ }
-      prospects.push({id:uid(),name:p.name,co:p.co||'',email:p.email||'',phone:p.phone||'',stage:'Prospect',temp:'Warm',score:null,nextAction:'',notes:'Every CRM profile starts in the pipeline.'+(src?' Origin: '+src+'.':''),lastContact:today,personId:p.id,sourceEvent:src&&src!=='Website signup'?src:'',auto:true});
+      try{ const L=personLinks(p); src=(L.ea[0]&&L.ea[0].event)||(L.ba[0]&&L.ba[0].sessionName)||(L.padel[0]&&'Padel')||(L.inbound[0]&&inbSrcName(L.inbound[0]))||''; }catch(_){ }
+      prospects.push({id:uid(),name:p.name,co:p.co||'',email:p.email||'',phone:p.phone||'',stage:'Prospect',temp:'Warm',score:null,nextAction:'',notes:'Every CRM profile starts in the pipeline.'+(src?' Origin: '+src+'.':''),lastContact:today,personId:p.id,sourceEvent:src&&src!=='Website signup'&&src!=='Founder Diagnostic'?src:'',auto:true});
       journeyLog(p.name,'Entered the Sales Pipeline (every profile starts here)');
       swept.push(p.id); sweptSet.add(p.id); marked=true; added++;
     });
@@ -4062,6 +4063,19 @@ function updateInboundBadge(){
   if(b){ b.textContent=n; b.style.display=n?'inline':'none'; }
 }
 function inbWhen(iso){ try{ const d=new Date(iso); const diff=Math.round((Date.now()-d.getTime())/86400000); if(diff<=0) return 'today'; if(diff===1) return 'yesterday'; if(diff<7) return diff+' days ago'; return d.toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'}); }catch(_){ return ''; } }
+// Leads can arrive from the website signup form or the Founder Journey Diagnostic.
+function inbSrcName(l){ return (l&&l.source)==='Diagnostic'?'Founder Diagnostic':'Website signup'; }
+function inbDiagText(l){
+  const d=l&&l.diagnostic; if(!d) return '';
+  const parts=['Founder Diagnostic: Stage '+d.stage+' of 5'+(d.stageName?' · '+d.stageName:'')+(d.persona?' · '+d.persona:'')+(d.ceiling?' (ceiling: '+d.ceiling+')':'')];
+  const dims=d.dimensions||{}; const ks=Object.keys(dims);
+  if(ks.length){
+    parts.push('Dimensions: '+ks.map(k=>k+' '+Number(dims[k]).toFixed(1)).join(' · '));
+    const lo=ks.reduce((a,b)=>dims[b]<dims[a]?b:a);
+    parts.push('Weakest dimension: '+lo+' ('+Number(dims[lo]).toFixed(1)+')');
+  }
+  return parts.join('\n');
+}
 function renderInbound(){
   const el=document.getElementById('inbound-content'); if(!el) return;
   const all=(ls.get('tuf_inbound_leads',[])||[]).slice().sort((a,b)=>(b.submittedAt||'').localeCompare(a.submittedAt||''));
@@ -4071,12 +4085,26 @@ function renderInbound(){
   const head=`
     <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px">
       <div style="display:flex;gap:6px;flex-wrap:wrap">${tab('new','New')}${tab('converted','Added')}${tab('archived','Archived')}<button class="btn btn-sm ${inboundFilter==='all'?'btn-k':'btn-ghost'}" onclick="setInboundFilter('all')">All</button></div>
-      <div style="font-size:12px;color:var(--mut)">Website signups land here. Review, then add the good ones to the pipeline.</div>
+      <div style="font-size:12px;color:var(--mut)">Website signups and diagnostic results land here. Review, then add the good ones to the pipeline.</div>
     </div>`;
   if(!list.length){ el.innerHTML=head+`<div class="empty"><div class="ico">📥</div>${inboundFilter==='new'?'No new website signups right now.':'Nothing here.'}</div>`; updateInboundBadge(); return; }
   const field=(label,val)=> val?`<div style="margin-top:8px"><div style="font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--mut);font-weight:700">${label}</div><div style="font-size:13.5px;white-space:pre-wrap">${escHtml(val)}</div></div>`:'';
+  const diagBlock=l=>{
+    const d=l.diagnostic; if(!d) return '';
+    const dims=d.dimensions||{}; const ks=Object.keys(dims);
+    const lo=ks.length?ks.reduce((a,b)=>dims[b]<dims[a]?b:a):null;
+    return `<div style="margin-top:10px;padding:10px 12px;background:rgba(251,240,0,.10);border-left:3px solid var(--y);border-radius:6px">
+      <div style="font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--mut);font-weight:700">Founder Diagnostic result</div>
+      <div style="font-size:14px;font-weight:700;margin-top:2px">Stage ${escHtml(String(d.stage))} of 5${d.stageName?' · '+escHtml(d.stageName):''}${d.persona?' · '+escHtml(d.persona):''}</div>
+      ${ks.length?`<div style="font-size:12.5px;color:var(--mut);margin-top:4px">${ks.map(k=>escHtml(k)+' '+Number(dims[k]).toFixed(1)).join(' · ')}</div>`:''}
+      ${lo?`<div style="font-size:12px;margin-top:4px"><b>Weakest:</b> ${escHtml(lo)} (${Number(dims[lo]).toFixed(1)})${d.ceiling?` &nbsp;·&nbsp; <b>Ceiling:</b> ${escHtml(d.ceiling)}`:''}</div>`:''}
+    </div>`;
+  };
   const card=l=>{
     const contact=[l.email?`✉️ <a href="mailto:${escAttr(l.email)}">${escHtml(l.email)}</a>`:'', l.phone?`📞 ${escHtml(l.phone)}`:'', l.website?`🌐 ${escHtml(l.website)}`:''].filter(Boolean).join('&nbsp;&nbsp;·&nbsp;&nbsp;');
+    const srcChip=l.source==='Diagnostic'
+      ? `<span style="background:var(--y);color:var(--k);font-size:10px;font-weight:800;padding:2px 8px;border-radius:10px;text-transform:uppercase;letter-spacing:.04em">Diagnostic</span>`
+      : `<span style="background:rgba(0,0,0,.06);color:var(--mut);font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;text-transform:uppercase;letter-spacing:.04em">Website</span>`;
     const actions = l.status==='new'
       ? `<button class="btn btn-k btn-sm" onclick="inbConvert('${l.id}')">+ Add to Pipeline</button><button class="btn btn-ghost btn-sm" onclick="inbArchive('${l.id}')">Archive</button>`
       : l.status==='archived'
@@ -4086,9 +4114,9 @@ function renderInbound(){
       <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px">
         <div><div style="font-weight:700;font-size:16px">${escHtml(l.name||'(no name)')}${l.company?` <span style="color:var(--mut);font-weight:500">· ${escHtml(l.company)}</span>`:''}</div>
         <div style="font-size:13px;margin-top:3px">${contact||'<span style="color:var(--mut)">No contact details</span>'}</div></div>
-        <div style="font-size:11px;color:var(--mut);white-space:nowrap">${inbWhen(l.submittedAt)}</div>
+        <div style="font-size:11px;color:var(--mut);white-space:nowrap;text-align:right">${srcChip}<br>${inbWhen(l.submittedAt)}</div>
       </div>
-      ${field('Business',l.businessDesc)}${field('Annual revenue',l.revenue)}${field('Biggest challenge',l.challenge)}${field('How they heard about us',l.heardVia)}
+      ${diagBlock(l)}${field('Business',l.businessDesc)}${field('Annual revenue',l.revenue)}${field('Biggest challenge',l.challenge)}${field('How they heard about us',l.heardVia)}
       <div style="display:flex;gap:6px;margin-top:14px;flex-wrap:wrap">${actions}</div>
     </div>`;
   };
@@ -4099,20 +4127,22 @@ function inbConvert(id){
   const leads=ls.get('tuf_inbound_leads',[])||[]; const l=leads.find(x=>x.id===id); if(!l) return;
   if(l.status==='converted'){ alert('This lead is already in the pipeline.'); return; }
   const today=new Date().toISOString().slice(0,10);
+  const srcName=inbSrcName(l);
   const notes=[];
-  notes.push('Source: Website signup'+(l.submittedAt?` (${new Date(l.submittedAt).toLocaleDateString('en-GB')})`:''));
+  notes.push('Source: '+srcName+(l.submittedAt?` (${new Date(l.submittedAt).toLocaleDateString('en-GB')})`:''));
   if(l.website) notes.push('Website: '+l.website);
   if(l.revenue) notes.push('Annual revenue: '+l.revenue);
+  if(l.diagnostic) notes.push('\n'+inbDiagText(l));
   if(l.businessDesc) notes.push('\nBusiness:\n'+l.businessDesc);
   if(l.challenge) notes.push('\nBiggest challenge:\n'+l.challenge);
   if(l.heardVia) notes.push('\nHeard about us via: '+l.heardVia);
   const prospects=ls.get('tuf_prospects',[]); const pid=uid();
-  prospects.push({ id:pid, name:l.name||'', co:l.company||'', email:l.email||'', phone:l.phone||'', stage:'Prospect', temp:'Warm', score:null, nextAction:'First response to website signup', nextActionDate:today, notes:notes.join('\n'), lastContact:today, source:'Website', fromInboundId:l.id });
+  prospects.push({ id:pid, name:l.name||'', co:l.company||'', email:l.email||'', phone:l.phone||'', stage:'Prospect', temp:'Warm', score:null, nextAction:l.source==='Diagnostic'?'First response to diagnostic result':'First response to website signup', nextActionDate:today, notes:notes.join('\n'), lastContact:today, source:l.source||'Website', fromInboundId:l.id });
   personTag(prospects);
   ls.set('tuf_prospects',prospects);
   l.status='converted'; l.prospectId=pid; ls.set('tuf_inbound_leads',leads);
-  addNotif(`Website signup added to pipeline: ${l.name||l.email||'lead'}`);
-  journeyLog(l.name,'Website signup → Sales Pipeline');
+  addNotif(`${srcName} added to pipeline: ${l.name||l.email||'lead'}`);
+  journeyLog(l.name,srcName+' → Sales Pipeline');
   renderInbound();
   const pp=document.getElementById('page-pipeline'); if(pp&&pp.classList.contains('active')) renderPipeline();
 }
