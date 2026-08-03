@@ -4057,6 +4057,9 @@ function saveProspect(){
 // which appends them to the shared tuf_inbound_leads store. The team triages here.
 let inboundFilter='new';
 function setInboundFilter(f){ inboundFilter=f; renderInbound(); }
+let inboundSrc='all', inbStage=0;
+function setInboundSrc(s){ inboundSrc=s; inbStage=0; renderInbound(); }
+function setInbStage(n){ inbStage=n; renderInbound(); }
 function updateInboundBadge(){
   const n=(ls.get('tuf_inbound_leads',[])||[]).filter(l=>l.status==='new').length;
   const b=document.getElementById('sb-inbound');
@@ -4080,14 +4083,17 @@ function renderInbound(){
   const el=document.getElementById('inbound-content'); if(!el) return;
   const all=(ls.get('tuf_inbound_leads',[])||[]).slice().sort((a,b)=>(b.submittedAt||'').localeCompare(a.submittedAt||''));
   const counts={ new:all.filter(l=>l.status==='new').length, converted:all.filter(l=>l.status==='converted').length, archived:all.filter(l=>l.status==='archived').length };
-  const list = inboundFilter==='all' ? all : all.filter(l=>l.status===inboundFilter);
+  let list = inboundFilter==='all' ? all : all.filter(l=>l.status===inboundFilter);
+  const diagCount=all.filter(l=>l.diagnostic).length;
+  if(inboundSrc==='diag'){ list=list.filter(l=>l.diagnostic); if(inbStage) list=list.filter(l=>l.diagnostic.stage===inbStage); }
   const tab=(k,label)=>`<button class="btn btn-sm ${inboundFilter===k?'btn-k':'btn-ghost'}" onclick="setInboundFilter('${k}')">${label}${counts[k]!=null?` (${counts[k]})`:''}</button>`;
   const head=`
     <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px">
-      <div style="display:flex;gap:6px;flex-wrap:wrap">${tab('new','New')}${tab('converted','Added')}${tab('archived','Archived')}<button class="btn btn-sm ${inboundFilter==='all'?'btn-k':'btn-ghost'}" onclick="setInboundFilter('all')">All</button></div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">${tab('new','New')}${tab('converted','Added')}${tab('archived','Archived')}<button class="btn btn-sm ${inboundFilter==='all'?'btn-k':'btn-ghost'}" onclick="setInboundFilter('all')">All</button><button class="btn btn-sm ${inboundSrc==='diag'?'btn-k':'btn-ghost'}" onclick="setInboundSrc(inboundSrc==='diag'?'all':'diag')">🧭 Diagnostic${diagCount?` (${diagCount})`:''}</button></div>
       <div style="font-size:12px;color:var(--mut)">Website signups and diagnostic results land here. Review, then add the good ones to the pipeline.</div>
-    </div>`;
-  if(!list.length){ el.innerHTML=head+`<div class="empty"><div class="ico">📥</div>${inboundFilter==='new'?'No new website signups right now.':'Nothing here.'}</div>`; updateInboundBadge(); return; }
+    </div>
+    ${inboundSrc==='diag'?`<div style="display:flex;gap:6px;flex-wrap:wrap;margin:-4px 0 14px">${[0,1,2,3,4,5].map(n=>`<button class="btn btn-sm ${inbStage===n?'btn-k':'btn-ghost'}" onclick="setInbStage(${n})">${n?'Stage '+n:'All stages'}</button>`).join('')}</div>`:''}`;
+  if(!list.length){ el.innerHTML=head+`<div class="empty"><div class="ico">📥</div>${inboundSrc==='diag'?'No diagnostic results'+(inbStage?' at Stage '+inbStage:'')+' yet.':inboundFilter==='new'?'No new website signups right now.':'Nothing here.'}</div>`; updateInboundBadge(); return; }
   const field=(label,val)=> val?`<div style="margin-top:8px"><div style="font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--mut);font-weight:700">${label}</div><div style="font-size:13.5px;white-space:pre-wrap">${escHtml(val)}</div></div>`:'';
   const diagBlock=l=>{
     const d=l.diagnostic; if(!d) return '';
@@ -4102,9 +4108,10 @@ function renderInbound(){
   };
   const card=l=>{
     const contact=[l.email?`✉️ <a href="mailto:${escAttr(l.email)}">${escHtml(l.email)}</a>`:'', l.phone?`📞 ${escHtml(l.phone)}`:'', l.website?`🌐 ${escHtml(l.website)}`:''].filter(Boolean).join('&nbsp;&nbsp;·&nbsp;&nbsp;');
-    const srcChip=l.source==='Diagnostic'
+    const srcChip=(l.source==='Diagnostic'||l.diagnostic)
       ? `<span style="background:var(--y);color:var(--k);font-size:10px;font-weight:800;padding:2px 8px;border-radius:10px;text-transform:uppercase;letter-spacing:.04em">Diagnostic</span>`
       : `<span style="background:rgba(0,0,0,.06);color:var(--mut);font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;text-transform:uppercase;letter-spacing:.04em">Website</span>`;
+    const attempts=(l.diagnosticHistory||[]).length?`<div style="font-size:10px;color:var(--mut);margin-top:2px">×${l.diagnosticHistory.length+1} attempts</div>`:'';
     const actions = l.status==='new'
       ? `<button class="btn btn-k btn-sm" onclick="inbConvert('${l.id}')">+ Add to Pipeline</button><button class="btn btn-ghost btn-sm" onclick="inbArchive('${l.id}')">Archive</button>`
       : l.status==='archived'
@@ -4114,14 +4121,41 @@ function renderInbound(){
       <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px">
         <div><div style="font-weight:700;font-size:16px">${escHtml(l.name||'(no name)')}${l.company?` <span style="color:var(--mut);font-weight:500">· ${escHtml(l.company)}</span>`:''}</div>
         <div style="font-size:13px;margin-top:3px">${contact||'<span style="color:var(--mut)">No contact details</span>'}</div></div>
-        <div style="font-size:11px;color:var(--mut);white-space:nowrap;text-align:right">${srcChip}<br>${inbWhen(l.submittedAt)}</div>
+        <div style="font-size:11px;color:var(--mut);white-space:nowrap;text-align:right">${srcChip}<br>${inbWhen(l.submittedAt)}${attempts}</div>
       </div>
       ${diagBlock(l)}${field('Business',l.businessDesc)}${field('Annual revenue',l.revenue)}${field('Biggest challenge',l.challenge)}${field('How they heard about us',l.heardVia)}
-      <div style="display:flex;gap:6px;margin-top:14px;flex-wrap:wrap">${actions}</div>
+      <div style="display:flex;gap:6px;margin-top:14px;flex-wrap:wrap">${l.diagnostic?`<button class="btn btn-ghost btn-sm" onclick="inbDiagModal('${l.id}')">View result</button>`:''}${actions}</div>
     </div>`;
   };
   el.innerHTML=head+list.map(card).join('');
   updateInboundBadge();
+}
+function inbDiagModal(id){
+  const l=(ls.get('tuf_inbound_leads',[])||[]).find(x=>x.id===id); if(!l||!l.diagnostic) return;
+  const d=l.diagnostic, dims=d.dimensions||{}, ks=Object.keys(dims);
+  const bars=['Time','Dependence','Team','Systems','Money','Identity'].filter(k=>dims[k]!=null).map(k=>`
+    <div style="display:grid;grid-template-columns:110px 1fr 64px;gap:10px;align-items:center;margin-bottom:8px">
+      <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.04em">${escHtml(k)}</div>
+      <div style="height:10px;background:rgba(0,0,0,.08);border-radius:5px;overflow:hidden"><div style="height:100%;width:${Math.min(100,Number(dims[k])/5*100)}%;background:var(--y);border-radius:5px"></div></div>
+      <div style="font-size:11px;color:var(--mut);text-align:right">Stage ${Number(dims[k]).toFixed(1)}</div>
+    </div>`).join('');
+  let gap='';
+  if(ks.length>1){
+    const hi=ks.reduce((a,b)=>dims[b]>dims[a]?b:a), lo=ks.reduce((a,b)=>dims[b]<dims[a]?b:a);
+    gap=`<div style="background:rgba(251,240,0,.12);border:1.5px solid var(--y);border-radius:8px;padding:12px 14px;margin:14px 0 0">
+      <div style="font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--mut)">The gap to open with</div>
+      <div style="font-size:13px;margin-top:4px;line-height:1.5">${escHtml(hi)} runs at Stage ${Number(dims[hi]).toFixed(1)} while ${escHtml(lo)} sits at Stage ${Number(dims[lo]).toFixed(1)}, a gap of ${(dims[hi]-dims[lo]).toFixed(1)}. The lagging dimension is usually the real ceiling, and the best place to start the conversation.</div>
+    </div>`;
+  }
+  const hist=l.diagnosticHistory||[];
+  const histHtml=hist.length?`<div style="margin-top:16px"><div style="font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--mut);margin-bottom:6px">Previous attempts</div>${hist.slice().reverse().map(h=>`<div style="font-size:12px;padding:4px 0;border-bottom:1px solid rgba(0,0,0,.06)">${h.completedAt?escHtml(fmtDate(String(h.completedAt).slice(0,10)))+' · ':''}Stage ${escHtml(String(h.stage))}${h.stageName?' · '+escHtml(h.stageName):''}${h.dimensions?'<span style="color:var(--mut)"> · '+Object.keys(h.dimensions).map(k=>escHtml(k)+' '+Number(h.dimensions[k]).toFixed(1)).join(', ')+'</span>':''}</div>`).join('')}</div>`:'';
+  const body=`
+    <div style="font-size:13px;color:var(--mut);margin-bottom:10px">${l.email?`<a href="mailto:${escAttr(l.email)}">${escHtml(l.email)}</a>`:''}${l.submittedAt?' · '+escHtml(fmtDate(l.submittedAt.slice(0,10))):''}</div>
+    <div style="font-size:18px;font-weight:800;margin-bottom:14px">Stage ${escHtml(String(d.stage))} of 5${d.stageName?' · '+escHtml(d.stageName):''}${d.persona?' · '+escHtml(d.persona):''}</div>
+    ${bars}
+    ${d.ceiling?`<div style="font-size:12px;color:var(--mut);margin-top:6px">Ceiling: ${escHtml(d.ceiling)}</div>`:''}
+    ${gap}${histHtml}`;
+  showModal(l.name||'Diagnostic result', body, `<button class="btn btn-ghost" onclick="closeModal()">Close</button>`);
 }
 function inbConvert(id){
   const leads=ls.get('tuf_inbound_leads',[])||[]; const l=leads.find(x=>x.id===id); if(!l) return;
@@ -4133,6 +4167,7 @@ function inbConvert(id){
   if(l.website) notes.push('Website: '+l.website);
   if(l.revenue) notes.push('Annual revenue: '+l.revenue);
   if(l.diagnostic) notes.push('\n'+inbDiagText(l));
+  if(l.diagnosticHistory&&l.diagnosticHistory.length) notes.push('Retakes: '+(l.diagnosticHistory.length+1)+' attempts, latest result shown');
   if(l.businessDesc) notes.push('\nBusiness:\n'+l.businessDesc);
   if(l.challenge) notes.push('\nBiggest challenge:\n'+l.challenge);
   if(l.heardVia) notes.push('\nHeard about us via: '+l.heardVia);
