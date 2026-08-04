@@ -4151,7 +4151,8 @@ function inbDiagModal(id){
   const histHtml=hist.length?`<div style="margin-top:16px"><div style="font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--mut);margin-bottom:6px">Previous attempts</div>${hist.slice().reverse().map(h=>`<div style="font-size:12px;padding:4px 0;border-bottom:1px solid rgba(0,0,0,.06)">${h.completedAt?escHtml(fmtDate(String(h.completedAt).slice(0,10)))+' · ':''}Stage ${escHtml(String(h.stage))}${h.stageName?' · '+escHtml(h.stageName):''}${h.dimensions?'<span style="color:var(--mut)"> · '+Object.keys(h.dimensions).map(k=>escHtml(k)+' '+Number(h.dimensions[k]).toFixed(1)).join(', ')+'</span>':''}</div>`).join('')}</div>`:'';
   const body=`
     <div style="font-size:13px;color:var(--mut);margin-bottom:10px">${l.email?`<a href="mailto:${escAttr(l.email)}">${escHtml(l.email)}</a>`:''}${l.submittedAt?' · '+escHtml(fmtDate(l.submittedAt.slice(0,10))):''}</div>
-    <div style="font-size:18px;font-weight:800;margin-bottom:14px">Stage ${escHtml(String(d.stage))} of 5${d.stageName?' · '+escHtml(d.stageName):''}${d.persona?' · '+escHtml(d.persona):''}</div>
+    <div style="font-size:18px;font-weight:800;margin-bottom:6px">Stage ${escHtml(String(d.stage))} of 5${d.stageName?' · '+escHtml(d.stageName):''}${d.persona?' · '+escHtml(d.persona):''}</div>
+    <div style="font-size:12px;font-weight:700;margin-bottom:14px;color:${(d.marketingConsent||d.consent)?'var(--grn)':'var(--mut)'}">${(d.marketingConsent||d.consent)?'✓ Opted in to founder insights emails':'Results only, no marketing opt-in'}</div>
     ${bars}
     ${d.ceiling?`<div style="font-size:12px;color:var(--mut);margin-top:6px">Ceiling: ${escHtml(d.ceiling)}</div>`:''}
     ${gap}${histHtml}`;
@@ -4167,6 +4168,7 @@ function inbConvert(id){
   if(l.website) notes.push('Website: '+l.website);
   if(l.revenue) notes.push('Annual revenue: '+l.revenue);
   if(l.diagnostic) notes.push('\n'+inbDiagText(l));
+  if(l.diagnostic) notes.push((l.diagnostic.marketingConsent||l.diagnostic.consent)?'Marketing opt-in: yes':'Marketing opt-in: no');
   if(l.diagnosticHistory&&l.diagnosticHistory.length) notes.push('Retakes: '+(l.diagnosticHistory.length+1)+' attempts, latest result shown');
   if(l.businessDesc) notes.push('\nBusiness:\n'+l.businessDesc);
   if(l.challenge) notes.push('\nBiggest challenge:\n'+l.challenge);
