@@ -2737,6 +2737,70 @@ async function deleteTask(id){
   renderTasks(); renderBriefTasks();
 }
 
+// ═══ BOARDROOM WHATSAPP GROUP TRACKER ═══════════════════════════════════════
+// Log of messages sent to the Boardroom WhatsApp group, plus cadence reminders
+// for the owner (default Joe). tuf_wa_log: [{id,date:'YYYY-MM-DD',by,note}].
+// Cadence and owner live on tuf_wa_status alongside the existing launch state.
+function waStatus(){
+  const w=ls.get('tuf_wa_status',null)||{};
+  return Object.assign({launched:false,members:0,rules:'Chatham House rules, no GIFs, business only. Launch when 12 paying members confirmed.',cadence:2,owner:'Joe',repeatSeeded:false},w);
+}
+function waEntries(){ return (ls.get('tuf_wa_log',[])||[]).slice().sort((a,b)=>(b.date||'').localeCompare(a.date||'')); }
+function waWeekCount(){ const mon=ymdLocal(mondayOf(new Date())); return waEntries().filter(e=>(e.date||'')>=mon).length; }
+function waDaysSince(){ const e=waEntries(); if(!e.length) return null; return Math.max(0,-daysUntil(e[0].date)); }
+// Due rule: with a target of N messages a week the expected gap is floor(7/N)
+// days (minimum 1). Due when the group is live, this week's target is not met
+// and the last message is at least a gap old (or none ever). Urgent at 2x gap.
+function waDue(){
+  const w=waStatus(); const target=Math.max(1,Number(w.cadence)||2);
+  const count=waWeekCount(); const ds=waDaysSince();
+  const gap=Math.max(1,Math.floor(7/target));
+  const due=!!w.launched&&count<target&&(ds===null||ds>=gap);
+  const urgent=due&&(ds===null||ds>=gap*2);
+  return {count,target,daysSince:ds,gap,due,urgent};
+}
+function waRerender(){
+  const bp=document.getElementById('page-boardroom'); if(bp&&bp.classList.contains('active')&&typeof brxRefresh==='function') brxRefresh();
+  const hp=document.getElementById('page-home'); if(hp&&hp.classList.contains('active')) renderHome();
+}
+function waLogAdd(note,date){
+  const log=ls.get('tuf_wa_log',[])||[];
+  log.push({id:uid(),date:date||new Date().toISOString().slice(0,10),by:CURRENT_USER||'',note:(note||'').trim()});
+  ls.set('tuf_wa_log',log);
+  addNotif('WhatsApp group message logged'+(note?': '+note:''));
+}
+function waLogDelete(id){
+  if(!confirm('Remove this log entry?')) return;
+  ls.set('tuf_wa_log',(ls.get('tuf_wa_log',[])||[]).filter(e=>e.id!==id));
+  waRerender();
+}
+function waLogModal(){
+  showModal('Log a WhatsApp group message',`
+    <div class="form-row"><label class="form-label">Date sent</label><input type="date" class="form-input" id="wa-log-date" value="${new Date().toISOString().slice(0,10)}"></div>
+    <div class="form-row"><label class="form-label">What was it? (optional)</label><input class="form-input" id="wa-log-note" placeholder="e.g. Session reminder, value drop, member win"></div>
+  `,`<button class="btn btn-ghost" onclick="closeModal()">Cancel</button><button class="btn btn-k" onclick="waLogSave()">Log it</button>`);
+}
+function waLogSave(){
+  const d=document.getElementById('wa-log-date').value||new Date().toISOString().slice(0,10);
+  const n=document.getElementById('wa-log-note').value;
+  waLogAdd(n,d); closeModal(); waRerender();
+}
+function waCadSave(){
+  const w=ls.get('tuf_wa_status',null)||{};
+  const c=document.getElementById('wa-cad'); const o=document.getElementById('wa-owner');
+  if(c) w.cadence=Math.max(1,Math.min(5,parseInt(c.value,10)||2));
+  if(o) w.owner=o.value;
+  ls.set('tuf_wa_status',w);
+  addNotif('WhatsApp cadence: '+(w.cadence||2)+' a week, owned by '+(w.owner||'Joe'));
+  waRerender();
+}
+function waTplLog(id){
+  const t=(ls.get('tuf_wa_templates',[])||[]).find(x=>x.id===id); if(!t) return;
+  waLogAdd('Template: '+t.name);
+  const btn=document.getElementById('wa-sent-'+id);
+  if(btn){btn.textContent='Logged ✓';setTimeout(()=>{btn.textContent='Sent ✓';},1500);}
+}
+
 // ═══ HOME / MORNING BRIEF ═══════════════════════════════════════════════════
 function renderHome(){
   // North Star
@@ -2773,6 +2837,8 @@ function renderHome(){
   MILESTONES.forEach(m=>{const d=daysUntil(m.date);if(d===0)pis.push({type:'urgent',tag:'TODAY',text:m.t,owner:m.o});else if(d>0&&d<=3)pis.push({type:'urgent',tag:d+'d',text:m.t,owner:m.o});else if(d>3&&d<=7)pis.push({type:'soon',tag:d+'d',text:m.t,owner:m.o});});
   const redCaps=CAPS.filter(c=>(ls.str('tuf_rag_'+c.id)||c.d)==='red');
   if(redCaps.length) pis.push({type:'info',tag:'RED',text:`${redCaps.length} RED capabilities: ${redCaps.map(c=>c.n).join(' · ')}`,owner:'Review'});
+  // Boardroom WhatsApp group cadence (waDue is false unless the group is live)
+  { const wd=waDue(); if(wd.due) pis.push({type:wd.urgent?'urgent':'soon',tag:'WHATSAPP',owner:waStatus().owner,text:`Boardroom WhatsApp group needs a message: ${wd.count} of ${wd.target} sent this week${wd.daysSince===null?', nothing logged yet':', last sent '+(wd.daysSince===0?'today':wd.daysSince+'d ago')}.`}); }
   // Client care: upcoming personal dates and contract renewals
   ls.get('tuf_members',[]).forEach(m=>{
     if(m.status&&m.status!=='active') return;
@@ -7445,12 +7511,21 @@ function brxNextView(){
       <button class="btn btn-ghost btn-sm" style="padding:2px 8px" onclick="brxFocusDelete('${f.id}')">✕</button>
     </div>`).join(''):'<div style="font-size:12px;color:var(--mut);padding:8px 0">Nothing logged yet. Add the bigger things to consider, e.g. build a P&L sheet.</div>';
   const sugs=brxAISugs;
+  const wd=waDue();
+  const waStrip=waStatus().launched?`
+  <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;background:#141416;border:1px solid ${wd.urgent?'var(--red)':wd.due?'var(--y)':'#1F1F24'};border-radius:10px;padding:12px 16px;margin-bottom:18px;font-size:13px">
+    <b>WhatsApp group</b><span>${wd.count} of ${wd.target} this week</span>
+    <span style="color:var(--mut)">${wd.daysSince===null?'nothing logged yet':'last sent '+(wd.daysSince===0?'today':wd.daysSince+'d ago')}</span>
+    ${wd.due?`<span style="color:${wd.urgent?'var(--red)':'var(--y)'};font-weight:700">${wd.urgent?'Overdue':'Due'} · ${escHtml(waStatus().owner)}</span>`:''}
+    <span style="flex:1"></span><button class="btn btn-ghost btn-sm" onclick="waLogModal()">+ Log message</button>
+  </div>`:'';
   return `
   <div class="brx-hero" style="padding:24px 30px 20px;margin-bottom:20px">
     <div class="brx-kicker">What's next</div>
     <h1 style="font-size:24px;margin-bottom:6px">${next?escHtml(next.name):'No session booked'}</h1>
     <div style="font-size:13px;color:var(--mut)">${next?`${escHtml(next.type)} · ${fmtDate(next.date)} · in ${daysUntil(next.date)} days`:'Add the next session in the Session Calendar so the to do list has a target.'}</div>
   </div>
+  ${waStrip}
   <div class="grid-2" style="align-items:start">
     <div>
       <div class="brx-group">1 · To do for upcoming events</div>
@@ -7652,8 +7727,26 @@ function brxModelView(){
   brxSvc(); // seed the three services once
   const model=ls.get('tuf_boardroom_model',{items:['Bi-monthly Boardroom Days (full day, in person)','Bi-monthly Implementation Sessions (online)','Private WhatsApp Boardroom Group','Direct access to Danny between sessions','Annual 1-2-1 strategy session with Danny','Access to all UF Network events','Guest expert sessions each Boardroom Day']});
   const paying=(ls.get('tuf_members',[])||[]).filter(m=>m.status==='active'&&(!m.type||m.type==='boardroom'));
-  const wa=ls.get('tuf_wa_status',{launched:false,members:0,rules:'Chatham House rules, no GIFs, business only. Launch when 12 paying members confirmed.'});
+  const wa=waStatus();
   const generalTpls=brTemplates().filter(t=>!t.service);
+  const wd=waDue(); const wlog=waEntries().slice(0,8);
+  const waTitle='WhatsApp community'+(wd.due?' <span class="brx-tag o" style="margin-left:8px">'+(wd.urgent?'overdue':'due')+'</span>':'');
+  const waBody=`
+    <div style="display:flex;gap:10px;align-items:center;margin-bottom:8px;flex-wrap:wrap"><span class="brx-tag ${wa.launched?'g':'o'}">${wa.launched?'Live':'Not launched'}</span>${!wa.launched?`<span style="font-size:11.5px;color:var(--mut)">Launch trigger: 12 paying members (currently ${paying.length})</span>`:''}</div>
+    <div style="font-size:12px;color:var(--mut);margin-bottom:10px">${escHtml(wa.rules)}</div>
+    ${wa.launched?`
+    <div style="display:flex;gap:14px;align-items:center;flex-wrap:wrap;margin-bottom:10px;font-size:13px">
+      <span><b>This week:</b> ${wd.count} of ${wd.target}</span>
+      <span style="color:var(--mut)">${wd.daysSince===null?'No messages logged yet':'Last message '+(wd.daysSince===0?'today':wd.daysSince+'d ago')+(wlog[0]&&wlog[0].by?' · '+escHtml(wlog[0].by):'')}</span>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:12px;font-size:12px">
+      <span style="color:var(--mut)">Cadence</span>
+      <select id="wa-cad" class="form-select" style="width:auto;padding:4px 8px;font-size:12px" onchange="waCadSave()">${[1,2,3,4,5].map(n=>`<option value="${n}"${wa.cadence===n?' selected':''}>${n} a week</option>`).join('')}</select>
+      <span style="color:var(--mut)">Owner</span>
+      <select id="wa-owner" class="form-select" style="width:auto;padding:4px 8px;font-size:12px" onchange="waCadSave()">${HOL_TEAM.map(p=>`<option${wa.owner===p?' selected':''}>${p}</option>`).join('')}</select>
+    </div>
+    ${wlog.length?wlog.map(e=>`<div style="display:flex;gap:10px;align-items:center;padding:5px 0;border-bottom:1px solid #1F1F24;font-size:12px"><span style="color:var(--mut);flex-shrink:0">${fmtDate(e.date)}</span><span style="flex-shrink:0">${escHtml(e.by||'')}</span><span style="flex:1;color:var(--mut)">${escHtml(e.note||'Message sent')}</span><button class="btn btn-ghost btn-sm" style="padding:1px 7px" onclick="waLogDelete('${e.id}')">✕</button></div>`).join(''):'<div style="font-size:12px;color:var(--mut)">No messages logged yet. Log each one so the reminders stay accurate.</div>'}`:''}`;
+  const waActions=`${wa.launched?`<button class="btn btn-ghost btn-sm" style="border-color:var(--y);color:var(--y)" onclick="waLogModal()">+ Log message</button>`:''}<button class="btn btn-ghost btn-sm" onclick="toggleWALaunch()">Mark as ${wa.launched?'Not Live':'Launched'}</button>`;
   return `
   <div class="brx-hero" style="padding:26px 30px 24px">
     <div class="brx-kicker">The Ultimate Founder · Flagship offer</div>
@@ -7672,10 +7765,7 @@ function brxModelView(){
   ${brxSec('model-benefits','What members get',
     model.items.map(i=>`<div style="display:flex;gap:10px;align-items:flex-start;padding:7px 0;border-bottom:1px solid #1F1F24;font-size:13px"><span style="color:var(--y);flex-shrink:0;font-weight:800">✓</span>${escHtml(i)}</div>`).join(''),
     `<button class="btn btn-ghost btn-sm" onclick="editBoardroomModel()">Edit</button>`)}
-  ${brxSec('model-wa','WhatsApp community',
-    `<div style="display:flex;gap:10px;align-items:center;margin-bottom:8px;flex-wrap:wrap"><span class="brx-tag ${wa.launched?'g':'o'}">${wa.launched?'Live':'Not launched'}</span>${!wa.launched?`<span style="font-size:11.5px;color:var(--mut)">Launch trigger: 12 paying members (currently ${paying.length})</span>`:''}</div>
-     <div style="font-size:12px;color:var(--mut);margin-bottom:10px">${escHtml(wa.rules)}</div>
-     <button class="btn btn-ghost btn-sm" onclick="toggleWALaunch()">Mark as ${wa.launched?'Not Live':'Launched'}</button>`)}
+  ${brxSec('model-wa',waTitle,waBody,waActions)}
   ${brxSec('model-gtpl','General message templates ('+generalTpls.length+')',
     (generalTpls.length?`<div class="grid-2" style="gap:10px">${generalTpls.map(brTplCard).join('')}</div>`:'<div style="font-size:12px;color:var(--mut)">None yet.</div>'),
     `<button class="btn btn-ghost btn-sm" onclick="brTplModal(null,'')">+ Add</button>`)}`;
@@ -8763,6 +8853,7 @@ function renderWATemplates(){
         </div>
         <div style="display:flex;gap:6px;flex-shrink:0">
           <button class="btn btn-k btn-sm" onclick="copyWATemplate('${t.id}')" id="wa-copy-${t.id}">Copy</button>
+          <button class="btn btn-ghost btn-sm" onclick="waTplLog('${t.id}')" id="wa-sent-${t.id}" title="Log this as sent to the Boardroom group">Sent ✓</button>
           <button class="btn btn-ghost btn-sm" onclick="editWAModal('${t.id}')">Edit</button>
           <button class="btn btn-red btn-sm" onclick="deleteWA('${t.id}')">✕</button>
         </div>
@@ -9266,6 +9357,20 @@ function cmSeedRepeats(){
     if(typeof CURRENT_USER==='undefined'||!CURRENT_USER) return;
     const s=ls.get('tuf_commitments',{})||{};
     const me=s[CURRENT_USER]=s[CURRENT_USER]||{};
+    // One-time: put the WhatsApp cadence task into the group owner's weekly
+    // repeats. Seeded once ever (tuf_wa_status.repeatSeeded), so if the owner
+    // later unpins it with the repeat toggle, their choice sticks.
+    try{
+      const w=waStatus();
+      if(w.launched&&!w.repeatSeeded&&CURRENT_USER===w.owner){
+        me.repeat=me.repeat||{daily:[],weekly:[],monthly:[]};
+        me.repeat.weekly=me.repeat.weekly||[];
+        me.repeat.weekly.push('Send Boardroom WhatsApp messages ('+Math.max(1,Number(w.cadence)||2)+' this week)');
+        if(me.repeatSeeded) me.repeatSeeded.weekly=''; // let it seed into this week too
+        const ws=ls.get('tuf_wa_status',null)||{}; ws.repeatSeeded=true; ls.set('tuf_wa_status',ws);
+        ls.set('tuf_commitments',s);
+      }
+    }catch(e){}
     const repT=me.repeat||{};
     const seeded=me.repeatSeeded||{};
     const keys={daily:cmDailyKey(0),weekly:cmWeekKey(0),monthly:cmMonthKey(0)};
