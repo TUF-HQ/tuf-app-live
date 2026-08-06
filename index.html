@@ -777,9 +777,11 @@ details>summary::-webkit-details-marker{display:none}
 
     <!-- ═══ PODCAST ═══ -->
     <div class="page" id="page-podcast">
+      <div id="pod-plan"></div>
       <div class="grid-4" id="pod-stats" style="margin-bottom:14px"></div>
-      <div id="pod-checklist" style="margin-bottom:14px"></div>
-      <div id="podcast-list"></div>
+      <div id="pod-schedule" style="margin-bottom:14px"></div>
+      <div id="podcast-list" style="margin-bottom:14px"></div>
+      <div id="pod-checklist"></div>
     </div>
 
     <!-- ═══ IP REGISTER ═══ -->
@@ -1921,7 +1923,9 @@ function mdModToggle(kind,id){
 }
 function mdModPodcastBody(){
   const c=podChkGet(); const all=[...(c.before||[]),...(c.after||[])]; const done=all.filter(it=>c.done[it.id]).length;
-  return `${podChkBar(done,all.length)}
+  const nd=podNextDay();
+  const ndLine=nd?`<div style="font-size:12px;font-weight:700;margin-bottom:8px">🎙 Next recording: ${fmtDate(nd.date)} · ${daysUntil(nd.date)===0?'today':'in '+daysUntil(nd.date)+'d'} · ${nd.eps.length} episode${nd.eps.length!==1?'s':''}</div>`:`<div style="font-size:12px;font-weight:700;color:var(--amb);margin-bottom:8px">🎙 No recording day booked</div>`;
+  return `${ndLine}${podChkBar(done,all.length)}
     <div style="font-size:11px;color:var(--mut);margin:6px 0 10px">${done}/${all.length} done${c.updatedBy?' · last by '+escHtml(c.updatedBy):''}</div>
     ${[['before','Before recording'],['after','After recording']].map(([k,t])=>{ const items=c[k]||[]; return `<div style="font-size:10px;font-weight:700;color:var(--mut);text-transform:uppercase;letter-spacing:.5px;margin:8px 0 4px">${t}</div>`+items.map(it=>`<div class="chk-row ${c.done[it.id]?'done':''}"><div class="chk-box" onclick="mdModToggle('podcast','${it.id}')">${c.done[it.id]?'✓':''}</div><span class="chk-text" style="flex:1;cursor:pointer" onclick="mdModToggle('podcast','${it.id}')">${escHtml(it.text)}</span></div>`).join(''); }).join('')}`;
 }
@@ -2839,6 +2843,11 @@ function renderHome(){
   if(redCaps.length) pis.push({type:'info',tag:'RED',text:`${redCaps.length} RED capabilities: ${redCaps.map(c=>c.n).join(' · ')}`,owner:'Review'});
   // Boardroom WhatsApp group cadence (waDue is false unless the group is live)
   { const wd=waDue(); if(wd.due) pis.push({type:wd.urgent?'urgent':'soon',tag:'WHATSAPP',owner:waStatus().owner,text:`Boardroom WhatsApp group needs a message: ${wd.count} of ${wd.target} sent this week${wd.daysSince===null?', nothing logged yet':', last sent '+(wd.daysSince===0?'today':wd.daysSince+'d ago')}.`}); }
+  // Podcast plan: 2 episodes a month, recorded back to back on one day
+  { const pdd=podDue();
+    if(pdd.due) pis.push({type:pdd.urgent?'urgent':'soon',tag:'PODCAST',owner:'James',text:`No podcast recording day booked: ${pdd.monthCount} of ${pdd.target} episodes this month. Book the next batch.`});
+    else if(pdd.next){ const d=daysUntil(pdd.next.date); if(d>=0&&d<=7){ const pc=podChkGet(); const pits=[...(pc.before||[]),...(pc.after||[])]; const pdn=pits.filter(it=>pc.done[it.id]).length; pis.push({type:d<=3?'urgent':'soon',tag:'PODCAST',owner:'James',text:`Podcast recording day ${d===0?'today':'in '+d+' day'+(d!==1?'s':'')}: ${pdd.next.eps.map(e=>escHtml(e.title)).join(' + ')}. Checklist ${pdn}/${pits.length} done.`}); } }
+  }
   // Client care: upcoming personal dates and contract renewals
   ls.get('tuf_members',[]).forEach(m=>{
     if(m.status&&m.status!=='active') return;
@@ -5451,14 +5460,68 @@ function podChkRestoreDefault(){ if(!confirm('Restore the default checklist? Thi
 
 function renderPodcast(){
   const list=ls.get('tuf_podcast',[]);
-  const confirmed=list.filter(g=>g.status==='Confirmed'||g.status==='Recorded'||g.status==='Published').length;
+  const eps=podEpisodes();
+  const today=new Date().toISOString().slice(0,10);
+  const pd=podDue(); const next=pd.next;
+  const c=podChkGet(); const allItems=[...(c.before||[]),...(c.after||[])]; const chkDone=allItems.filter(it=>c.done[it.id]).length;
+  // Next recording day hero
+  const dtxt=d=>d===0?'today':'in '+d+' day'+(d!==1?'s':'');
+  document.getElementById('pod-plan').innerHTML = next?`
+    <div class="card" style="border-left:4px solid var(--y);margin-bottom:14px">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap">
+        <div>
+          <div style="font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--mut)">Next recording day</div>
+          <div style="font-size:20px;font-weight:800;margin:4px 0 2px">${fmtDate(next.date)} · ${dtxt(daysUntil(next.date))}</div>
+          <div style="font-size:13px;color:var(--mut)">${next.eps.length} episode${next.eps.length!==1?'s':''} booked${next.eps.length<POD_PER_MONTH?' · room for '+(POD_PER_MONTH-next.eps.length)+' more':''}</div>
+        </div>
+        <button class="btn btn-k btn-sm" onclick="podEpModal()">+ Add episode</button>
+      </div>
+      <div style="margin-top:10px">
+        ${next.eps.map(e=>`<div style="display:flex;gap:10px;align-items:center;padding:6px 0;border-top:1px solid #EEE;font-size:13px"><span style="font-weight:700">🎙 ${escHtml(e.title)}</span>${e.guestName?`<span style="color:var(--mut)">with ${escHtml(e.guestName)}</span>`:''}<span style="flex:1"></span><button class="btn btn-ghost btn-sm" onclick="podEpModal('${e.id}')">Edit</button></div>`).join('')}
+      </div>
+      <div style="margin-top:10px">${podChkBar(chkDone,allItems.length)}<div style="font-size:11px;color:var(--mut);margin-top:4px">Production checklist: ${chkDone}/${allItems.length} done</div></div>
+    </div>`:`
+    <div class="card" style="border-left:4px solid ${pd.urgent?'var(--red)':'var(--amb)'};margin-bottom:14px">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
+        <div>
+          <div style="font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:${pd.urgent?'var(--red)':'var(--amb)'}">No recording day booked</div>
+          <div style="font-size:14px;margin-top:4px">The rhythm is ${POD_PER_MONTH} episodes a month, recorded back to back. ${pd.monthCount} of ${POD_PER_MONTH} this month.</div>
+        </div>
+        <button class="btn btn-k btn-sm" onclick="podEpModal()">+ Plan episodes</button>
+      </div>
+    </div>`;
+  // Stats
+  const upBooked=eps.filter(e=>e.recordDate&&e.recordDate>=today&&e.status==='Planned').length;
+  const pubEps=eps.filter(e=>e.status==='Published').length;
+  const published=pubEps||list.filter(g=>g.status==='Published').length;
   document.getElementById('pod-stats').innerHTML=`
-    <div class="stat y"><div class="n">${confirmed}</div><div class="l">Confirmed+</div></div>
-    <div class="stat g"><div class="n">${list.filter(g=>g.status==='Published').length}</div><div class="l">Published</div></div>
-    <div class="stat"><div class="n">${list.length}</div><div class="l">In Pipeline</div></div>
-    <div class="stat ${list.length<10?'r':'g'}"><div class="n">${list.length}/20</div><div class="l">Target: 20</div></div>
+    <div class="stat ${pd.monthCount>=POD_PER_MONTH?'g':pd.monthCount?'y':'r'}"><div class="n">${pd.monthCount}/${POD_PER_MONTH}</div><div class="l">This Month</div></div>
+    <div class="stat ${upBooked?'g':'r'}"><div class="n">${upBooked}</div><div class="l">Booked Ahead</div></div>
+    <div class="stat g"><div class="n">${published}</div><div class="l">Published</div></div>
+    <div class="stat ${list.length<10?'r':'g'}"><div class="n">${list.length}/20</div><div class="l">Guest Pipeline</div></div>
   `;
-  document.getElementById('podcast-list').innerHTML=list.length
+  // Episode schedule
+  const upcoming=eps.filter(e=>e.status!=='Published'&&(!e.recordDate||e.recordDate>=today));
+  const past=eps.filter(e=>upcoming.indexOf(e)<0).slice().reverse();
+  const epCard=e=>`
+    <div class="card" style="margin-bottom:8px;border-left:4px solid ${e.status==='Published'?'var(--grn)':e.status==='Recorded'?'var(--amb)':'var(--y)'}">
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+        <div style="flex:1;min-width:200px">
+          <div style="font-weight:700;font-size:14px">${escHtml(e.title)}</div>
+          <div style="font-size:12px;color:var(--mut)">${e.guestName?'With '+escHtml(e.guestName)+' · ':''}${e.recordDate?'Record '+fmtShort(e.recordDate):'No date'}${e.publishDate?' · Publish '+fmtShort(e.publishDate):''}</div>
+        </div>
+        <select class="form-select" style="width:auto;padding:4px 8px;font-size:11px" onchange="podEpStatus('${e.id}',this.value)">${POD_EP_STATUSES.map(s=>`<option${s===e.status?' selected':''}>${s}</option>`).join('')}</select>
+        <button class="btn btn-ghost btn-sm" onclick="podEpModal('${e.id}')">Edit</button>
+      </div>
+      ${e.notes?`<div style="font-size:12px;color:var(--mut);margin-top:6px">${escHtml(e.notes)}</div>`:''}
+    </div>`;
+  document.getElementById('pod-schedule').innerHTML=`
+    <div class="sec-hdr">Episode schedule</div>
+    ${upcoming.length?upcoming.map(epCard).join(''):'<div class="empty"><div class="ico">🎙</div>No upcoming episodes planned. Book the next recording day.</div>'}
+    ${past.length?`<div class="sec-hdr" style="margin-top:14px">Published and past (${past.length})</div>`+past.map(e=>`<div style="display:flex;gap:10px;align-items:center;padding:6px 10px;border-bottom:1px solid #EEE;font-size:12.5px"><span class="tag ${e.status==='Published'?'tag-g':'tag-a'}" style="font-size:9px">${e.status}</span><span style="font-weight:600">${escHtml(e.title)}</span>${e.guestName?`<span style="color:var(--mut)">· ${escHtml(e.guestName)}</span>`:''}<span style="flex:1"></span><span style="color:var(--mut)">${e.recordDate?fmtShort(e.recordDate):''}</span><button class="btn btn-ghost btn-sm" style="padding:1px 8px" onclick="podEpModal('${e.id}')">Edit</button></div>`).join(''):''}
+  `;
+  // Guest pipeline
+  document.getElementById('podcast-list').innerHTML='<div class="sec-hdr">Guest pipeline</div>'+(list.length
     ? `<table class="tbl"><thead><tr><th>Guest</th><th>Topic</th><th>Status</th><th>Date</th><th>Notes</th><th></th></tr></thead><tbody>
       ${list.map(g=>`<tr>
         <td><strong>${escHtml(g.name)}</strong><div style="font-size:10px;color:var(--mut)">${escHtml(g.co||'')}</div></td>
@@ -5466,11 +5529,11 @@ function renderPodcast(){
         <td><select class="form-select" style="padding:4px 6px;font-size:11px" onchange="updatePodStatus('${g.id}',this.value)">${PODCAST_STATUSES.map(s=>`<option${s===g.status?' selected':''}>${s}</option>`).join('')}</select></td>
         <td style="font-size:11px">${g.date?fmtShort(g.date):''}</td>
         <td style="font-size:11px;color:var(--mut)">${escHtml(g.notes||'')}</td>
-        <td><button class="btn btn-ghost btn-sm" onclick="editGuestModal('${g.id}')">Edit</button></td>
+        <td style="white-space:nowrap">${g.status==='Confirmed'?`<button class="btn btn-ghost btn-sm" onclick="podEpModal(null,'${g.id}')" title="Book an episode with this guest">🎙 Book</button>`:''}<button class="btn btn-ghost btn-sm" onclick="editGuestModal('${g.id}')">Edit</button></td>
       </tr>`).join('')}
       </tbody></table>`
-    : '<div class="empty">No podcast guests yet. Target: 20+ in the pipeline.</div>';
-  document.getElementById('topbar-actions').innerHTML=`<button class="btn btn-k btn-sm" onclick="addGuestModal()">+ Add Guest</button>`;
+    : '<div class="empty">No podcast guests yet. Target: 20+ in the pipeline.</div>');
+  document.getElementById('topbar-actions').innerHTML=`<button class="btn btn-k btn-sm" onclick="podEpModal()">+ Add Episode</button><button class="btn btn-ghost btn-sm" onclick="addGuestModal()">+ Add Guest</button>`;
   renderPodcastChecklist();
 }
 function updatePodStatus(id,val){const list=ls.get('tuf_podcast',[]);const i=list.findIndex(x=>x.id===id);if(i<0)return;list[i].status=val;ls.set('tuf_podcast',list);if(val==='Confirmed')addNotif(`Podcast guest confirmed: ${list[i].name}`);renderPodcast();}
@@ -5491,6 +5554,84 @@ function editGuestModal(id){const g=ls.get('tuf_podcast',[]).find(x=>x.id===id);
 `,`<button class="btn btn-red btn-sm" onclick="deleteGuest('${id}')">Delete</button><button class="btn btn-ghost" onclick="closeModal()">Cancel</button><button class="btn btn-k" onclick="updateGuest('${id}')">Save</button>`);}
 function updateGuest(id){const list=ls.get('tuf_podcast',[]);const i=list.findIndex(x=>x.id===id);if(i<0)return;list[i]={...list[i],topic:document.getElementById('eg-topic').value.trim(),status:document.getElementById('eg-status').value,date:document.getElementById('eg-date').value,notes:document.getElementById('eg-notes').value.trim()};ls.set('tuf_podcast',list);closeModal();renderPodcast();}
 function deleteGuest(id){if(!confirm('Delete?'))return;ls.set('tuf_podcast',ls.get('tuf_podcast',[]).filter(x=>x.id!==id));closeModal();renderPodcast();}
+
+// ── Podcast episodes: the plan. The rhythm is 2 episodes a month, recorded
+// back to back on one recording day. tuf_episodes:
+// [{id,title,guestId,guestName,recordDate,publishDate,status,notes}]
+const POD_PER_MONTH=2;
+const POD_EP_STATUSES=['Planned','Recorded','Published'];
+function podEpisodes(){ return (ls.get('tuf_episodes',[])||[]).slice().sort((a,b)=>(a.recordDate||'').localeCompare(b.recordDate||'')); }
+function podNextDay(){
+  const today=new Date().toISOString().slice(0,10);
+  const up=podEpisodes().filter(e=>e.recordDate&&e.recordDate>=today&&e.status==='Planned');
+  if(!up.length) return null;
+  const date=up[0].recordDate;
+  return {date, eps:up.filter(e=>e.recordDate===date)};
+}
+function podMonthCount(){
+  const m=new Date().toISOString().slice(0,7);
+  return podEpisodes().filter(e=>(e.recordDate||'').slice(0,7)===m).length;
+}
+function podDue(){
+  const next=podNextDay(); const monthCount=podMonthCount();
+  const due=!next&&monthCount<POD_PER_MONTH;
+  const urgent=due&&monthCount===0;
+  return {monthCount,target:POD_PER_MONTH,next,due,urgent};
+}
+// Moving an episode to Recorded/Published pulls the linked guest forward
+// through the pipeline too (never backwards).
+function podGuestAdvance(e){
+  if(!e||!e.guestId) return;
+  const want=e.status==='Recorded'?'Recorded':e.status==='Published'?'Published':null;
+  if(!want) return;
+  const guests=ls.get('tuf_podcast',[])||[]; const g=guests.find(x=>x.id===e.guestId); if(!g) return;
+  if(PODCAST_STATUSES.indexOf(want)>PODCAST_STATUSES.indexOf(g.status)){ g.status=want; ls.set('tuf_podcast',guests); }
+}
+function podEpModal(id,guestId){
+  const eps=ls.get('tuf_episodes',[])||[]; const e=id?eps.find(x=>x.id===id):null;
+  const guests=ls.get('tuf_podcast',[])||[];
+  const g=!e&&guestId?guests.find(x=>x.id===guestId):null;
+  const selGuest=e?e.guestId:(g?g.id:'');
+  showModal(e?'Edit episode':'Plan an episode',`
+    <div class="form-row"><label class="form-label">Episode title</label><input class="form-input" id="ep-title" value="${escHtml(e?e.title:(g?('Episode with '+g.name):''))}" placeholder="e.g. Scaling past yourself"></div>
+    <div class="form-row"><label class="form-label">Guest</label><select class="form-select" id="ep-guest">
+      <option value="">No guest / solo</option>
+      ${guests.map(x=>`<option value="${x.id}"${selGuest===x.id?' selected':''}>${escHtml(x.name)}${x.co?' ('+escHtml(x.co)+')':''}</option>`).join('')}
+    </select></div>
+    <div class="grid-2">
+      <div class="form-row"><label class="form-label">Recording date</label><input class="form-input" type="date" id="ep-record" value="${e?e.recordDate||'':''}"></div>
+      <div class="form-row"><label class="form-label">Publish date (optional)</label><input class="form-input" type="date" id="ep-publish" value="${e?e.publishDate||'':''}"></div>
+    </div>
+    <div class="form-row"><label class="form-label">Status</label><select class="form-select" id="ep-status">${POD_EP_STATUSES.map(s=>`<option${e&&e.status===s?' selected':''}>${s}</option>`).join('')}</select></div>
+    <div class="form-row"><label class="form-label">Notes</label><textarea class="form-textarea" id="ep-notes">${escHtml(e?e.notes||'':'')}</textarea></div>
+  `,`${e?`<button class="btn btn-red btn-sm" onclick="podEpDelete('${e.id}')">Delete</button>`:''}<button class="btn btn-ghost" onclick="closeModal()">Cancel</button><button class="btn btn-k" onclick="podEpSave('${e?e.id:''}')">Save</button>`);
+}
+function podEpSave(id){
+  const eps=ls.get('tuf_episodes',[])||[];
+  const guests=ls.get('tuf_podcast',[])||[];
+  const gid=document.getElementById('ep-guest').value;
+  const g=guests.find(x=>x.id===gid);
+  const rec={
+    title:document.getElementById('ep-title').value.trim(),
+    guestId:gid, guestName:g?g.name:'',
+    recordDate:document.getElementById('ep-record').value,
+    publishDate:document.getElementById('ep-publish').value,
+    status:document.getElementById('ep-status').value,
+    notes:document.getElementById('ep-notes').value.trim()
+  };
+  if(!rec.title&&!rec.guestName){ alert('Give the episode a title or a guest.'); return; }
+  if(!rec.title) rec.title='Episode with '+rec.guestName;
+  if(id){ const i=eps.findIndex(x=>x.id===id); if(i<0) return; eps[i]={...eps[i],...rec}; podGuestAdvance(eps[i]); }
+  else { eps.push({id:uid(),...rec}); podGuestAdvance(eps[eps.length-1]); }
+  ls.set('tuf_episodes',eps); closeModal(); renderPodcast();
+}
+function podEpDelete(id){ if(!confirm('Delete this episode?')) return; ls.set('tuf_episodes',(ls.get('tuf_episodes',[])||[]).filter(x=>x.id!==id)); closeModal(); renderPodcast(); }
+function podEpStatus(id,val){
+  const eps=ls.get('tuf_episodes',[])||[]; const e=eps.find(x=>x.id===id); if(!e) return;
+  e.status=val; podGuestAdvance(e); ls.set('tuf_episodes',eps);
+  if(val==='Published') addNotif('Podcast episode published: '+e.title);
+  renderPodcast();
+}
 
 // ═══ IP REGISTER ═════════════════════════════════════════════════════════════
 function renderIP(){
