@@ -512,6 +512,7 @@ details>summary::-webkit-details-marker{display:none}
     <div class="sb-item" data-page="social" onclick="nav('social',this)"><span class="ico">📊</span>Social Media</div>
     <div class="sb-item" data-page="content" onclick="nav('content',this)"><span class="ico">🗓️</span>Content Calendar</div>
     <div class="sb-item" data-page="podcast" onclick="nav('podcast',this)"><span class="ico">🎙</span>Podcast</div>
+    <div class="sb-item" data-page="growthplan" onclick="nav('growthplan',this)"><span class="ico">📈</span>Growth Plan</div>
     <div class="sb-item" data-page="files" onclick="nav('files',this)"><span class="ico">📁</span>Documents</div>
     <div class="sb-item" data-page="testimonials" onclick="nav('testimonials',this)"><span class="ico">⭐</span>Testimonials</div>
     <div class="sb-item" data-page="emaillist" onclick="nav('emaillist',this)"><span class="ico">📧</span>Email List</div>
@@ -778,6 +779,9 @@ details>summary::-webkit-details-marker{display:none}
 
     <!-- ═══ COACHING SESSIONS ═══ -->
     <div class="page" id="page-coaching"><div id="coaching-content"></div></div>
+
+    <!-- ═══ GROWTH PLAN ═══ -->
+    <div class="page" id="page-growthplan"><div id="growth-content"></div></div>
 
     <!-- ═══ PODCAST ═══ -->
     <div class="page" id="page-podcast">
@@ -1770,7 +1774,7 @@ const PAGE_TITLES = {
   boardroom:'Boardroom',content:'Content Calendar',social:'Social Media',ideas:'Content Ideas',kpis:'KPIs',aidump:'AI Tool (Dump)',buildreq:'Build Requests',clientanalysis:'Client Analysis',emaillist:'Email List',watemplates:'WhatsApp Templates',
   prospects:'Warm Prospects',testimonials:'Testimonials',
   onboarding:'Onboarding',sessions:'Session Planner',events:'Event CRM',padel:'Padel Event',
-  calendar:'Content Calendar',podcast:'Podcast Pipeline',coaching:'Coaching Sessions',ip:'IP Register',files:'Documents',
+  calendar:'Content Calendar',podcast:'Podcast Pipeline',coaching:'Coaching Sessions',growthplan:'Growth Plan',ip:'IP Register',files:'Documents',
   capmap:'Capability Map',goals:'Goals & OKRs',fourbox:'The 4 Box Model',budget:'Budget',
   teamtasks:'Team Tasks',roles:'Roles',reviews:'Weekly Review',kb:'Knowledge Base',notifs:'Notifications',
   csuite:'C-Suite',holidays:'Holidays',daily:'Daily Progress',
@@ -1806,7 +1810,7 @@ function renderPage(page){
     boardroom:renderBoardroom, content:renderContent, social:renderSocial, ideas:renderIdeas, kpis:renderKPIs, aidump:renderAIDump, buildreq:renderBuildRequests, clientanalysis:renderClientAnalysis, emaillist:renderEmailList, watemplates:renderWATemplates,
     prospects:renderProspects, testimonials:renderTestimonials,
     onboarding:renderOnboarding, sessions:renderSessions, events:renderEventCRM, padel:renderPadel,
-    calendar:renderCalendar, podcast:renderPodcast, coaching:renderCoaching, ip:renderIP, files:renderFiles,
+    calendar:renderCalendar, podcast:renderPodcast, coaching:renderCoaching, growthplan:renderGrowthPlan, ip:renderIP, files:renderFiles,
     capmap:renderCapMap, goals:renderGoals, fourbox:renderFourBox, budget:renderBudget,
     teamtasks:renderTeamTasks, roles:renderRoles, reviews:renderReviews, kb:renderKB, notifs:renderNotifs,
     csuite:renderCSuite, holidays:renderHolidays, daily:renderDaily, teamoverview:renderTeamOverview, myday:renderMyDay,
@@ -2752,6 +2756,336 @@ async function deleteTask(id){
   renderTasks(); renderBriefTasks();
 }
 
+// ═══ GROWTH PLAN (Marketing & Sales checklist — the six client target) ═══════
+// The uncle's 15-section checklist as a living tracker. One-off build sections
+// with owners, Weekly Activity Targets that reset every Monday (ticks keyed by
+// cmWeekKey), and a Monthly Scorecard of real numbers. Store: tuf_growth_plan.
+const GROWTH_FOCUS_TEST='If an activity cannot be connected to a new relationship, a warm introduction, a qualified conversation or a new client, it should not be a priority.';
+const GROWTH_PLAN_DEFAULT={
+  sections:[
+    {title:'Immediate Priorities for the Team',items:[
+      'Finalise the Ultimate Founder proposition and ideal-client profile.',
+      'Audit and update all current marketing and sales materials.',
+      'Select key clients and begin producing case studies.',
+      'Build the priority introducer, collaborator and referral lists.',
+      'Create the introducer one-pager and introduction template.',
+      'Set up the CRM stages, ownership and reporting.',
+      'Confirm the networking and panel-event calendar.',
+      'Launch personal outreach to the first 15 introducers.',
+      'Begin asking existing clients and trusted contacts for specific introductions.',
+      'Publish the first case-study campaign.',
+      'Begin the weekly pipeline and marketing meeting.',
+      'Review progress against the six-client target every Friday.']},
+    {title:'1. Proposition and Target Market',items:[
+      'Define the ideal Ultimate Founder client: business size and revenue; founder profile; current challenges; growth ambitions; ability and willingness to invest.',
+      'Clearly articulate the problems Ultimate Founder solves.',
+      'Define the outcomes clients can expect.',
+      'Clarify the structure, duration and investment.',
+      "Create a concise 'Why Ultimate Founder?' positioning statement.",
+      'Create a one-sentence explanation that introducers can easily repeat.',
+      'Identify the triggers that indicate a founder is ready for support.',
+      'Agree clear qualification and disqualification criteria.',
+      'Define the journey from first conversation to becoming a client.']},
+    {title:'2. Core Marketing and Sales Assets',items:[
+      'Update the main Ultimate Founder brochure.',
+      'Create a shorter two-page overview for prospective clients.',
+      'Create a one-page introducer guide covering who we help, problems to listen for, referral triggers, how to introduce us and what happens next.',
+      'Create a partnership and collaboration pack.',
+      'Create a concise panel-speaker biography.',
+      'Create a founder-focused speaker and panel topic sheet.',
+      'Update the Ultimate Founder website or landing page.',
+      'Add a clear call to action to book an initial conversation.',
+      'Create a frequently asked questions document.',
+      'Create a proposal template.',
+      'Create a follow-up summary template for prospect meetings.',
+      'Create an onboarding overview for new clients.',
+      'Ensure branding, language and calls to action are consistent across every asset.']},
+    {title:'3. Case Studies and Social Proof',items:[
+      'Select five to eight key clients for case studies.',
+      'Interview each selected client.',
+      'Create a detailed written case study for each, covering the original situation, challenges, work completed and measurable outcomes.',
+      'Secure written approval to use names, quotes, logos and results.',
+      'Create a one-page version of every case study.',
+      'Create a short sales-deck version of every case study.',
+      'Turn each case study into an Instagram carousel.',
+      'Adapt each case study for LinkedIn.',
+      'Create short testimonial graphics from other client feedback.',
+      'Group testimonials by common founder challenge.',
+      'Record client video testimonials where possible.',
+      'Build a searchable testimonial and evidence library for the team.',
+      'Add relevant case studies to proposals and prospect follow-ups.']},
+    {title:'4. Introducer Partnership Programme',note:'Priority introducers: accountants, corporate-finance advisers, lawyers, wealth managers, business brokers, investors, fractional finance directors, leadership consultants and other trusted founder advisers.',items:[
+      'Build a list of 30-40 priority introducers.',
+      'Categorise them as existing relationships, warm connections or new targets.',
+      'Identify the person responsible for each relationship.',
+      'Prioritise the top 15 introducers most likely to generate suitable opportunities.',
+      'Create personalised outreach for each introducer.',
+      'Book one-to-one meetings to understand their clients and priorities.',
+      'Explain the Ultimate Founder proposition and ideal referral profile.',
+      'Ask what would make them comfortable introducing a client.',
+      'Provide the introducer guide and relevant case studies.',
+      'Agree how introductions will be handled and followed up.',
+      'Create a simple email introduction template they can use.',
+      'Develop opportunities to provide value through private roundtables, founder briefings, panel events, educational content, joint webinars and guest articles or podcasts.',
+      'Record every introducer, conversation and next action in the CRM.',
+      'Establish a monthly relationship-nurturing cadence.',
+      'Thank introducers promptly and update them appropriately after introductions.',
+      'Track introductions, qualified opportunities and clients by introducer.']},
+    {title:'5. Strategic Collaborations',items:[
+      'Identify 10-15 organisations that already serve the target audience.',
+      'Assess the audience fit, credibility and mutual value of each collaboration.',
+      'Develop a specific collaboration idea for each priority partner.',
+      'Create a joint event or campaign proposal.',
+      'Agree responsibilities, promotion commitments and follow-up arrangements.',
+      'Create co-branded event and marketing assets.',
+      'Set up a compliant process for sharing attendee details and consent.',
+      'Agree how leads and opportunities will be attributed.',
+      'Schedule post-campaign reviews with every partner.',
+      'Develop successful one-off collaborations into ongoing partnerships.']},
+    {title:'6. Referrals from Clients and the Existing Network',items:[
+      'Create a list of current clients, former clients and trusted contacts who could introduce suitable founders.',
+      'Identify the best moment to ask each person for an introduction.',
+      'Create a personal referral-request message.',
+      'Make the ideal client description specific and easy to understand.',
+      'Give contacts a ready-written introduction email.',
+      'Ask for introductions to named individuals where appropriate.',
+      'Build referral requests into client reviews and successful project milestones.',
+      'Follow up without making the relationship feel transactional.',
+      'Thank every referrer personally.',
+      'Keep referrers informed while respecting prospect confidentiality.',
+      'Invite key clients and referrers to exclusive events.',
+      'Track the number and quality of referrals generated.']},
+    {title:'7. Networking Strategy',items:[
+      'Identify the events regularly attended by ideal clients and introducers.',
+      'Prioritise quality and relevance over the number of events attended.',
+      'Select a manageable calendar of high-value networking opportunities.',
+      'Set a clear objective before every event.',
+      'Research priority attendees in advance.',
+      'Arrange meetings before the event where possible.',
+      'Prepare a natural and concise explanation of Ultimate Founder.',
+      'Avoid selling during the initial conversation.',
+      'Record relevant contacts and notes within 24 hours.',
+      'Send personalised follow-ups within 48 hours.',
+      'Invite suitable contacts to a useful next step: a coffee, one-to-one meeting, founder event, private roundtable, relevant case study or initial diagnostic conversation.',
+      'Track conversations, follow-ups, meetings and resulting opportunities.']},
+    {title:'8. Panel Events and Founder Roundtables',items:[
+      'Define three to five compelling topics based on current founder challenges.',
+      'Make each topic commercially relevant without turning it into a sales presentation.',
+      'Identify credible panel guests who bring an audience and complementary expertise.',
+      'Secure an appropriate venue and event partners.',
+      'Create the event landing page and registration process.',
+      'Prepare invitation emails and direct messages.',
+      'Create social media graphics and speaker assets.',
+      'Agree a promotion schedule with every panellist and partner.',
+      'Personally invite priority prospects and introducers.',
+      'Collect relevant qualification information during registration.',
+      'Prepare moderator questions and discussion prompts.',
+      'Include a clear but understated next step at the event.',
+      'Capture professional photography and video.',
+      'Turn the discussion into short-form content, articles and carousels.',
+      'Send a value-led follow-up within 24-48 hours.',
+      'Personally contact high-potential attendees.',
+      'Book follow-up conversations within seven days.',
+      'Measure attendance, ideal-client fit, meetings booked and opportunities created.']},
+    {title:'9. Content and Social Media',items:[
+      'Define four to six Ultimate Founder content themes.',
+      'Build content around the real challenges, decisions and ambitions of founders.',
+      'Publish case studies consistently.',
+      'Turn client feedback into Instagram carousels.',
+      'Publish founder insights and lessons on LinkedIn.',
+      'Share clips and insights from panel events.',
+      'Feature collaboration partners and introducers where appropriate.',
+      'Create content that helps introducers recognise a suitable referral.',
+      'Include clear calls to action without making every post promotional.',
+      'Create a content calendar through the end of the year.',
+      'Repurpose every substantial piece of content across multiple formats.',
+      'Track enquiries, conversations and introductions generated by content, not just engagement.']},
+    {title:'10. Lead Capture and CRM',items:[
+      'Use one central CRM or pipeline tracker.',
+      'Record all prospects, introducers, referrers, collaborators and event attendees.',
+      'Capture the original source of every opportunity.',
+      'Define the pipeline stages: Identified; Introduction or initial contact; First conversation booked; Qualified; Diagnostic or discovery meeting; Proposal or invitation; Decision and follow-up; Won, lost or nurture.',
+      'Define the required next action at every stage.',
+      'Assign an owner to every relationship and opportunity.',
+      'Set follow-up dates rather than relying on memory.',
+      'Create a reason-lost field to improve future marketing and sales.',
+      'Review pipeline accuracy every week.']},
+    {title:'11. Prospect Nurture Journey',items:[
+      'Create a response process for every new introduction or enquiry.',
+      'Respond to warm introductions within one working day.',
+      'Send a clear explanation of the first conversation.',
+      'Research the founder and business before meeting.',
+      'Use a consistent qualification and discovery framework.',
+      'Send a personalised follow-up after each conversation.',
+      'Share the most relevant case study or resource.',
+      'Agree a specific next action and date.',
+      'Create a nurture sequence for prospects who are interested but not ready.',
+      'Maintain personal contact with high-value prospects.',
+      'Use event invitations, insights and case studies as reasons to reconnect.',
+      'Define when an opportunity should be paused, closed or reactivated.']},
+    {title:'12. Sales Conversion',items:[
+      'Create a structured first-conversation guide.',
+      'Create a deeper diagnostic-meeting framework.',
+      "Ensure the sales conversation focuses on the founder's situation, desired outcome and cost of inaction.",
+      'Present the most relevant evidence and case studies.',
+      'Confirm decision-making authority, timing and investment readiness.',
+      "Tailor the proposal to the prospect's priorities.",
+      'Keep proposals concise and outcome-focused.',
+      'Agree the decision process before sending a proposal.',
+      'Book the proposal follow-up meeting in advance.',
+      'Create a consistent approach to common questions and objections.',
+      'Capture learning from every unsuccessful opportunity.',
+      'Make onboarding immediate and professional once a client commits.']}
+  ],
+  weekly:{note:'Planning assumption: to secure six clients, aim to generate 18-24 genuinely qualified opportunities.',items:[
+    'Contact or follow up with five priority introducers.',
+    'Hold at least two introducer or collaboration meetings.',
+    'Make three specific referral requests.',
+    'Attend or host one relevant networking activity.',
+    'Publish two to three high-quality pieces of content.',
+    'Follow up every live prospect.',
+    'Add new prospects and relationship opportunities to the CRM.',
+    'Review the six-client target and pipeline position.',
+    'Identify stalled opportunities and agree the next action.']},
+  scorecard:['New introducers identified','Introducer meetings held','Active introducer relationships','Introductions received','Referral requests made','Referrals received','Collaborations agreed','Events held or attended','Ideal prospects attending events','Initial conversations booked','Qualified opportunities created','Proposals or invitations issued','New clients secured','Conversion rate by lead source','Estimated pipeline value','Progress against the six-client target']
+};
+let gpOpenSecs=new Set(), gpScoreOff=0;
+function gpSeed(){
+  return {
+    target:6, won:0, seeded:true,
+    sections:GROWTH_PLAN_DEFAULT.sections.map(s=>({id:uid(),title:s.title,note:s.note||'',owner:'',items:s.items.map(t=>({id:uid(),text:t,done:false,owner:'',due:'',taskId:''}))})),
+    weekly:{owner:'',note:GROWTH_PLAN_DEFAULT.weekly.note,items:GROWTH_PLAN_DEFAULT.weekly.items.map(t=>({id:uid(),text:t})),ticks:{}},
+    scorecard:{owner:'',metrics:GROWTH_PLAN_DEFAULT.scorecard.map(l=>({id:uid(),label:l})),values:{}}
+  };
+}
+function gpGet(){
+  let g=ls.get('tuf_growth_plan',null);
+  if(g&&g.seeded) return g;
+  if(typeof sbLoadOK!=='undefined'&&!sbLoadOK) return g||gpSeed(); // never seed-save over an unloaded server
+  g=gpSeed(); ls.set('tuf_growth_plan',g); return g;
+}
+function gpSave(g){ ls.set('tuf_growth_plan',g); }
+function gpProgress(g){ let d=0,t=0; g.sections.forEach(s=>{ t+=s.items.length; d+=s.items.filter(i=>i.done).length; }); return {done:d,total:t}; }
+function gpWeekDone(g){ return (((g.weekly||{}).ticks||{})[cmWeekKey(0)]||[]).length; }
+function gpMonthKey(off){ const d=new Date(); const x=new Date(d.getFullYear(),d.getMonth()+off,1); return x.getFullYear()+'-'+String(x.getMonth()+1).padStart(2,'0'); }
+function gpMonthLabel(key){ const [y,m]=key.split('-').map(Number); return new Date(y,m-1,1).toLocaleDateString('en-GB',{month:'long',year:'numeric'}); }
+// ── Mutators ──
+function gpToggleSec(id){ if(gpOpenSecs.has(id)) gpOpenSecs.delete(id); else gpOpenSecs.add(id); renderGrowthPlan(); }
+function gpSecOwner(id,val){ const g=gpGet(); const s=g.sections.find(x=>x.id===id); if(!s) return; s.owner=val; gpSave(g); }
+function gpToggleItem(sid,iid){ const g=gpGet(); const s=g.sections.find(x=>x.id===sid); const it=s&&s.items.find(x=>x.id===iid); if(!it) return; it.done=!it.done; gpSave(g); renderGrowthPlan(); }
+function gpAddItem(sid){ const inp=document.getElementById('gp-add-'+sid); if(!inp) return; const t=inp.value.trim(); if(!t) return; const g=gpGet(); const s=g.sections.find(x=>x.id===sid); if(!s) return; s.items.push({id:uid(),text:t,done:false,owner:'',due:'',taskId:''}); gpSave(g); renderGrowthPlan(); }
+function gpEditItem(sid,iid){
+  const g=gpGet(); const s=g.sections.find(x=>x.id===sid); const it=s&&s.items.find(x=>x.id===iid); if(!it) return;
+  showModal('Edit item',`
+    <div class="form-row"><label class="form-label">Item</label><textarea class="form-textarea" id="gp-e-text">${escHtml(it.text)}</textarea></div>
+    <div class="grid-2">
+      <div class="form-row"><label class="form-label">Owner</label><select class="form-select" id="gp-e-owner"><option value="">None</option>${HOL_TEAM.map(p=>`<option${it.owner===p?' selected':''}>${p}</option>`).join('')}</select></div>
+      <div class="form-row"><label class="form-label">Deadline</label><input class="form-input" type="date" id="gp-e-due" value="${it.due||''}"></div>
+    </div>
+  `,`<button class="btn btn-ghost" onclick="closeModal()">Cancel</button><button class="btn btn-k" onclick="gpEditItemSave('${sid}','${iid}')">Save</button>`);
+}
+function gpEditItemSave(sid,iid){
+  const g=gpGet(); const s=g.sections.find(x=>x.id===sid); const it=s&&s.items.find(x=>x.id===iid); if(!it) return;
+  it.text=document.getElementById('gp-e-text').value.trim()||it.text;
+  it.owner=document.getElementById('gp-e-owner').value;
+  it.due=document.getElementById('gp-e-due').value;
+  gpSave(g); closeModal(); renderGrowthPlan();
+}
+function gpDelItem(sid,iid){ if(!confirm('Delete this item?')) return; const g=gpGet(); const s=g.sections.find(x=>x.id===sid); if(!s) return; s.items=s.items.filter(x=>x.id!==iid); gpSave(g); renderGrowthPlan(); }
+async function gpPushTask(sid,iid){
+  const g=gpGet(); const s=g.sections.find(x=>x.id===sid); const it=s&&s.items.find(x=>x.id===iid); if(!it) return;
+  if(it.taskId){ addNotif('Already linked to a team task'); return; }
+  const id=uid();
+  await commitTasks(arr=>{ arr.push({id,title:it.text,owner:it.owner||s.owner||'',priority:'Medium',dueDate:it.due||'',status:'Not Started',linkedTo:'',notes:'From the Growth Plan · '+s.title,section:'sales',createdBy:CURRENT_USER,createdAt:new Date().toISOString()}); });
+  it.taskId=id; gpSave(g); addNotif('Task created: '+it.text.slice(0,60)); renderGrowthPlan();
+}
+function gpWon(d){ const g=gpGet(); g.won=Math.max(0,(g.won||0)+d); gpSave(g); if(d>0) addNotif('Client secured. '+g.won+' of '+g.target+' on the board.'); renderGrowthPlan(); }
+function gpWeekTick(iid){ const g=gpGet(); const k=cmWeekKey(0); g.weekly.ticks=g.weekly.ticks||{}; const arr=g.weekly.ticks[k]||[]; const i=arr.indexOf(iid); if(i>=0) arr.splice(i,1); else arr.push(iid); g.weekly.ticks[k]=arr; gpSave(g); renderGrowthPlan(); }
+function gpWeekOwner(val){ const g=gpGet(); g.weekly.owner=val; gpSave(g); }
+function gpScoreNav(d){ gpScoreOff=Math.min(0,gpScoreOff+d); renderGrowthPlan(); }
+function gpScoreSet(mid,val){ const g=gpGet(); const k=gpMonthKey(gpScoreOff); g.scorecard.values=g.scorecard.values||{}; const m=g.scorecard.values[k]=g.scorecard.values[k]||{}; const n=parseFloat(val); if(val===''||isNaN(n)) delete m[mid]; else m[mid]=n; gpSave(g); }
+function gpMetricAdd(){ const inp=document.getElementById('gp-metric-add'); if(!inp) return; const t=inp.value.trim(); if(!t) return; const g=gpGet(); g.scorecard.metrics.push({id:uid(),label:t}); gpSave(g); renderGrowthPlan(); }
+function gpMetricDel(mid){ if(!confirm('Remove this metric? Its monthly numbers stay stored.')) return; const g=gpGet(); g.scorecard.metrics=g.scorecard.metrics.filter(x=>x.id!==mid); gpSave(g); renderGrowthPlan(); }
+// ── Page ──
+function renderGrowthPlan(){
+  const el=document.getElementById('growth-content'); if(!el) return;
+  const g=gpGet();
+  if(!renderGrowthPlan._init&&g.sections.length){ renderGrowthPlan._init=true; gpOpenSecs.add(g.sections[0].id); }
+  const pr=gpProgress(g);
+  const pct=pr.total?Math.round(pr.done/pr.total*100):0;
+  const wkItems=(g.weekly&&g.weekly.items)||[]; const wkDone=gpWeekDone(g);
+  const mk=gpMonthKey(gpScoreOff), mkPrev=gpMonthKey(gpScoreOff-1);
+  const vals=((g.scorecard||{}).values||{})[mk]||{}, prev=((g.scorecard||{}).values||{})[mkPrev]||{};
+  el.innerHTML=`
+  <div class="card" style="border-left:4px solid var(--y);margin-bottom:14px">
+    <div style="display:flex;gap:16px;align-items:center;flex-wrap:wrap">
+      <div>
+        <div style="font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--mut)">The six client target</div>
+        <div style="font-size:30px;font-weight:900;line-height:1">${g.won} <span style="font-size:15px;color:var(--mut);font-weight:600">of ${g.target} secured</span></div>
+      </div>
+      <div style="display:flex;gap:6px"><button class="btn btn-ghost btn-sm" onclick="gpWon(1)">+ Client won</button>${g.won>0?`<button class="btn btn-ghost btn-sm" onclick="gpWon(-1)">−</button>`:''}</div>
+      <div style="flex:1;min-width:180px">
+        ${podChkBar(pr.done,pr.total)}
+        <div style="font-size:11px;color:var(--mut);margin-top:4px">Build progress: ${pr.done} of ${pr.total} items (${pct}%) · This week: ${wkDone} of ${wkItems.length} targets</div>
+      </div>
+    </div>
+    <div style="font-size:11.5px;color:var(--mut);margin-top:10px;border-top:1px solid #EEE;padding-top:8px"><b>The focus test:</b> ${escHtml(GROWTH_FOCUS_TEST)}</div>
+  </div>
+  <div class="card" style="margin-bottom:14px">
+    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:6px">
+      <div style="font-weight:800">Weekly Activity Targets</div>
+      <span class="tag ${wkDone>=wkItems.length&&wkItems.length?'tag-g':'tag-a'}" style="font-size:9px">This week: ${wkDone}/${wkItems.length}</span>
+      <span style="flex:1"></span>
+      <span style="font-size:11px;color:var(--mut)">Owner</span>
+      <select class="form-select" style="width:auto;padding:3px 8px;font-size:11px" onchange="gpWeekOwner(this.value)"><option value="">Team</option>${HOL_TEAM.map(p=>`<option${(g.weekly.owner||'')===p?' selected':''}>${p}</option>`).join('')}</select>
+    </div>
+    ${g.weekly.note?`<div style="font-size:11.5px;color:var(--mut);margin-bottom:8px">${escHtml(g.weekly.note)}</div>`:''}
+    ${wkItems.map(i=>{const on=(((g.weekly.ticks||{})[cmWeekKey(0)])||[]).indexOf(i.id)>=0;return `<div class="chk-row${on?' done':''}"><div class="chk-box" onclick="gpWeekTick('${i.id}')">${on?'✓':''}</div><span class="chk-text" style="flex:1;font-size:12.5px;cursor:pointer" onclick="gpWeekTick('${i.id}')">${escHtml(i.text)}</span></div>`;}).join('')}
+    <div style="font-size:10.5px;color:var(--mut);margin-top:6px">Ticks reset every Monday. History is kept.</div>
+  </div>
+  <div class="card" style="margin-bottom:14px">
+    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:10px">
+      <div style="font-weight:800">Monthly Scorecard</div>
+      <span style="flex:1"></span>
+      <button class="btn btn-ghost btn-sm" onclick="gpScoreNav(-1)">‹</button>
+      <b style="font-size:13px">${gpMonthLabel(mk)}</b>
+      <button class="btn btn-ghost btn-sm" ${gpScoreOff>=0?'disabled style="opacity:.35"':''} onclick="gpScoreNav(1)">›</button>
+    </div>
+    <div style="overflow-x:auto"><table class="tbl"><thead><tr><th>Metric</th><th style="width:110px">${gpMonthLabel(mk).split(' ')[0]}</th><th style="width:90px">${gpMonthLabel(mkPrev).split(' ')[0]}</th><th style="width:34px"></th></tr></thead><tbody>
+      ${g.scorecard.metrics.map(m=>{const v=vals[m.id],p=prev[m.id];const delta=(v!=null&&p!=null)?(v>p?'<span style="color:var(--grn)">▲</span>':v<p?'<span style="color:var(--red)">▼</span>':'·'):'';
+      return `<tr><td style="font-size:12px">${escHtml(m.label)}</td>
+        <td><input class="form-input" type="number" step="any" style="padding:4px 8px;font-size:12px" value="${v!=null?v:''}" onchange="gpScoreSet('${m.id}',this.value)"></td>
+        <td style="font-size:12px;color:var(--mut)">${p!=null?p:''} ${delta}</td>
+        <td><button class="btn btn-ghost btn-sm" style="padding:1px 7px" onclick="gpMetricDel('${m.id}')">✕</button></td></tr>`;}).join('')}
+    </tbody></table></div>
+    <div style="display:flex;gap:6px;margin-top:8px"><input class="form-input" id="gp-metric-add" placeholder="Add a metric…" style="flex:1;padding:6px 10px;font-size:12px" onkeydown="if(event.key==='Enter')gpMetricAdd()"><button class="btn btn-ghost btn-sm" onclick="gpMetricAdd()">Add</button></div>
+  </div>
+  <div class="sec-hdr">The build</div>
+  ${g.sections.map(s=>{
+    const done=s.items.filter(i=>i.done).length; const open=gpOpenSecs.has(s.id);
+    return `<div class="card" style="margin-bottom:10px${done===s.items.length&&s.items.length?';border-left:4px solid var(--grn)':''}">
+    <div style="display:flex;gap:10px;align-items:center;cursor:pointer;flex-wrap:wrap" onclick="gpToggleSec('${s.id}')">
+      <div style="flex:1;min-width:200px"><div style="font-weight:700">${escHtml(s.title)}</div>${s.note?`<div style="font-size:11px;color:var(--mut);margin-top:2px">${escHtml(s.note)}</div>`:''}</div>
+      <select class="form-select" style="width:auto;padding:3px 8px;font-size:11px" onclick="event.stopPropagation()" onchange="gpSecOwner('${s.id}',this.value)"><option value="">Owner…</option>${HOL_TEAM.map(p=>`<option${s.owner===p?' selected':''}>${p}</option>`).join('')}</select>
+      <div style="width:100px">${podChkBar(done,s.items.length)}</div>
+      <span style="font-size:11px;color:var(--mut);white-space:nowrap">${done}/${s.items.length} ${open?'▾':'▸'}</span>
+    </div>
+    ${open?`<div style="margin-top:10px">
+      ${s.items.map(i=>`<div class="chk-row${i.done?' done':''}">
+        <div class="chk-box" onclick="gpToggleItem('${s.id}','${i.id}')">${i.done?'✓':''}</div>
+        <span class="chk-text" style="flex:1;font-size:12.5px;cursor:pointer" onclick="gpToggleItem('${s.id}','${i.id}')">${escHtml(i.text)}</span>
+        ${i.owner?`<span class="tag tag-b" style="font-size:9px">${escHtml(i.owner)}</span>`:''}
+        ${i.due?`<span style="font-size:10.5px;color:${daysUntil(i.due)<0&&!i.done?'var(--red)':'var(--mut)'};white-space:nowrap">${fmtShort(i.due)}</span>`:''}
+        ${i.taskId?`<span title="Linked to a team task" style="font-size:10px;color:var(--grn);white-space:nowrap">✓ task</span>`:`<button class="btn btn-ghost btn-sm" style="padding:1px 7px" title="Create a team task from this item" onclick="gpPushTask('${s.id}','${i.id}')">→ Task</button>`}
+        <button class="btn btn-ghost btn-sm" style="padding:1px 7px" onclick="gpEditItem('${s.id}','${i.id}')">✎</button>
+        <button class="btn btn-ghost btn-sm" style="padding:1px 7px" onclick="gpDelItem('${s.id}','${i.id}')">✕</button>
+      </div>`).join('')}
+      <div style="display:flex;gap:6px;margin-top:8px"><input class="form-input" id="gp-add-${s.id}" placeholder="Add an item…" style="flex:1;padding:6px 10px;font-size:12.5px" onkeydown="if(event.key==='Enter')gpAddItem('${s.id}')"><button class="btn btn-ghost btn-sm" onclick="gpAddItem('${s.id}')">Add</button></div>
+    </div>`:''}
+  </div>`;}).join('')}`;
+  const ta=document.getElementById('topbar-actions'); if(ta) ta.innerHTML='';
+}
+
 // ═══ BOARDROOM WHATSAPP GROUP TRACKER ═══════════════════════════════════════
 // Log of messages sent to the Boardroom WhatsApp group, plus cadence reminders
 // for the owner (default Joe). tuf_wa_log: [{id,date:'YYYY-MM-DD',by,note}].
@@ -3293,6 +3627,13 @@ function renderHome(){
     if(pdd.due) pis.push({type:pdd.urgent?'urgent':'soon',tag:'PODCAST',owner:'James',text:`No podcast recording day booked: ${pdd.monthCount} of ${pdd.target} episodes this month. Book the next batch.`});
     else if(pdd.next){ const d=daysUntil(pdd.next.date); if(d>=0&&d<=7){ const pc=podChkGet(); const pits=[...(pc.before||[]),...(pc.after||[])]; const pdn=pits.filter(it=>pc.done[it.id]).length; pis.push({type:d<=3?'urgent':'soon',tag:'PODCAST',owner:'James',text:`Podcast recording day ${d===0?'today':'in '+d+' day'+(d!==1?'s':'')}: ${pdd.next.eps.map(e=>escHtml(e.title)).join(' + ')}. Checklist ${pdn}/${pits.length} done.`}); } }
   }
+  // Growth Plan: weekly targets closing out + monthly scorecard reminder
+  try{ const g=gpGet();
+    const dow=(new Date().getDay()+6)%7; // 0 = Monday
+    const wk=(g.weekly&&g.weekly.items)||[]; const wkDone=gpWeekDone(g);
+    if(dow>=3&&wk.length&&wkDone<wk.length) pis.push({type:'soon',tag:'GROWTH',owner:(g.weekly.owner)||'Team',text:`Growth weekly targets: ${wkDone} of ${wk.length} done with the week closing.`});
+    if(new Date().getDate()<=5){ const lm=gpMonthKey(-1); const lv=((g.scorecard||{}).values||{})[lm]||{}; if(!Object.keys(lv).length) pis.push({type:'info',tag:'GROWTH',owner:(g.scorecard.owner)||'Team',text:"Fill last month's Growth scorecard for the Friday review."}); }
+  }catch(e){}
   // Client care: upcoming personal dates and contract renewals
   ls.get('tuf_members',[]).forEach(m=>{
     if(m.status&&m.status!=='active') return;
