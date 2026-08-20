@@ -2949,7 +2949,7 @@ const GROWTH_PLAN_DEFAULT={
     'Identify stalled opportunities and agree the next action.']},
   scorecard:['New introducers identified','Introducer meetings held','Active introducer relationships','Introductions received','Referral requests made','Referrals received','Collaborations agreed','Events held or attended','Ideal prospects attending events','Initial conversations booked','Qualified opportunities created','Proposals or invitations issued','New clients secured','Conversion rate by lead source','Estimated pipeline value','Progress against the six-client target']
 };
-let gpOpenSecs=new Set(), gpScoreOff=0;
+let gpView='week', gpSecId=null, gpScoreOff=0;
 function gpSeed(){
   return {
     target:6, won:0, seeded:true,
@@ -2970,7 +2970,8 @@ function gpWeekDone(g){ return (((g.weekly||{}).ticks||{})[cmWeekKey(0)]||[]).le
 function gpMonthKey(off){ const d=new Date(); const x=new Date(d.getFullYear(),d.getMonth()+off,1); return x.getFullYear()+'-'+String(x.getMonth()+1).padStart(2,'0'); }
 function gpMonthLabel(key){ const [y,m]=key.split('-').map(Number); return new Date(y,m-1,1).toLocaleDateString('en-GB',{month:'long',year:'numeric'}); }
 // ── Mutators ──
-function gpToggleSec(id){ if(gpOpenSecs.has(id)) gpOpenSecs.delete(id); else gpOpenSecs.add(id); renderGrowthPlan(); }
+function gpNav(v){ gpView=v; gpSecId=null; renderGrowthPlan(); }
+function gpOpenSec(id){ gpView='build'; gpSecId=id; renderGrowthPlan(); }
 function gpSecOwner(id,val){ const g=gpGet(); const s=g.sections.find(x=>x.id===id); if(!s) return; s.owner=val; gpSave(g); }
 function gpToggleItem(sid,iid){ const g=gpGet(); const s=g.sections.find(x=>x.id===sid); const it=s&&s.items.find(x=>x.id===iid); if(!it) return; it.done=!it.done; gpSave(g); renderGrowthPlan(); }
 function gpAddItem(sid){ const inp=document.getElementById('gp-add-'+sid); if(!inp) return; const t=inp.value.trim(); if(!t) return; const g=gpGet(); const s=g.sections.find(x=>x.id===sid); if(!s) return; s.items.push({id:uid(),text:t,done:false,owner:'',due:'',taskId:''}); gpSave(g); renderGrowthPlan(); }
@@ -2982,7 +2983,7 @@ function gpEditItem(sid,iid){
       <div class="form-row"><label class="form-label">Owner</label><select class="form-select" id="gp-e-owner"><option value="">None</option>${HOL_TEAM.map(p=>`<option${it.owner===p?' selected':''}>${p}</option>`).join('')}</select></div>
       <div class="form-row"><label class="form-label">Deadline</label><input class="form-input" type="date" id="gp-e-due" value="${it.due||''}"></div>
     </div>
-  `,`<button class="btn btn-ghost" onclick="closeModal()">Cancel</button><button class="btn btn-k" onclick="gpEditItemSave('${sid}','${iid}')">Save</button>`);
+  `,`${it.taskId?`<span style="font-size:11px;color:var(--grn);align-self:center;margin-right:auto">✓ linked to a team task</span>`:`<button class="btn btn-ghost btn-sm" onclick="closeModal();gpPushTask('${sid}','${iid}')">→ Make a task</button>`}<button class="btn btn-red btn-sm" onclick="closeModal();gpDelItem('${sid}','${iid}')">Delete</button><button class="btn btn-ghost" onclick="closeModal()">Cancel</button><button class="btn btn-k" onclick="gpEditItemSave('${sid}','${iid}')">Save</button>`);
 }
 function gpEditItemSave(sid,iid){
   const g=gpGet(); const s=g.sections.find(x=>x.id===sid); const it=s&&s.items.find(x=>x.id===iid); if(!it) return;
@@ -3006,44 +3007,99 @@ function gpScoreNav(d){ gpScoreOff=Math.min(0,gpScoreOff+d); renderGrowthPlan();
 function gpScoreSet(mid,val){ const g=gpGet(); const k=gpMonthKey(gpScoreOff); g.scorecard.values=g.scorecard.values||{}; const m=g.scorecard.values[k]=g.scorecard.values[k]||{}; const n=parseFloat(val); if(val===''||isNaN(n)) delete m[mid]; else m[mid]=n; gpSave(g); }
 function gpMetricAdd(){ const inp=document.getElementById('gp-metric-add'); if(!inp) return; const t=inp.value.trim(); if(!t) return; const g=gpGet(); g.scorecard.metrics.push({id:uid(),label:t}); gpSave(g); renderGrowthPlan(); }
 function gpMetricDel(mid){ if(!confirm('Remove this metric? Its monthly numbers stay stored.')) return; const g=gpGet(); g.scorecard.metrics=g.scorecard.metrics.filter(x=>x.id!==mid); gpSave(g); renderGrowthPlan(); }
-// ── Page ──
+// ── Page: compact hero + three tabs (This Week / The Build / Scorecard) ──────
 function renderGrowthPlan(){
   const el=document.getElementById('growth-content'); if(!el) return;
   const g=gpGet();
-  if(!renderGrowthPlan._init&&g.sections.length){ renderGrowthPlan._init=true; gpOpenSecs.add(g.sections[0].id); }
-  const pr=gpProgress(g);
-  const pct=pr.total?Math.round(pr.done/pr.total*100):0;
+  const pr=gpProgress(g); const pct=pr.total?Math.round(pr.done/pr.total*100):0;
   const wkItems=(g.weekly&&g.weekly.items)||[]; const wkDone=gpWeekDone(g);
-  const mk=gpMonthKey(gpScoreOff), mkPrev=gpMonthKey(gpScoreOff-1);
-  const vals=((g.scorecard||{}).values||{})[mk]||{}, prev=((g.scorecard||{}).values||{})[mkPrev]||{};
-  el.innerHTML=`
-  <div class="card" style="border-left:4px solid var(--y);margin-bottom:14px">
-    <div style="display:flex;gap:16px;align-items:center;flex-wrap:wrap">
-      <div>
-        <div style="font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--mut)">The six client target</div>
-        <div style="font-size:30px;font-weight:900;line-height:1">${g.won} <span style="font-size:15px;color:var(--mut);font-weight:600">of ${g.target} secured</span></div>
+  const hero=`
+  <div class="card" style="border-left:4px solid var(--y);margin-bottom:12px">
+    <div style="display:flex;gap:14px;align-items:center;flex-wrap:wrap">
+      <div style="display:flex;gap:10px;align-items:center">
+        <div style="font-size:26px;font-weight:900;line-height:1">${g.won}<span style="font-size:13px;color:var(--mut);font-weight:600"> of ${g.target} clients</span></div>
+        <button class="btn btn-ghost btn-sm" onclick="gpWon(1)">+ Won</button>${g.won>0?`<button class="btn btn-ghost btn-sm" onclick="gpWon(-1)">−</button>`:''}
       </div>
-      <div style="display:flex;gap:6px"><button class="btn btn-ghost btn-sm" onclick="gpWon(1)">+ Client won</button>${g.won>0?`<button class="btn btn-ghost btn-sm" onclick="gpWon(-1)">−</button>`:''}</div>
-      <div style="flex:1;min-width:180px">
-        ${podChkBar(pr.done,pr.total)}
-        <div style="font-size:11px;color:var(--mut);margin-top:4px">Build progress: ${pr.done} of ${pr.total} items (${pct}%) · This week: ${wkDone} of ${wkItems.length} targets</div>
-      </div>
+      <div style="flex:1;min-width:160px">${podChkBar(pr.done,pr.total)}<div style="font-size:10.5px;color:var(--mut);margin-top:3px">Build ${pct}% (${pr.done}/${pr.total} items)</div></div>
+      <button class="btn btn-ghost btn-sm" onclick="gpNav('week')">This week: ${wkDone}/${wkItems.length}</button>
     </div>
-    <div style="font-size:11.5px;color:var(--mut);margin-top:10px;border-top:1px solid #EEE;padding-top:8px"><b>The focus test:</b> ${escHtml(GROWTH_FOCUS_TEST)}</div>
+    <div style="font-size:10.5px;color:var(--mut);margin-top:8px">${escHtml(GROWTH_FOCUS_TEST)}</div>
   </div>
+  <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px">
+    ${[['week','This Week'],['build','The Build'],['score','Scorecard']].map(([k,l])=>`<button class="btn btn-sm ${gpView===k?'btn-k':'btn-ghost'}" onclick="gpNav('${k}')">${l}</button>`).join('')}
+  </div>`;
+  el.innerHTML=hero+(gpView==='score'?gpScoreView(g):gpView==='build'?(gpSecId?gpSecView(g):gpBuildView(g)):gpWeekView(g));
+  const ta=document.getElementById('topbar-actions'); if(ta) ta.innerHTML='';
+}
+function gpWeekView(g){
+  const wkItems=(g.weekly&&g.weekly.items)||[]; const ticks=((g.weekly.ticks||{})[cmWeekKey(0)])||[];
+  const due=[];
+  g.sections.forEach(s=>s.items.forEach(i=>{ if(i.due&&!i.done){ const d=daysUntil(i.due); if(d<=14) due.push({s,i,d}); } }));
+  due.sort((a,b)=>a.d-b.d);
+  return `
   <div class="card" style="margin-bottom:14px">
-    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:6px">
+    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:4px">
       <div style="font-weight:800">Weekly Activity Targets</div>
-      <span class="tag ${wkDone>=wkItems.length&&wkItems.length?'tag-g':'tag-a'}" style="font-size:9px">This week: ${wkDone}/${wkItems.length}</span>
+      <span class="tag ${ticks.length>=wkItems.length&&wkItems.length?'tag-g':'tag-a'}" style="font-size:9px">${ticks.length}/${wkItems.length}</span>
       <span style="flex:1"></span>
       <span style="font-size:11px;color:var(--mut)">Owner</span>
       <select class="form-select" style="width:auto;padding:3px 8px;font-size:11px" onchange="gpWeekOwner(this.value)"><option value="">Team</option>${HOL_TEAM.map(p=>`<option${(g.weekly.owner||'')===p?' selected':''}>${p}</option>`).join('')}</select>
     </div>
     ${g.weekly.note?`<div style="font-size:11.5px;color:var(--mut);margin-bottom:8px">${escHtml(g.weekly.note)}</div>`:''}
-    ${wkItems.map(i=>{const on=(((g.weekly.ticks||{})[cmWeekKey(0)])||[]).indexOf(i.id)>=0;return `<div class="chk-row${on?' done':''}"><div class="chk-box" onclick="gpWeekTick('${i.id}')">${on?'✓':''}</div><span class="chk-text" style="flex:1;font-size:12.5px;cursor:pointer" onclick="gpWeekTick('${i.id}')">${escHtml(i.text)}</span></div>`;}).join('')}
+    ${wkItems.map(i=>{const on=ticks.indexOf(i.id)>=0;return `<div class="chk-row${on?' done':''}"><div class="chk-box" onclick="gpWeekTick('${i.id}')">${on?'✓':''}</div><span class="chk-text" style="flex:1;font-size:13px;cursor:pointer" onclick="gpWeekTick('${i.id}')">${escHtml(i.text)}</span></div>`;}).join('')}
     <div style="font-size:10.5px;color:var(--mut);margin-top:6px">Ticks reset every Monday. History is kept.</div>
   </div>
-  <div class="card" style="margin-bottom:14px">
+  <div class="card">
+    <div style="font-weight:800;margin-bottom:6px">Due soon</div>
+    ${due.length?due.map(x=>`<div class="chk-row${x.i.done?' done':''}">
+      <div class="chk-box" onclick="gpToggleItem('${x.s.id}','${x.i.id}')">${x.i.done?'✓':''}</div>
+      <span class="chk-text" style="flex:1;font-size:12.5px;cursor:pointer" onclick="gpToggleItem('${x.s.id}','${x.i.id}')"><span style="color:var(--mut)">${escHtml(x.s.title.replace(/^\d+\.\s*/,''))} · </span>${escHtml(x.i.text)}</span>
+      ${x.i.owner?`<span class="tag tag-b" style="font-size:9px">${escHtml(x.i.owner)}</span>`:''}
+      <span style="font-size:10.5px;color:${x.d<0?'var(--red)':'var(--mut)'};white-space:nowrap">${x.d<0?Math.abs(x.d)+'d overdue':x.d===0?'due today':fmtShort(x.i.due)}</span>
+    </div>`).join(''):'<div style="font-size:12.5px;color:var(--mut)">Nothing with a deadline in the next two weeks. Set deadlines on build items and they will surface here.</div>'}
+  </div>`;
+}
+function gpBuildView(g){
+  return `<div class="sec-hdr">Checklist contents</div>`+g.sections.map(s=>{
+    const done=s.items.filter(i=>i.done).length; const complete=done===s.items.length&&s.items.length>0;
+    return `<div class="card" style="margin-bottom:8px;cursor:pointer${complete?';border-left:4px solid var(--grn)':''}" onclick="gpOpenSec('${s.id}')">
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+        <div style="flex:1;min-width:180px;font-weight:700">${escHtml(s.title)}</div>
+        <select class="form-select" style="width:auto;padding:3px 8px;font-size:11px" onclick="event.stopPropagation()" onchange="gpSecOwner('${s.id}',this.value)"><option value="">Owner…</option>${HOL_TEAM.map(p=>`<option${s.owner===p?' selected':''}>${p}</option>`).join('')}</select>
+        <div style="width:90px">${podChkBar(done,s.items.length)}</div>
+        <span style="font-size:11px;color:var(--mut);white-space:nowrap">${done}/${s.items.length} ›</span>
+      </div>
+    </div>`;}).join('');
+}
+function gpSecView(g){
+  const s=g.sections.find(x=>x.id===gpSecId); if(!s){ gpSecId=null; return gpBuildView(g); }
+  const done=s.items.filter(i=>i.done).length;
+  return `
+  <div class="card">
+    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:4px">
+      <button class="btn btn-ghost btn-sm" onclick="gpNav('build')">← All sections</button>
+      <div style="flex:1;font-weight:800">${escHtml(s.title)}</div>
+      <select class="form-select" style="width:auto;padding:3px 8px;font-size:11px" onchange="gpSecOwner('${s.id}',this.value)"><option value="">Owner…</option>${HOL_TEAM.map(p=>`<option${s.owner===p?' selected':''}>${p}</option>`).join('')}</select>
+      <span style="font-size:11px;color:var(--mut)">${done}/${s.items.length}</span>
+    </div>
+    ${s.note?`<div style="font-size:11.5px;color:var(--mut);margin-bottom:8px">${escHtml(s.note)}</div>`:''}
+    <div style="margin-bottom:10px">${podChkBar(done,s.items.length)}</div>
+    ${s.items.map(i=>`<div class="chk-row${i.done?' done':''}">
+      <div class="chk-box" onclick="gpToggleItem('${s.id}','${i.id}')">${i.done?'✓':''}</div>
+      <span class="chk-text" style="flex:1;font-size:13px;cursor:pointer" onclick="gpToggleItem('${s.id}','${i.id}')">${escHtml(i.text)}</span>
+      ${i.owner?`<span class="tag tag-b" style="font-size:9px">${escHtml(i.owner)}</span>`:''}
+      ${i.due?`<span style="font-size:10.5px;color:${daysUntil(i.due)<0&&!i.done?'var(--red)':'var(--mut)'};white-space:nowrap">${fmtShort(i.due)}</span>`:''}
+      ${i.taskId?`<span title="Linked to a team task" style="font-size:10px;color:var(--grn);white-space:nowrap">✓ task</span>`:''}
+      <button class="btn btn-ghost btn-sm" style="padding:1px 9px" title="Edit, set owner or deadline, make a task, delete" onclick="gpEditItem('${s.id}','${i.id}')">⋯</button>
+    </div>`).join('')}
+    <div style="display:flex;gap:6px;margin-top:10px"><input class="form-input" id="gp-add-${s.id}" placeholder="Add an item…" style="flex:1;padding:6px 10px;font-size:12.5px" onkeydown="if(event.key==='Enter')gpAddItem('${s.id}')"><button class="btn btn-ghost btn-sm" onclick="gpAddItem('${s.id}')">Add</button></div>
+  </div>`;
+}
+function gpScoreView(g){
+  const mk=gpMonthKey(gpScoreOff), mkPrev=gpMonthKey(gpScoreOff-1);
+  const vals=((g.scorecard||{}).values||{})[mk]||{}, prev=((g.scorecard||{}).values||{})[mkPrev]||{};
+  return `
+  <div class="card">
     <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:10px">
       <div style="font-weight:800">Monthly Scorecard</div>
       <span style="flex:1"></span>
@@ -3059,31 +3115,7 @@ function renderGrowthPlan(){
         <td><button class="btn btn-ghost btn-sm" style="padding:1px 7px" onclick="gpMetricDel('${m.id}')">✕</button></td></tr>`;}).join('')}
     </tbody></table></div>
     <div style="display:flex;gap:6px;margin-top:8px"><input class="form-input" id="gp-metric-add" placeholder="Add a metric…" style="flex:1;padding:6px 10px;font-size:12px" onkeydown="if(event.key==='Enter')gpMetricAdd()"><button class="btn btn-ghost btn-sm" onclick="gpMetricAdd()">Add</button></div>
-  </div>
-  <div class="sec-hdr">The build</div>
-  ${g.sections.map(s=>{
-    const done=s.items.filter(i=>i.done).length; const open=gpOpenSecs.has(s.id);
-    return `<div class="card" style="margin-bottom:10px${done===s.items.length&&s.items.length?';border-left:4px solid var(--grn)':''}">
-    <div style="display:flex;gap:10px;align-items:center;cursor:pointer;flex-wrap:wrap" onclick="gpToggleSec('${s.id}')">
-      <div style="flex:1;min-width:200px"><div style="font-weight:700">${escHtml(s.title)}</div>${s.note?`<div style="font-size:11px;color:var(--mut);margin-top:2px">${escHtml(s.note)}</div>`:''}</div>
-      <select class="form-select" style="width:auto;padding:3px 8px;font-size:11px" onclick="event.stopPropagation()" onchange="gpSecOwner('${s.id}',this.value)"><option value="">Owner…</option>${HOL_TEAM.map(p=>`<option${s.owner===p?' selected':''}>${p}</option>`).join('')}</select>
-      <div style="width:100px">${podChkBar(done,s.items.length)}</div>
-      <span style="font-size:11px;color:var(--mut);white-space:nowrap">${done}/${s.items.length} ${open?'▾':'▸'}</span>
-    </div>
-    ${open?`<div style="margin-top:10px">
-      ${s.items.map(i=>`<div class="chk-row${i.done?' done':''}">
-        <div class="chk-box" onclick="gpToggleItem('${s.id}','${i.id}')">${i.done?'✓':''}</div>
-        <span class="chk-text" style="flex:1;font-size:12.5px;cursor:pointer" onclick="gpToggleItem('${s.id}','${i.id}')">${escHtml(i.text)}</span>
-        ${i.owner?`<span class="tag tag-b" style="font-size:9px">${escHtml(i.owner)}</span>`:''}
-        ${i.due?`<span style="font-size:10.5px;color:${daysUntil(i.due)<0&&!i.done?'var(--red)':'var(--mut)'};white-space:nowrap">${fmtShort(i.due)}</span>`:''}
-        ${i.taskId?`<span title="Linked to a team task" style="font-size:10px;color:var(--grn);white-space:nowrap">✓ task</span>`:`<button class="btn btn-ghost btn-sm" style="padding:1px 7px" title="Create a team task from this item" onclick="gpPushTask('${s.id}','${i.id}')">→ Task</button>`}
-        <button class="btn btn-ghost btn-sm" style="padding:1px 7px" onclick="gpEditItem('${s.id}','${i.id}')">✎</button>
-        <button class="btn btn-ghost btn-sm" style="padding:1px 7px" onclick="gpDelItem('${s.id}','${i.id}')">✕</button>
-      </div>`).join('')}
-      <div style="display:flex;gap:6px;margin-top:8px"><input class="form-input" id="gp-add-${s.id}" placeholder="Add an item…" style="flex:1;padding:6px 10px;font-size:12.5px" onkeydown="if(event.key==='Enter')gpAddItem('${s.id}')"><button class="btn btn-ghost btn-sm" onclick="gpAddItem('${s.id}')">Add</button></div>
-    </div>`:''}
-  </div>`;}).join('')}`;
-  const ta=document.getElementById('topbar-actions'); if(ta) ta.innerHTML='';
+  </div>`;
 }
 
 // ═══ BOARDROOM WHATSAPP GROUP TRACKER ═══════════════════════════════════════
