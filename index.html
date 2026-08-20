@@ -3024,6 +3024,7 @@ function coPersonView(){
           <div style="font-weight:700">Session ${s.session_no||'?'} · ${fmtDate(s.session_date)} <span style="color:var(--mut);font-weight:500">· ${escHtml(s.meeting_type)}</span></div>
           <div style="font-size:11.5px;color:var(--mut)">${s.sent_at?'Sent '+fmtDate(String(s.sent_at).slice(0,10))+(s.sent_to&&s.sent_to.length?' to '+escHtml(s.sent_to.join(', ')):''):s.sent_to&&s.sent_to.length?'To send to '+escHtml(s.sent_to.join(', ')):''}${s.read_ai_meeting_id?' · Read AI linked':''}</div>
         </div>
+        ${s.status==='draft'?`<button class="btn btn-k btn-sm" onclick="coSessStatus('${s.id}','approved')">✓ Approve</button>`:''}
         <select class="form-select" style="width:auto;padding:3px 8px;font-size:11px" onchange="coSessStatus('${s.id}',this.value)">${CO_SESSION_STATUSES.map(x=>`<option${x===s.status?' selected':''}>${x}</option>`).join('')}</select>
         <button class="btn btn-ghost btn-sm" onclick="coSessModal('${s.id}')">Edit</button>
       </div>
@@ -3200,6 +3201,18 @@ function coDannyView(){
     <div class="stat ${openTotal?'y':'g'}"><div class="n">${openTotal}</div><div class="l">Open actions</div></div>
     <div class="stat ${stuck.length?'r':'g'}"><div class="n">${stuck.length}</div><div class="l">Carried 2+ times</div></div>
   </div>
+  ${(()=>{const drafts=coData.sessions.filter(s=>s.status==='draft').slice().sort((a,b)=>(b.session_date||'').localeCompare(a.session_date||''));
+    return drafts.length?`<div class="sec-hdr">Awaiting approval (${drafts.length})</div>`+drafts.map(s=>{const p=coPerson(s.person_id);const preview=(s.recap_md||'').trim().slice(0,160);
+    return `<div class="card" style="margin-bottom:8px;border-left:4px solid var(--y)">
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+        <div style="flex:1;min-width:200px">
+          <div style="font-weight:700">${escHtml(p?p.name:'')} <span style="color:var(--mut);font-weight:500">· Session ${s.session_no||'?'} · ${fmtDate(s.session_date)}</span></div>
+          ${preview?`<div style="font-size:12px;color:var(--mut);margin-top:3px">${escHtml(preview)}…</div>`:''}
+        </div>
+        <button class="btn btn-k btn-sm" onclick="coSessStatus('${s.id}','approved')">✓ Approve</button>
+        <button class="btn btn-ghost btn-sm" onclick="coOpenPerson('${s.person_id}')">Open</button>
+      </div>
+    </div>`;}).join(''):'';})()}
   <div class="sec-hdr">Actions carried more than once</div>
   ${stuck.length?stuck.map(a=>{
     const p=coPerson(a.person_id);
@@ -3229,6 +3242,8 @@ async function coBriefNudges(){
     const el=document.getElementById('brief-items'); if(!el) return;
     const mk=(type,text)=>`<div class="pi ${type}"><span class="pi-tag ${type}">COACHING</span><span style="font-size:10px;font-weight:700;background:var(--k);color:var(--w);border-radius:20px;padding:2px 9px;flex-shrink:0;margin-top:1px">Danny</span><span style="flex:1;font-size:12.5px;line-height:1.45;margin-left:4px">${text}</span></div>`;
     let html='';
+    const drafts=coData.sessions.filter(s=>s.status==='draft');
+    if(drafts.length) html+=mk('urgent',`${drafts.length} coaching recap${drafts.length!==1?'s':''} awaiting approval: ${drafts.slice(0,3).map(s=>escHtml((coPerson(s.person_id)||{}).name||'')).join(', ')}${drafts.length>3?'…':''}. Review and approve in Coaching.`);
     if(stuck.length) html+=mk('soon',`${stuck.length} coaching action${stuck.length!==1?'s':''} carried more than once: ${stuck.slice(0,3).map(a=>escHtml(((coPerson(a.person_id)||{}).name||'')+': '+String(a.text||'').slice(0,40))).join(' · ')}${stuck.length>3?'…':''}`);
     if(stale.length) html+=mk('soon',`No coaching session for ${CO_STALE_DAYS}+ days: ${stale.slice(0,4).map(x=>escHtml(x.p.name)+' ('+x.days+'d)').join(', ')}${stale.length>4?'…':''}`);
     if(html){ const clear=el.querySelector('.pi.good'); if(clear) clear.remove(); el.insertAdjacentHTML('beforeend',html); }
