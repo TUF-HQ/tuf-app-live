@@ -2973,7 +2973,67 @@ function gpMonthLabel(key){ const [y,m]=key.split('-').map(Number); return new D
 function gpNav(v){ gpView=v; gpSecId=null; renderGrowthPlan(); }
 function gpOpenSec(id){ gpView='build'; gpSecId=id; renderGrowthPlan(); }
 function gpSecOwner(id,val){ const g=gpGet(); const s=g.sections.find(x=>x.id===id); if(!s) return; s.owner=val; gpSave(g); }
-function gpToggleItem(sid,iid){ const g=gpGet(); const s=g.sections.find(x=>x.id===sid); const it=s&&s.items.find(x=>x.id===iid); if(!it) return; it.done=!it.done; gpSave(g); renderGrowthPlan(); }
+function gpToggleItem(sid,iid){ const g=gpGet(); const s=g.sections.find(x=>x.id===sid); const it=s&&s.items.find(x=>x.id===iid); if(!it) return; it.done=!it.done; if(it.done){ it.doneBy=CURRENT_USER||''; it.doneAt=new Date().toISOString().slice(0,10); } else { it.doneBy=''; it.doneAt=''; } gpSave(g); renderGrowthPlan(); }
+// Items the app already covers get a jump straight to the tool. Conservative
+// patterns only: no button beats a wrong button.
+function gpAppRoute(text){
+  const t=String(text||'');
+  if(/CRM|pipeline/i.test(t)) return ['pipeline','Sales Pipeline'];
+  if(/case stud|testimonial/i.test(t)) return ['testimonials','Testimonials'];
+  if(/content calendar|Instagram|LinkedIn|carousel|content themes/i.test(t)) return ['content','Content Calendar'];
+  if(/panel|roundtable|event landing/i.test(t)) return ['events','Event CRM'];
+  return null;
+}
+// ── Evidence: tangible proof on an item (file in Documents, link, or note) ──
+function gpItem(sid,iid){ const g=gpGet(); const s=g.sections.find(x=>x.id===sid); const it=s&&s.items.find(x=>x.id===iid); return {g,s,it}; }
+function gpEvUpload(sid,iid){
+  const inp=document.createElement('input'); inp.type='file';
+  inp.onchange=async()=>{
+    const f=inp.files[0]; if(!f) return;
+    if(f.size>25*1024*1024){ alert('That file is '+(f.size/1048576).toFixed(1)+'MB. Max is 25MB. Add it as a link instead.'); return; }
+    const safe=(f.name||'file').replace(/[^A-Za-z0-9.\-_]/g,'_');
+    const path='growth_'+uid()+'_'+safe;
+    try{
+      const {error}=await sb.storage.from(DOCS_BUCKET).upload(path,f,{upsert:false,contentType:f.type||undefined});
+      if(error) throw error;
+    }catch(e){ alert('Upload failed: '+((e&&e.message)||e)); return; }
+    const fid=uid();
+    const files=ls.get('tuf_files',[]);
+    files.push({id:fid,name:f.name,cat:'Growth Plan',type:docType(f.name),kind:'upload',path,size:f.size,by:CURRENT_USER,updated:new Date().toISOString().slice(0,10)});
+    ls.set('tuf_files',files);
+    const r=gpItem(sid,iid); if(!r.it) return;
+    r.it.evidence=r.it.evidence||[];
+    r.it.evidence.push({id:uid(),kind:'file',fileId:fid,name:f.name,by:CURRENT_USER||'',date:new Date().toISOString().slice(0,10)});
+    gpSave(r.g); addNotif('Evidence filed: '+f.name);
+    gpEditItem(sid,iid); renderGrowthPlan();
+  };
+  inp.click();
+}
+function gpEvAddLink(sid,iid){
+  const u=((document.getElementById('gp-ev-url')||{}).value||'').trim(); if(!u){ alert('Paste a link first.'); return; }
+  const n=((document.getElementById('gp-ev-urlname')||{}).value||'').trim();
+  const r=gpItem(sid,iid); if(!r.it) return;
+  r.it.evidence=r.it.evidence||[];
+  r.it.evidence.push({id:uid(),kind:'link',url:u,name:n||u,by:CURRENT_USER||'',date:new Date().toISOString().slice(0,10)});
+  gpSave(r.g); gpEditItem(sid,iid); renderGrowthPlan();
+}
+function gpEvAddNote(sid,iid){
+  const t=((document.getElementById('gp-ev-note')||{}).value||'').trim(); if(!t) return;
+  const r=gpItem(sid,iid); if(!r.it) return;
+  r.it.evidence=r.it.evidence||[];
+  r.it.evidence.push({id:uid(),kind:'note',text:t,name:'Note',by:CURRENT_USER||'',date:new Date().toISOString().slice(0,10)});
+  gpSave(r.g); gpEditItem(sid,iid); renderGrowthPlan();
+}
+function gpEvDel(sid,iid,eid){
+  const r=gpItem(sid,iid); if(!r.it||!r.it.evidence) return;
+  r.it.evidence=r.it.evidence.filter(e=>e.id!==eid);
+  gpSave(r.g); gpEditItem(sid,iid); renderGrowthPlan();
+}
+function gpEvOpen(sid,iid,eid){
+  const r=gpItem(sid,iid); const e=r.it&&(r.it.evidence||[]).find(x=>x.id===eid); if(!e) return;
+  if(e.kind==='file'&&e.fileId) docOpen(e.fileId);
+  else if(e.kind==='link'&&e.url) window.open(e.url,'_blank');
+}
 function gpAddItem(sid){ const inp=document.getElementById('gp-add-'+sid); if(!inp) return; const t=inp.value.trim(); if(!t) return; const g=gpGet(); const s=g.sections.find(x=>x.id===sid); if(!s) return; s.items.push({id:uid(),text:t,done:false,owner:'',due:'',taskId:''}); gpSave(g); renderGrowthPlan(); }
 function gpEditItem(sid,iid){
   const g=gpGet(); const s=g.sections.find(x=>x.id===sid); const it=s&&s.items.find(x=>x.id===iid); if(!it) return;
@@ -2982,6 +3042,17 @@ function gpEditItem(sid,iid){
     <div class="grid-2">
       <div class="form-row"><label class="form-label">Owner</label><select class="form-select" id="gp-e-owner"><option value="">None</option>${HOL_TEAM.map(p=>`<option${it.owner===p?' selected':''}>${p}</option>`).join('')}</select></div>
       <div class="form-row"><label class="form-label">Deadline</label><input class="form-input" type="date" id="gp-e-due" value="${it.due||''}"></div>
+    </div>
+    <div class="form-row"><label class="form-label">Evidence (${(it.evidence||[]).length})</label>
+      ${(it.evidence||[]).length?(it.evidence||[]).map(e=>`<div style="display:flex;gap:8px;align-items:center;padding:5px 0;border-bottom:1px solid #EEE;font-size:12px">
+        <span>${e.kind==='file'?'📄':e.kind==='link'?'🔗':'📝'}</span>
+        ${e.kind==='note'?`<span style="flex:1;white-space:pre-wrap">${escHtml(e.text||'')}</span>`:`<a href="#" onclick="event.preventDefault();gpEvOpen('${sid}','${iid}','${e.id}')" style="flex:1">${escHtml(e.name||'')}</a>`}
+        <span style="font-size:10px;color:var(--mut);white-space:nowrap">${escHtml(e.by||'')}${e.date?' · '+fmtShort(e.date):''}</span>
+        <button class="btn btn-ghost btn-sm" style="padding:1px 7px" title="Remove from this item (uploaded files stay in Documents)" onclick="gpEvDel('${sid}','${iid}','${e.id}')">✕</button>
+      </div>`).join(''):'<div style="font-size:11.5px;color:var(--mut)">Nothing attached yet. Upload the finished document, link to it, or leave a note.</div>'}
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px"><button class="btn btn-ghost btn-sm" onclick="gpEvUpload('${sid}','${iid}')">📎 Upload file</button></div>
+      <div style="display:flex;gap:6px;margin-top:6px"><input class="form-input" id="gp-ev-url" placeholder="https://…" style="flex:2;padding:5px 9px;font-size:12px"><input class="form-input" id="gp-ev-urlname" placeholder="Name (optional)" style="flex:1;padding:5px 9px;font-size:12px"><button class="btn btn-ghost btn-sm" onclick="gpEvAddLink('${sid}','${iid}')">🔗 Link</button></div>
+      <div style="display:flex;gap:6px;margin-top:6px"><input class="form-input" id="gp-ev-note" placeholder="Add a note as evidence…" style="flex:1;padding:5px 9px;font-size:12px"><button class="btn btn-ghost btn-sm" onclick="gpEvAddNote('${sid}','${iid}')">📝 Note</button></div>
     </div>
   `,`${it.taskId?`<span style="font-size:11px;color:var(--grn);align-self:center;margin-right:auto">✓ linked to a team task</span>`:`<button class="btn btn-ghost btn-sm" onclick="closeModal();gpPushTask('${sid}','${iid}')">→ Make a task</button>`}<button class="btn btn-red btn-sm" onclick="closeModal();gpDelItem('${sid}','${iid}')">Delete</button><button class="btn btn-ghost" onclick="closeModal()">Cancel</button><button class="btn btn-k" onclick="gpEditItemSave('${sid}','${iid}')">Save</button>`);
 }
@@ -3054,6 +3125,7 @@ function gpWeekView(g){
     ${due.length?due.map(x=>`<div class="chk-row${x.i.done?' done':''}">
       <div class="chk-box" onclick="gpToggleItem('${x.s.id}','${x.i.id}')">${x.i.done?'✓':''}</div>
       <span class="chk-text" style="flex:1;font-size:12.5px;cursor:pointer" onclick="gpToggleItem('${x.s.id}','${x.i.id}')"><span style="color:var(--mut)">${escHtml(x.s.title.replace(/^\d+\.\s*/,''))} · </span>${escHtml(x.i.text)}</span>
+      ${(x.i.evidence&&x.i.evidence.length)?`<span class="tag tag-b" style="font-size:9px;white-space:nowrap">📎${x.i.evidence.length}</span>`:''}
       ${x.i.owner?`<span class="tag tag-b" style="font-size:9px">${escHtml(x.i.owner)}</span>`:''}
       <span style="font-size:10.5px;color:${x.d<0?'var(--red)':'var(--mut)'};white-space:nowrap">${x.d<0?Math.abs(x.d)+'d overdue':x.d===0?'due today':fmtShort(x.i.due)}</span>
     </div>`).join(''):'<div style="font-size:12.5px;color:var(--mut)">Nothing with a deadline in the next two weeks. Set deadlines on build items and they will surface here.</div>'}
@@ -3087,10 +3159,13 @@ function gpSecView(g){
     ${s.items.map(i=>`<div class="chk-row${i.done?' done':''}">
       <div class="chk-box" onclick="gpToggleItem('${s.id}','${i.id}')">${i.done?'✓':''}</div>
       <span class="chk-text" style="flex:1;font-size:13px;cursor:pointer" onclick="gpToggleItem('${s.id}','${i.id}')">${escHtml(i.text)}</span>
+      ${i.done&&i.doneBy?`<span style="font-size:10px;color:var(--mut);white-space:nowrap">· ${escHtml(i.doneBy)}, ${fmtShort(i.doneAt)}</span>`:''}
+      ${(i.evidence&&i.evidence.length)?`<span class="tag tag-b" style="font-size:9px;cursor:pointer;white-space:nowrap" title="Evidence attached" onclick="gpEditItem('${s.id}','${i.id}')">📎${i.evidence.length}</span>`:''}
       ${i.owner?`<span class="tag tag-b" style="font-size:9px">${escHtml(i.owner)}</span>`:''}
       ${i.due?`<span style="font-size:10.5px;color:${daysUntil(i.due)<0&&!i.done?'var(--red)':'var(--mut)'};white-space:nowrap">${fmtShort(i.due)}</span>`:''}
       ${i.taskId?`<span title="Linked to a team task" style="font-size:10px;color:var(--grn);white-space:nowrap">✓ task</span>`:''}
-      <button class="btn btn-ghost btn-sm" style="padding:1px 9px" title="Edit, set owner or deadline, make a task, delete" onclick="gpEditItem('${s.id}','${i.id}')">⋯</button>
+      ${(r=>r?`<button class="btn btn-ghost btn-sm" style="padding:1px 7px" title="Open ${r[1]}" onclick="goPage('${r[0]}')">↗</button>`:'')(gpAppRoute(i.text))}
+      <button class="btn btn-ghost btn-sm" style="padding:1px 9px" title="Edit, evidence, owner, deadline, make a task, delete" onclick="gpEditItem('${s.id}','${i.id}')">⋯</button>
     </div>`).join('')}
     <div style="display:flex;gap:6px;margin-top:10px"><input class="form-input" id="gp-add-${s.id}" placeholder="Add an item…" style="flex:1;padding:6px 10px;font-size:12.5px" onkeydown="if(event.key==='Enter')gpAddItem('${s.id}')"><button class="btn btn-ghost btn-sm" onclick="gpAddItem('${s.id}')">Add</button></div>
   </div>`;
@@ -3107,6 +3182,12 @@ function gpScoreView(g){
       <b style="font-size:13px">${gpMonthLabel(mk)}</b>
       <button class="btn btn-ghost btn-sm" ${gpScoreOff>=0?'disabled style="opacity:.35"':''} onclick="gpScoreNav(1)">›</button>
     </div>
+    ${(()=>{const pr2=ls.get('tuf_prospects',[])||[];
+      const act=pr2.filter(p=>['Prospect','Contacted','Meeting Booked','Proposal Sent','Committed'].indexOf(p.stage)>=0).length;
+      const meet=pr2.filter(p=>p.stage==='Meeting Booked').length;
+      const prop=pr2.filter(p=>p.stage==='Proposal Sent').length;
+      const wonP=pr2.filter(p=>p.stage==='Won').length;
+      return `<div style="font-size:11.5px;color:var(--mut);margin-bottom:10px">Live right now: pipeline ${act} · meetings booked ${meet} · proposals sent ${prop} · won in pipeline ${wonP} · client counter ${g.won} of ${g.target}</div>`;})()}
     <div style="overflow-x:auto"><table class="tbl"><thead><tr><th>Metric</th><th style="width:110px">${gpMonthLabel(mk).split(' ')[0]}</th><th style="width:90px">${gpMonthLabel(mkPrev).split(' ')[0]}</th><th style="width:34px"></th></tr></thead><tbody>
       ${g.scorecard.metrics.map(m=>{const v=vals[m.id],p=prev[m.id];const delta=(v!=null&&p!=null)?(v>p?'<span style="color:var(--grn)">▲</span>':v<p?'<span style="color:var(--red)">▼</span>':'·'):'';
       return `<tr><td style="font-size:12px">${escHtml(m.label)}</td>
@@ -6560,7 +6641,7 @@ function updateIP(id){const list=ls.get('tuf_ip',[]);const i=list.findIndex(x=>x
 function deleteIP(id){if(!confirm('Delete?'))return;ls.set('tuf_ip',ls.get('tuf_ip',[]).filter(x=>x.id!==id));closeModal();renderIP();}
 
 // ═══ FILES ═══════════════════════════════════════════════════════════════════
-const FILE_CATS=['Boardroom Reports','Sales','Boardroom','Events','Content','Finance','Operations','Other'];
+const FILE_CATS=['Boardroom Reports','Sales','Boardroom','Events','Content','Finance','Operations','Growth Plan','Other'];
 const DOCS_BUCKET='tuf-docs';
 function docType(name){ const e=(String(name||'').split('.').pop()||'').toLowerCase(); if(e==='pdf')return'pdf'; if(['ppt','pptx','key'].includes(e))return'deck'; if(['doc','docx'].includes(e))return'doc'; if(['xls','xlsx','csv'].includes(e))return'sheet'; if(['png','jpg','jpeg','gif','webp','heic'].includes(e))return'image'; return'other'; }
 function docIcon(t){ return t==='pdf'?'📄':t==='deck'?'📊':t==='doc'?'📝':t==='sheet'?'📈':t==='image'?'🖼':'📁'; }
