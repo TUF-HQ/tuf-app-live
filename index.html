@@ -499,6 +499,7 @@ details>summary::-webkit-details-marker{display:none}
     <div class="sb-item" data-page="pipeline" onclick="nav('pipeline',this)"><span class="ico">💰</span>Sales Pipeline</div>
     <div class="sb-item" data-page="onboarding" onclick="nav('onboarding',this)"><span class="ico">📋</span>Onboarding</div>
     <div class="sb-item" data-page="clientanalysis" onclick="nav('clientanalysis',this)"><span class="ico">🔍</span>Client Analysis</div>
+    <div class="sb-item" data-page="coaching" onclick="nav('coaching',this)"><span class="ico">🎯</span>Coaching</div>
 
     <div class="sb-section">Products</div>
     <div class="sb-item" data-page="events" onclick="nav('events',this)"><span class="ico">🎟️</span>Event CRM</div>
@@ -775,6 +776,9 @@ details>summary::-webkit-details-marker{display:none}
       <div id="cal-backlog" style="margin-top:18px"></div>
     </div>
 
+    <!-- ═══ COACHING SESSIONS ═══ -->
+    <div class="page" id="page-coaching"><div id="coaching-content"></div></div>
+
     <!-- ═══ PODCAST ═══ -->
     <div class="page" id="page-podcast">
       <div id="pod-plan"></div>
@@ -1047,6 +1051,9 @@ function patchLocalTask(id, patch){
   Object.assign(a[i], patch); localStorage.setItem('tuf_tasks', JSON.stringify(a));
 }
 
+// Coaching tables are row-per-record; when the recap agent (or a teammate)
+// writes one, just re-render the Coaching page if it is open.
+function coRealtimeRefresh(){ try{ const a=document.querySelector('.page.active'); if(a&&a.id==='page-coaching') renderCoaching(); }catch(e){} }
 function subscribeToChanges() {
   if (!sb) return;
   sb.channel('tuf_realtime')
@@ -1062,6 +1069,10 @@ function subscribeToChanges() {
         if (active) renderPage(active.id.replace('page-', ''));
       }
     })
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'coaching_sessions' }, coRealtimeRefresh)
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'coaching_actions' }, coRealtimeRefresh)
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'coaching_people' }, coRealtimeRefresh)
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'coaching_files' }, coRealtimeRefresh)
     .subscribe();
   // Self-heal: a tab left open overnight (or whose realtime dropped) refreshes from the server
   // when refocused, so it can never save a stale task list over teammates' completions.
@@ -1759,7 +1770,7 @@ const PAGE_TITLES = {
   boardroom:'Boardroom',content:'Content Calendar',social:'Social Media',ideas:'Content Ideas',kpis:'KPIs',aidump:'AI Tool (Dump)',buildreq:'Build Requests',clientanalysis:'Client Analysis',emaillist:'Email List',watemplates:'WhatsApp Templates',
   prospects:'Warm Prospects',testimonials:'Testimonials',
   onboarding:'Onboarding',sessions:'Session Planner',events:'Event CRM',padel:'Padel Event',
-  calendar:'Content Calendar',podcast:'Podcast Pipeline',ip:'IP Register',files:'Documents',
+  calendar:'Content Calendar',podcast:'Podcast Pipeline',coaching:'Coaching Sessions',ip:'IP Register',files:'Documents',
   capmap:'Capability Map',goals:'Goals & OKRs',fourbox:'The 4 Box Model',budget:'Budget',
   teamtasks:'Team Tasks',roles:'Roles',reviews:'Weekly Review',kb:'Knowledge Base',notifs:'Notifications',
   csuite:'C-Suite',holidays:'Holidays',daily:'Daily Progress',
@@ -1795,7 +1806,7 @@ function renderPage(page){
     boardroom:renderBoardroom, content:renderContent, social:renderSocial, ideas:renderIdeas, kpis:renderKPIs, aidump:renderAIDump, buildreq:renderBuildRequests, clientanalysis:renderClientAnalysis, emaillist:renderEmailList, watemplates:renderWATemplates,
     prospects:renderProspects, testimonials:renderTestimonials,
     onboarding:renderOnboarding, sessions:renderSessions, events:renderEventCRM, padel:renderPadel,
-    calendar:renderCalendar, podcast:renderPodcast, ip:renderIP, files:renderFiles,
+    calendar:renderCalendar, podcast:renderPodcast, coaching:renderCoaching, ip:renderIP, files:renderFiles,
     capmap:renderCapMap, goals:renderGoals, fourbox:renderFourBox, budget:renderBudget,
     teamtasks:renderTeamTasks, roles:renderRoles, reviews:renderReviews, kb:renderKB, notifs:renderNotifs,
     csuite:renderCSuite, holidays:renderHolidays, daily:renderDaily, teamoverview:renderTeamOverview, myday:renderMyDay,
@@ -2805,6 +2816,425 @@ function waTplLog(id){
   if(btn){btn.textContent='Logged ✓';setTimeout(()=>{btn.textContent='Sent ✓';},1500);}
 }
 
+// ═══ COACHING SESSIONS (Danny's 121 coaching inside client businesses) ═══════
+// Row-per-record Supabase tables (coaching_people / coaching_sessions /
+// coaching_actions / coaching_files) — deliberately NOT tuf_state blobs — so
+// the recap agent and the app can write at the same time without clobbering
+// each other. One-time SQL lives in COACHING_SETUP.md. Files go to the private
+// tuf-coaching bucket, opened with 1-hour signed URLs.
+let coView='list', coPersonId=null;
+let coData={people:[],sessions:[],actions:[],files:[],loaded:false};
+const CO_BUCKET='tuf-coaching';
+const CO_STALE_DAYS=30;
+const CO_TYPES=['121','strategy','leadership'];
+const CO_SESSION_STATUSES=['draft','approved','sent','failed'];
+const CO_ACTION_STATUSES=['open','carried','done','dropped'];
+
+async function coLoad(){
+  if(typeof sb==='undefined'||!sb) return {ok:false,reason:'error',msg:'Not connected'};
+  try{
+    const [p,s,a,f]=await Promise.all([
+      sb.from('coaching_people').select('*'),
+      sb.from('coaching_sessions').select('*'),
+      sb.from('coaching_actions').select('*'),
+      sb.from('coaching_files').select('*')
+    ]);
+    const err=[p,s,a,f].map(r=>r.error).find(Boolean);
+    if(err) throw err;
+    coData={people:p.data||[],sessions:s.data||[],actions:a.data||[],files:f.data||[],loaded:true};
+    coSummaryCache();
+    coPeopleLink();
+    return {ok:true};
+  }catch(e){
+    const msg=String((e&&e.message)||e);
+    const setup=msg.indexOf('schema cache')>=0||msg.indexOf('does not exist')>=0;
+    return {ok:false,reason:setup?'setup':'error',msg};
+  }
+}
+function coPerson(id){ return coData.people.find(p=>p.id===id); }
+function coSessionsFor(pid){ return coData.sessions.filter(s=>s.person_id===pid).slice().sort((a,b)=>(b.session_date||'').localeCompare(a.session_date||'')); }
+function coActionsFor(pid){ return coData.actions.filter(a=>a.person_id===pid); }
+function coOpenActions(pid){ return coActionsFor(pid).filter(a=>a.status==='open'); }
+function coLastSession(pid){ const s=coSessionsFor(pid); return s.length?s[0]:null; }
+// How many times has this action been carried? Walk the carried_from chain back.
+function coCarryCount(a){ let n=0,cur=a,guard=0; while(cur&&cur.carried_from_id&&guard++<50){ cur=coData.actions.find(x=>x.id===cur.carried_from_id); if(cur) n++; } return n; }
+function coStuckActions(){ return coData.actions.filter(a=>a.status==='open'&&coCarryCount(a)>=2); }
+function coStalePeople(){
+  return coData.people.filter(p=>p.status==='active').map(p=>{
+    const last=coLastSession(p.id);
+    const days=last?Math.max(0,-daysUntil(last.session_date)):null;
+    return {p,last,days};
+  }).filter(x=>x.days===null||x.days>CO_STALE_DAYS);
+}
+// Device-local summary cache so the People profile can show a Coaching panel
+// without an async fetch (raw localStorage, never synced to tuf_state).
+function coSummaryCache(){
+  try{
+    const sum={};
+    coData.people.forEach(p=>{ sum[profileKey(p.name)]={sessions:coSessionsFor(p.id).length,open:coOpenActions(p.id).length,last:(coLastSession(p.id)||{}).session_date||''}; });
+    localStorage.setItem('tuf_coaching_summary',JSON.stringify({at:new Date().toISOString(),people:sum}));
+  }catch(e){}
+}
+// Link coachees into the People master DB (app-side sweep, like peopleSweep).
+function coPeopleLink(){
+  try{
+    if(typeof sbLoadOK==='undefined'||!sbLoadOK||!peopleAll().length) return;
+    coData.people.forEach(p=>{
+      if(p.person_id||!(p.name||'').trim()) return;
+      const per=personEnsure(p.name,{co:p.company,email:p.email});
+      if(per){ p.person_id=per.id; coUpd('coaching_people',p.id,{person_id:per.id},true); }
+    });
+  }catch(e){ console.warn('coPeopleLink failed',e); }
+}
+// ── Generic row helpers ──
+async function coIns(table,rec){
+  const {data,error}=await sb.from(table).insert(rec).select();
+  if(error){ alert('Save failed: '+error.message); return null; }
+  return data&&data[0];
+}
+async function coUpd(table,id,patch,quiet){
+  patch.updated_at=new Date().toISOString();
+  const {error}=await sb.from(table).update(patch).eq('id',id);
+  if(error){ if(!quiet) alert('Save failed: '+error.message); return false; }
+  return true;
+}
+async function coDel(table,id){
+  const {error}=await sb.from(table).delete().eq('id',id);
+  if(error){ alert('Delete failed: '+error.message); return false; }
+  return true;
+}
+function coRefresh(){ coLoad().then(r=>{ if(r.ok) coDraw(); }); }
+// ── Page ──
+function renderCoaching(){
+  const el=document.getElementById('coaching-content'); if(!el) return;
+  el.innerHTML='<div class="empty"><div class="ico">⏳</div>Loading coaching data…</div>';
+  const ta=document.getElementById('topbar-actions'); if(ta) ta.innerHTML='';
+  coLoad().then(r=>{
+    const still=document.getElementById('coaching-content'); if(!still) return;
+    if(!r.ok){
+      still.innerHTML = r.reason==='setup'
+        ? `<div class="card" style="border-left:4px solid var(--amb)"><div style="font-weight:800;margin-bottom:6px">One-time setup needed</div><div style="font-size:13px;line-height:1.6">The coaching tables do not exist yet. Run <b>COACHING_SETUP.md</b> in the Supabase dashboard (SQL editor + one storage bucket), then reload this page. Nothing else in the app is affected.</div></div>`
+        : `<div class="card" style="border-left:4px solid var(--red)"><div style="font-weight:800;margin-bottom:6px">Could not load coaching data</div><div style="font-size:13px">${escHtml(r.msg||'Unknown error')}</div><button class="btn btn-ghost btn-sm" style="margin-top:10px" onclick="renderCoaching()">Retry</button></div>`;
+      return;
+    }
+    coDraw();
+  });
+}
+function coNav(v){ coView=v; if(v!=='person') coPersonId=null; coDraw(); }
+function coOpenPerson(id){ coPersonId=id; coView='person'; coDraw(); }
+function coDraw(){
+  const el=document.getElementById('coaching-content'); if(!el) return;
+  const pills=[['list','People'],['danny','Danny view']];
+  const nav=`<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px">${pills.map(([k,l])=>`<button class="btn btn-sm ${coView===k?'btn-k':'btn-ghost'}" onclick="coNav('${k}')">${l}</button>`).join('')}</div>`;
+  const body=(coView==='person'&&coPersonId)?coPersonView():coView==='danny'?coDannyView():coListView();
+  el.innerHTML=nav+body;
+  const ta=document.getElementById('topbar-actions');
+  if(ta) ta.innerHTML=`<button class="btn btn-k btn-sm" onclick="coPersonModal()">+ Add Person</button>`;
+}
+function coListView(){
+  if(!coData.people.length) return `<div class="empty"><div class="ico">🎯</div>No coaching people yet. Add the individuals Danny coaches inside client businesses.</div>`;
+  const byCo={};
+  coData.people.forEach(p=>{ const c=p.company||'(no company)'; (byCo[c]=byCo[c]||[]).push(p); });
+  return Object.keys(byCo).sort().map(c=>`
+    <div class="sec-hdr">${escHtml(c)}</div>
+    ${byCo[c].map(p=>{
+      const last=coLastSession(p.id); const open=coOpenActions(p.id).length; const sess=coSessionsFor(p.id).length;
+      return `<div class="card" style="margin-bottom:8px;cursor:pointer" onclick="coOpenPerson('${p.id}')">
+        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+          <div style="flex:1;min-width:200px">
+            <div style="font-weight:700">${escHtml(p.name)}${p.role?` <span style="color:var(--mut);font-weight:500">· ${escHtml(p.role)}</span>`:''}</div>
+            <div style="font-size:12px;color:var(--mut)">${escHtml(p.engagement_type||'121')} · ${sess} session${sess!==1?'s':''}${last?' · last '+fmtShort(last.session_date):' · no sessions yet'}${open?` · <b>${open} open action${open!==1?'s':''}</b>`:''}</div>
+          </div>
+          <span class="tag ${p.status==='active'?'tag-g':'tag-a'}" style="font-size:9px">${escHtml(p.status)}</span>
+        </div>
+      </div>`;
+    }).join('')}`).join('');
+}
+// ── Person CRUD ──
+function coPersonModal(id){
+  const p=id?coPerson(id):null;
+  const clients=(ls.get('tuf_members',[])||[]).filter(m=>m.type==='existing_client');
+  showModal(p?('Edit '+p.name):'Add coaching person',`
+    <div class="grid-2">
+      <div class="form-row"><label class="form-label">Name</label><input class="form-input" id="cop-name" value="${escHtml(p?p.name:'')}"></div>
+      <div class="form-row"><label class="form-label">Role</label><input class="form-input" id="cop-role" value="${escHtml(p?p.role:'')}" placeholder="e.g. Head of Ops"></div>
+    </div>
+    <div class="grid-2">
+      <div class="form-row"><label class="form-label">Email</label><input class="form-input" id="cop-email" value="${escHtml(p?p.email:'')}"></div>
+      <div class="form-row"><label class="form-label">Company</label><input class="form-input" id="cop-co" value="${escHtml(p?p.company:'')}" placeholder="e.g. Rave Coffee"></div>
+    </div>
+    <div class="form-row"><label class="form-label">Paying client (optional)</label><select class="form-select" id="cop-client"><option value="">None / not linked</option>${clients.map(m=>`<option value="${m.id}"${p&&p.client_member_id===m.id?' selected':''}>${escHtml(m.name)}${m.co?' ('+escHtml(m.co)+')':''}</option>`).join('')}</select></div>
+    <div class="grid-2">
+      <div class="form-row"><label class="form-label">Engagement</label><select class="form-select" id="cop-type">${CO_TYPES.map(t=>`<option${p&&p.engagement_type===t?' selected':''}>${t}</option>`).join('')}</select></div>
+      <div class="form-row"><label class="form-label">Status</label><select class="form-select" id="cop-status">${['active','paused','ended'].map(s=>`<option${p&&p.status===s?' selected':''}>${s}</option>`).join('')}</select></div>
+    </div>
+    <div class="form-row"><label class="form-label">Notes</label><textarea class="form-textarea" id="cop-notes">${escHtml(p?p.notes:'')}</textarea></div>
+  `,`${p?`<button class="btn btn-red btn-sm" onclick="coPersonDelete('${p.id}')">Delete</button>`:''}<button class="btn btn-ghost" onclick="closeModal()">Cancel</button><button class="btn btn-k" onclick="coPersonSave('${p?p.id:''}')">Save</button>`);
+}
+async function coPersonSave(id){
+  const name=document.getElementById('cop-name').value.trim();
+  if(!name){ alert('Please enter a name.'); return; }
+  const client=document.getElementById('cop-client').value;
+  const rec={
+    name, role:document.getElementById('cop-role').value.trim(),
+    email:document.getElementById('cop-email').value.trim().toLowerCase(),
+    company:document.getElementById('cop-co').value.trim(),
+    client_member_id:client,
+    engagement_type:document.getElementById('cop-type').value,
+    status:document.getElementById('cop-status').value,
+    notes:document.getElementById('cop-notes').value.trim()
+  };
+  if(id){ if(!await coUpd('coaching_people',id,rec)) return; }
+  else { rec.created_by=CURRENT_USER||''; if(!await coIns('coaching_people',rec)) return; addNotif('Coaching person added: '+name); }
+  closeModal(); coRefresh();
+}
+async function coPersonDelete(id){
+  const p=coPerson(id); if(!p) return;
+  if(coSessionsFor(id).length){ alert('This person has sessions filed. Delete or move those first — session history is never silently lost.'); return; }
+  if(!confirm('Delete '+p.name+' from coaching?')) return;
+  if(await coDel('coaching_people',id)){ closeModal(); coView='list'; coPersonId=null; coRefresh(); }
+}
+// ── Person view ──
+function coActionRow(a,ctx){
+  const cc=coCarryCount(a);
+  const overdue=a.due_date&&a.status==='open'&&daysUntil(a.due_date)<0;
+  return `<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:6px 0;border-bottom:1px solid #EEE;font-size:12.5px">
+    <span style="flex:1;min-width:180px${a.status==='done'?';text-decoration:line-through;color:var(--mut)':''}">${escHtml(a.text)}</span>
+    ${cc?`<span class="tag tag-a" style="font-size:9px" title="Carried over ${cc} time${cc!==1?'s':''}">carried ×${cc}</span>`:''}
+    ${a.owner?`<span style="font-size:11px;color:var(--mut)">${escHtml(a.owner)}</span>`:''}
+    ${a.due_date?`<span style="font-size:11px;color:${overdue?'var(--red)':'var(--mut)'}">${fmtShort(a.due_date)}</span>`:''}
+    <select class="form-select" style="width:auto;padding:2px 6px;font-size:10.5px" onchange="coActionStatus('${a.id}',this.value)">${CO_ACTION_STATUSES.map(s=>`<option${s===a.status?' selected':''}>${s}</option>`).join('')}</select>
+    ${ctx==='open'&&a.status==='open'?`<button class="btn btn-ghost btn-sm" style="padding:1px 8px" title="Carry into the latest session" onclick="coCarry('${a.id}')">↪ Carry</button>`:''}
+    <button class="btn btn-ghost btn-sm" style="padding:1px 7px" onclick="coActionDelete('${a.id}')">✕</button>
+  </div>`;
+}
+function coPersonView(){
+  const p=coPerson(coPersonId); if(!p) return '<div class="empty">Person not found.</div>';
+  const sess=coSessionsFor(p.id);
+  const open=coOpenActions(p.id);
+  const clientM=(ls.get('tuf_members',[])||[]).find(m=>m.id===p.client_member_id);
+  const files=sid=>coData.files.filter(f=>f.session_id===sid);
+  const sessCard=s=>{
+    const acts=coData.actions.filter(a=>a.session_id===s.id).slice().sort((a,b)=>(a.sort||0)-(b.sort||0)||(a.created_at||'').localeCompare(b.created_at||''));
+    const fl=files(s.id);
+    const recap=(s.recap_md||'').trim();
+    return `<div class="card" style="margin-bottom:10px;border-left:4px solid ${s.status==='sent'?'var(--grn)':s.status==='failed'?'var(--red)':s.status==='approved'?'var(--y)':'var(--amb)'}">
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+        <div style="flex:1;min-width:200px">
+          <div style="font-weight:700">Session ${s.session_no||'?'} · ${fmtDate(s.session_date)} <span style="color:var(--mut);font-weight:500">· ${escHtml(s.meeting_type)}</span></div>
+          <div style="font-size:11.5px;color:var(--mut)">${s.sent_at?'Sent '+fmtDate(String(s.sent_at).slice(0,10))+(s.sent_to&&s.sent_to.length?' to '+escHtml(s.sent_to.join(', ')):''):s.sent_to&&s.sent_to.length?'To send to '+escHtml(s.sent_to.join(', ')):''}${s.read_ai_meeting_id?' · Read AI linked':''}</div>
+        </div>
+        <select class="form-select" style="width:auto;padding:3px 8px;font-size:11px" onchange="coSessStatus('${s.id}',this.value)">${CO_SESSION_STATUSES.map(x=>`<option${x===s.status?' selected':''}>${x}</option>`).join('')}</select>
+        <button class="btn btn-ghost btn-sm" onclick="coSessModal('${s.id}')">Edit</button>
+      </div>
+      ${recap?`<div style="font-size:12.5px;color:var(--mut);margin-top:8px;white-space:pre-wrap">${escHtml(recap.slice(0,280))}${recap.length>280?'… ':''}</div>${recap.length>280?`<button class="btn btn-ghost btn-sm" style="margin-top:4px;padding:1px 8px" onclick="coRecapModal('${s.id}')">View full recap</button>`:''}`:''}
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;font-size:12px">
+        ${s.recording_url?`<a href="${escHtml(s.recording_url)}" target="_blank" rel="noopener" class="btn btn-ghost btn-sm">▶ Recording</a>`:''}
+        ${fl.map(f=>`<button class="btn btn-ghost btn-sm" onclick="coFileOpen('${f.id}')">${f.kind==='recap_pdf'?'📄':f.kind==='transcript'?'📝':'📎'} ${escHtml(f.name||f.kind)}</button>`).join('')}
+        <button class="btn btn-ghost btn-sm" onclick="coUploadFile('${s.id}','recap_pdf')">+ Recap PDF</button>
+        <button class="btn btn-ghost btn-sm" onclick="coUploadFile('${s.id}','transcript')">+ Transcript file</button>
+        <button class="btn btn-ghost btn-sm" onclick="coPasteTranscript('${s.id}')">+ Paste transcript</button>
+      </div>
+      <div style="margin-top:10px">
+        <div style="font-size:10px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--mut);margin-bottom:2px">Actions from this session</div>
+        ${acts.length?acts.map(a=>coActionRow(a,'session')).join(''):'<div style="font-size:12px;color:var(--mut);padding:4px 0">None logged.</div>'}
+        <div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap">
+          <input class="form-input" id="co-act-add-${s.id}" placeholder="Add an action…" style="flex:1;min-width:160px;padding:6px 10px;font-size:12.5px" onkeydown="if(event.key==='Enter')coActionAdd('${s.id}')">
+          <button class="btn btn-ghost btn-sm" onclick="coActionAdd('${s.id}')">Add</button>
+        </div>
+      </div>
+    </div>`;
+  };
+  return `
+  <div class="card" style="border-left:4px solid var(--y);margin-bottom:14px">
+    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+      <div style="flex:1;min-width:220px">
+        <div style="font-size:18px;font-weight:800">${escHtml(p.name)}${p.role?` <span style="font-size:13px;color:var(--mut);font-weight:500">· ${escHtml(p.role)}</span>`:''}</div>
+        <div style="font-size:12.5px;color:var(--mut);margin-top:2px">${escHtml(p.company||'')}${clientM?' · client: '+escHtml(clientM.name):''} · ${escHtml(p.engagement_type||'121')} · ${sess.length} session${sess.length!==1?'s':''}${p.email?` · <a href="mailto:${escHtml(p.email)}">${escHtml(p.email)}</a>`:''}</div>
+      </div>
+      <button class="btn btn-k btn-sm" onclick="coSessModal(null,'${p.id}')">+ Log session</button>
+      <button class="btn btn-ghost btn-sm" onclick="coPersonModal('${p.id}')">Edit</button>
+      <button class="btn btn-ghost btn-sm" onclick="coNav('list')">← All people</button>
+    </div>
+    ${p.notes?`<div style="font-size:12px;color:var(--mut);margin-top:8px;white-space:pre-wrap">${escHtml(p.notes)}</div>`:''}
+  </div>
+  <div class="card" style="margin-bottom:14px">
+    <div style="font-size:10px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--mut);margin-bottom:4px">Open actions (${open.length})</div>
+    ${open.length?open.map(a=>coActionRow(a,'open')).join(''):'<div style="font-size:12.5px;color:var(--mut)">Nothing open. Clean slate.</div>'}
+  </div>
+  <div class="sec-hdr">Session history</div>
+  ${sess.length?sess.map(sessCard).join(''):'<div class="empty"><div class="ico">📅</div>No sessions yet. Log the first one.</div>'}`;
+}
+function coRecapModal(sid){
+  const s=coData.sessions.find(x=>x.id===sid); if(!s) return;
+  const p=coPerson(s.person_id);
+  showModal('Session '+(s.session_no||'?')+' recap · '+escHtml(p?p.name:''),`<div style="white-space:pre-wrap;font-size:13px;line-height:1.6">${escHtml(s.recap_md||'')}</div>`,`<button class="btn btn-ghost" onclick="closeModal()">Close</button>`);
+}
+// ── Session CRUD ──
+function coSessModal(id,personId){
+  const s=id?coData.sessions.find(x=>x.id===id):null;
+  const pid=s?s.person_id:personId;
+  const p=coPerson(pid); if(!p) return;
+  const nextNo=coSessionsFor(pid).length+1;
+  showModal(s?('Edit session '+(s.session_no||'')):'Log a session · '+p.name,`
+    <div class="grid-2">
+      <div class="form-row"><label class="form-label">Session date</label><input class="form-input" type="date" id="cos-date" value="${s?s.session_date:new Date().toISOString().slice(0,10)}"></div>
+      <div class="form-row"><label class="form-label">Number in series</label><input class="form-input" type="number" id="cos-no" value="${s?(s.session_no||''):nextNo}" min="1"></div>
+    </div>
+    <div class="grid-2">
+      <div class="form-row"><label class="form-label">Meeting type</label><select class="form-select" id="cos-type">${CO_TYPES.map(t=>`<option${(s?s.meeting_type:p.engagement_type)===t?' selected':''}>${t}</option>`).join('')}</select></div>
+      <div class="form-row"><label class="form-label">Status</label><select class="form-select" id="cos-status">${CO_SESSION_STATUSES.map(x=>`<option${s&&s.status===x?' selected':''}>${x}</option>`).join('')}</select></div>
+    </div>
+    <div class="form-row"><label class="form-label">Recording link</label><input class="form-input" id="cos-rec" value="${escHtml(s?s.recording_url:'')}" placeholder="https://…"></div>
+    <div class="form-row"><label class="form-label">Sent to (comma separated emails)</label><input class="form-input" id="cos-sentto" value="${escHtml(s&&s.sent_to?s.sent_to.join(', '):(p.email||''))}"></div>
+    <div class="form-row"><label class="form-label">Recap</label><textarea class="form-textarea" id="cos-recap" style="min-height:140px">${escHtml(s?s.recap_md:'')}</textarea></div>
+  `,`${s?`<button class="btn btn-red btn-sm" onclick="coSessDelete('${s.id}')">Delete</button>`:''}<button class="btn btn-ghost" onclick="closeModal()">Cancel</button><button class="btn btn-k" onclick="coSessSave('${s?s.id:''}','${pid}')">Save</button>`);
+}
+async function coSessSave(id,pid){
+  const p=coPerson(pid); if(!p) return;
+  const rec={
+    person_id:pid, company:p.company||'',
+    session_date:document.getElementById('cos-date').value||new Date().toISOString().slice(0,10),
+    session_no:parseInt(document.getElementById('cos-no').value,10)||null,
+    meeting_type:document.getElementById('cos-type').value,
+    status:document.getElementById('cos-status').value,
+    recording_url:document.getElementById('cos-rec').value.trim(),
+    sent_to:document.getElementById('cos-sentto').value.split(',').map(x=>x.trim().toLowerCase()).filter(Boolean),
+    recap_md:document.getElementById('cos-recap').value
+  };
+  if(rec.status==='sent') rec.sent_at=new Date().toISOString();
+  if(id){ if(!await coUpd('coaching_sessions',id,rec)) return; }
+  else {
+    rec.created_by=CURRENT_USER||'';
+    if(!await coIns('coaching_sessions',rec)) return;
+    try{ journeyLog(p.name,'Coaching session '+(rec.session_no||'')+' logged ('+rec.meeting_type+')'); }catch(e){}
+    addNotif('Coaching session logged: '+p.name);
+  }
+  closeModal(); coRefresh();
+}
+async function coSessStatus(id,val){
+  const patch={status:val};
+  if(val==='sent') patch.sent_at=new Date().toISOString();
+  if(await coUpd('coaching_sessions',id,patch)) coRefresh();
+}
+async function coSessDelete(id){
+  if(!confirm('Delete this session, its actions and its files? This cannot be undone.')) return;
+  const fl=coData.files.filter(f=>f.session_id===id);
+  if(fl.length){ try{ await sb.storage.from(CO_BUCKET).remove(fl.map(f=>f.path)); }catch(e){} }
+  if(await coDel('coaching_sessions',id)){ closeModal(); coRefresh(); }
+}
+// ── Action CRUD + carry ──
+async function coActionAdd(sessionId){
+  const inp=document.getElementById('co-act-add-'+sessionId); if(!inp) return;
+  const text=inp.value.trim(); if(!text) return;
+  const s=coData.sessions.find(x=>x.id===sessionId); if(!s) return;
+  const p=coPerson(s.person_id);
+  if(await coIns('coaching_actions',{session_id:sessionId,person_id:s.person_id,text,owner:p?p.name:'',status:'open'})){ inp.value=''; coRefresh(); }
+}
+async function coActionStatus(id,val){ if(await coUpd('coaching_actions',id,{status:val})) coRefresh(); }
+async function coActionDelete(id){ if(!confirm('Delete this action?')) return; if(await coDel('coaching_actions',id)) coRefresh(); }
+// Carry an open action into the person's latest session: new row pointing back
+// at this one via carried_from_id; the old one becomes status 'carried'.
+async function coCarry(id){
+  const a=coData.actions.find(x=>x.id===id); if(!a) return;
+  const latest=coLastSession(a.person_id);
+  if(!latest){ alert('No session to carry into.'); return; }
+  if(latest.id===a.session_id){ alert('This action is already on the latest session. Log the next session first, then carry it.'); return; }
+  const nu=await coIns('coaching_actions',{session_id:latest.id,person_id:a.person_id,text:a.text,owner:a.owner||'',due_date:a.due_date||null,status:'open',carried_from_id:a.id});
+  if(nu){ await coUpd('coaching_actions',a.id,{status:'carried'}); addNotif('Action carried forward'); coRefresh(); }
+}
+// ── Files ──
+function coUploadFile(sessionId,kind){
+  const inp=document.createElement('input'); inp.type='file';
+  if(kind==='recap_pdf') inp.accept='application/pdf';
+  inp.onchange=async()=>{
+    const f=inp.files[0]; if(!f) return;
+    if(f.size>25*1024*1024){ alert('That file is '+(f.size/1048576).toFixed(1)+'MB. Max is 25MB.'); return; }
+    const s=coData.sessions.find(x=>x.id===sessionId); if(!s) return;
+    const safe=(f.name||'file').replace(/[^A-Za-z0-9.\-_]/g,'_');
+    const path='coaching/'+s.person_id+'/'+sessionId+'/'+uid()+'_'+safe;
+    const {error}=await sb.storage.from(CO_BUCKET).upload(path,f,{upsert:false,contentType:f.type||undefined});
+    if(error){ alert('Upload failed: '+error.message+(String(error.message||'').toLowerCase().indexOf('bucket')>=0?' — has the tuf-coaching bucket been created? See COACHING_SETUP.md step 2.':'')); return; }
+    await coIns('coaching_files',{session_id:sessionId,person_id:s.person_id,kind,path,name:f.name,size:f.size,mime:f.type||'',uploaded_by:CURRENT_USER||''});
+    if(kind==='recap_pdf') await coUpd('coaching_sessions',sessionId,{recap_pdf_path:path},true);
+    if(kind==='transcript') await coUpd('coaching_sessions',sessionId,{transcript_path:path},true);
+    coRefresh();
+  };
+  inp.click();
+}
+function coPasteTranscript(sessionId){
+  showModal('Paste transcript',`
+    <div class="form-row"><label class="form-label">Transcript text</label><textarea class="form-textarea" id="cot-text" style="min-height:220px" placeholder="Paste the full transcript…"></textarea></div>
+    <div style="font-size:11px;color:var(--mut)">Stored as a text file in the private coaching bucket, not in the database.</div>
+  `,`<button class="btn btn-ghost" onclick="closeModal()">Cancel</button><button class="btn btn-k" onclick="coPasteTranscriptSave('${sessionId}')">Save transcript</button>`);
+}
+async function coPasteTranscriptSave(sessionId){
+  const text=document.getElementById('cot-text').value.trim(); if(!text){ alert('Nothing to save.'); return; }
+  const s=coData.sessions.find(x=>x.id===sessionId); if(!s) return;
+  const path='coaching/'+s.person_id+'/'+sessionId+'/'+uid()+'_transcript.txt';
+  const blob=new Blob([text],{type:'text/plain'});
+  const {error}=await sb.storage.from(CO_BUCKET).upload(path,blob,{upsert:false,contentType:'text/plain'});
+  if(error){ alert('Upload failed: '+error.message); return; }
+  await coIns('coaching_files',{session_id:sessionId,person_id:s.person_id,kind:'transcript',path,name:'transcript.txt',size:text.length,mime:'text/plain',uploaded_by:CURRENT_USER||''});
+  await coUpd('coaching_sessions',sessionId,{transcript_path:path},true);
+  closeModal(); coRefresh();
+}
+async function coFileOpen(id){
+  const f=coData.files.find(x=>x.id===id); if(!f) return;
+  const {data,error}=await sb.storage.from(CO_BUCKET).createSignedUrl(f.path,3600);
+  if(error||!data||!data.signedUrl){ alert('Could not open the file: '+((error&&error.message)||'unknown error')); return; }
+  window.open(data.signedUrl,'_blank');
+}
+// ── Danny view ──
+function coDannyView(){
+  const stuck=coStuckActions();
+  const stale=coStalePeople();
+  const active=coData.people.filter(p=>p.status==='active').length;
+  const m=new Date().toISOString().slice(0,7);
+  const monthSess=coData.sessions.filter(s=>(s.session_date||'').slice(0,7)===m).length;
+  const openTotal=coData.actions.filter(a=>a.status==='open').length;
+  return `
+  <div class="grid-4" style="margin-bottom:14px">
+    <div class="stat"><div class="n">${active}</div><div class="l">People coached</div></div>
+    <div class="stat"><div class="n">${monthSess}</div><div class="l">Sessions this month</div></div>
+    <div class="stat ${openTotal?'y':'g'}"><div class="n">${openTotal}</div><div class="l">Open actions</div></div>
+    <div class="stat ${stuck.length?'r':'g'}"><div class="n">${stuck.length}</div><div class="l">Carried 2+ times</div></div>
+  </div>
+  <div class="sec-hdr">Actions carried more than once</div>
+  ${stuck.length?stuck.map(a=>{
+    const p=coPerson(a.person_id);
+    return `<div class="card" style="margin-bottom:8px;border-left:4px solid var(--red);cursor:pointer" onclick="coOpenPerson('${a.person_id}')">
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+        <div style="flex:1;min-width:200px"><div style="font-weight:700;font-size:13px">${escHtml(a.text)}</div>
+        <div style="font-size:12px;color:var(--mut)">${escHtml(p?p.name:'')}${p&&p.company?' · '+escHtml(p.company):''}</div></div>
+        <span class="tag tag-r" style="font-size:9px">carried ×${coCarryCount(a)}</span>
+      </div>
+    </div>`;
+  }).join(''):'<div style="font-size:12.5px;color:var(--mut);margin-bottom:14px">Nothing stuck. No action has been carried more than once.</div>'}
+  <div class="sec-hdr" style="margin-top:16px">No session for ${CO_STALE_DAYS}+ days</div>
+  ${stale.length?stale.map(x=>`<div class="card" style="margin-bottom:8px;border-left:4px solid var(--amb);cursor:pointer" onclick="coOpenPerson('${x.p.id}')">
+    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+      <div style="flex:1"><b>${escHtml(x.p.name)}</b> <span style="color:var(--mut);font-size:12px">· ${escHtml(x.p.company||'')}</span></div>
+      <span style="font-size:12px;color:var(--mut)">${x.days===null?'No session ever logged':'Last session '+x.days+' days ago ('+fmtShort(x.last.session_date)+')'}</span>
+    </div>
+  </div>`).join(''):'<div style="font-size:12.5px;color:var(--mut)">Everyone has been seen inside the last '+CO_STALE_DAYS+' days.</div>'}`;
+}
+// ── Morning Brief nudges (async: appends to the brief once data arrives) ──
+async function coBriefNudges(){
+  try{
+    if(typeof sb==='undefined'||!sb||!document.getElementById('brief-items')) return;
+    const r=await coLoad(); if(!r.ok) return;
+    const stuck=coStuckActions();
+    const stale=coStalePeople().filter(x=>x.days!==null);
+    const el=document.getElementById('brief-items'); if(!el) return;
+    const mk=(type,text)=>`<div class="pi ${type}"><span class="pi-tag ${type}">COACHING</span><span style="font-size:10px;font-weight:700;background:var(--k);color:var(--w);border-radius:20px;padding:2px 9px;flex-shrink:0;margin-top:1px">Danny</span><span style="flex:1;font-size:12.5px;line-height:1.45;margin-left:4px">${text}</span></div>`;
+    let html='';
+    if(stuck.length) html+=mk('soon',`${stuck.length} coaching action${stuck.length!==1?'s':''} carried more than once: ${stuck.slice(0,3).map(a=>escHtml(((coPerson(a.person_id)||{}).name||'')+': '+String(a.text||'').slice(0,40))).join(' · ')}${stuck.length>3?'…':''}`);
+    if(stale.length) html+=mk('soon',`No coaching session for ${CO_STALE_DAYS}+ days: ${stale.slice(0,4).map(x=>escHtml(x.p.name)+' ('+x.days+'d)').join(', ')}${stale.length>4?'…':''}`);
+    if(html){ const clear=el.querySelector('.pi.good'); if(clear) clear.remove(); el.insertAdjacentHTML('beforeend',html); }
+  }catch(e){}
+}
+
 // ═══ HOME / MORNING BRIEF ═══════════════════════════════════════════════════
 function renderHome(){
   // North Star
@@ -2881,6 +3311,7 @@ function renderHome(){
   renderBriefTasks();
   renderBriefPosting();
   updateTaskBadge();
+  coBriefNudges();
 }
 function renderDailyControl(){
   const el=document.getElementById('daily-control'); if(!el)return;
@@ -3497,6 +3928,14 @@ function renderPersonProfile(id){
       `${kv('Submitted',x.submittedAt?fmtDate(x.submittedAt.slice(0,10)):'')}${d?kv('Result',escHtml('Stage '+d.stage+' of 5'+(d.stageName?' · '+d.stageName:'')+(d.persona?' · '+d.persona:''))):kv('Challenge',escHtml(x.challenge||''))}`,
       'Inbound',`goPage('inbound')`);
   });
+  // Coaching panel (from the device-local summary cache written by coLoad)
+  try{
+    const cs=JSON.parse(localStorage.getItem('tuf_coaching_summary')||'null');
+    const c=cs&&cs.people&&cs.people[profileKey(p.name)];
+    if(c) panels+=panel('Coaching',`<span class="tag tag-g" style="font-size:9px">${c.sessions} session${c.sessions!==1?'s':''}</span>`,
+      `${kv('Sessions',String(c.sessions))}${kv('Open actions',String(c.open))}${c.last?kv('Last session',fmtDate(c.last)):''}`,
+      'Coaching',`goPage('coaching')`);
+  }catch(e){}
   // Add-to-section buttons for sections they are not in
   const na=escAttr(p.name);
   const addBtns=[
