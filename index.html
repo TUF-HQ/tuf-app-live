@@ -3444,6 +3444,7 @@ function coListView(){
             <div style="font-weight:700">${escHtml(p.name)}${p.role?` <span style="color:var(--mut);font-weight:500">· ${escHtml(p.role)}</span>`:''}</div>
             <div style="font-size:12px;color:var(--mut)">${escHtml(p.engagement_type||'121')} · ${sess} session${sess!==1?'s':''}${last?' · last '+fmtShort(last.session_date):' · no sessions yet'}${open?` · <b>${open} open action${open!==1?'s':''}</b>`:''}</div>
           </div>
+          <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();coPrepBrief('${p.id}')" title="Prep brief">⚡</button>
           <span class="tag ${p.status==='active'?'tag-g':'tag-a'}" style="font-size:9px">${escHtml(p.status)}</span>
         </div>
       </div>`;
@@ -3552,6 +3553,7 @@ function coPersonView(){
         <div style="font-size:18px;font-weight:800">${escHtml(p.name)}${p.role?` <span style="font-size:13px;color:var(--mut);font-weight:500">· ${escHtml(p.role)}</span>`:''}</div>
         <div style="font-size:12.5px;color:var(--mut);margin-top:2px">${escHtml(p.company||'')}${clientM?' · client: '+escHtml(clientM.name):''} · ${escHtml(p.engagement_type||'121')} · ${sess.length} session${sess.length!==1?'s':''}${p.email?` · <a href="mailto:${escHtml(p.email)}">${escHtml(p.email)}</a>`:''}</div>
       </div>
+      <button class="btn btn-ghost btn-sm" onclick="coPrepBrief('${p.id}')" title="Everything Danny needs before the session">⚡ Prep brief</button>
       <button class="btn btn-k btn-sm" onclick="coSessModal(null,'${p.id}')">+ Log session</button>
       <button class="btn btn-ghost btn-sm" onclick="coPersonModal('${p.id}')">Edit</button>
       <button class="btn btn-ghost btn-sm" onclick="coNav('list')">← All people</button>
@@ -3685,6 +3687,81 @@ async function coFileOpen(id){
   if(error||!data||!data.signedUrl){ alert('Could not open the file: '+((error&&error.message)||'unknown error')); return; }
   window.open(data.signedUrl,'_blank');
 }
+// ── Prep briefs: everything Danny needs before a session, assembled from the
+// person's history and open actions, with AI suggested angles on top. ──
+function coPrepDeterministic(p){
+  const sess=coSessionsFor(p.id);
+  const last=sess[0]||null;
+  const open=coOpenActions(p.id);
+  const days=last?Math.max(0,-daysUntil(last.session_date)):null;
+  const stuck=open.filter(a=>coCarryCount(a)>=2);
+  const lines=[];
+  lines.push('PREP BRIEF · '+p.name+(p.company?' · '+p.company:'')+' · '+(p.engagement_type||'121'));
+  lines.push(sess.length+' session'+(sess.length!==1?'s':'')+' so far'+(last?' · last one '+fmtDate(last.session_date)+(days!==null?' ('+days+' days ago)':''):' · first session coming up'));
+  lines.push('');
+  if(last&&(last.recap_md||'').trim()){
+    lines.push('WHERE YOU LEFT OFF (session '+(last.session_no||sess.length)+')');
+    const paras=last.recap_md.split('\n').map(s=>s.trim()).filter(s=>s&&s.indexOf('#')!==0&&s.indexOf('>')!==0);
+    if(paras[0]) lines.push(paras[0]);
+    lines.push('');
+  }
+  lines.push('OPEN ACTIONS ('+open.length+')');
+  if(open.length) open.forEach(a=>{ const cc=coCarryCount(a); lines.push('· '+a.text+(a.owner?' ['+a.owner+']':'')+(cc?' — carried x'+cc:'')+(a.due_date?' — due '+fmtShort(a.due_date):'')); });
+  else lines.push('· Clean slate. Nothing open.');
+  lines.push('');
+  if(stuck.length){
+    lines.push('WATCH FOR');
+    stuck.forEach(a=>lines.push('· "'+a.text.slice(0,80)+'" has been carried '+coCarryCount(a)+' times. Worth asking what is really blocking it.'));
+    lines.push('');
+  }
+  return {text:lines.join('\n'), last, open, stuck};
+}
+async function coPrepBrief(pid){
+  const p=coPerson(pid); if(!p) return;
+  const cacheKey='tuf_coprep_'+pid+'_'+new Date().toISOString().slice(0,10);
+  let cached=null; try{ cached=localStorage.getItem(cacheKey); }catch(e){}
+  if(cached){ coPrepShow(p,cached); return; }
+  const det=coPrepDeterministic(p);
+  coPrepShow(p, det.text+'SUGGESTED ANGLES\n· Thinking…');
+  let angles='';
+  try{
+    const prompt="You prepare Danny Wicks, business coach at The Ultimate Founder, for a coaching session. Based on this context, write exactly 3 short suggested opening angles or questions for the session, in Danny's warm direct style. No preamble, no numbering, one per line starting with '· '. Never use hyphens or dashes.\n\n"+det.text+(det.last&&det.last.recap_md?'\n\nFULL LAST RECAP:\n'+det.last.recap_md.slice(0,3000):'');
+    const data=await claudeCall({model:'claude-haiku-4-5-20251001',max_tokens:300,messages:[{role:'user',content:prompt}]});
+    angles=((data.content&&data.content[0]&&data.content[0].text)||'').trim();
+  }catch(e){
+    angles='· Where did the open actions land since last time?\n· What has changed since '+(det.last?fmtDate(det.last.session_date):'you last spoke')+'?\n· What would make today a genuinely valuable session?';
+  }
+  const full=det.text+'SUGGESTED ANGLES\n'+angles;
+  try{ localStorage.setItem(cacheKey,full); }catch(e){}
+  coPrepShow(p,full);
+}
+function coPrepShow(p,text){
+  showModal('⚡ Prep brief · '+escHtml(p.name),
+    `<div style="white-space:pre-wrap;font-size:13px;line-height:1.6" id="coprep-text">${escHtml(text)}</div>`,
+    `<button class="btn btn-ghost btn-sm" onclick="coPrepRegen('${p.id}')">↻ Regenerate</button><button class="btn btn-ghost btn-sm" id="coprep-copy" onclick="coPrepCopy()">Copy</button><button class="btn btn-k" onclick="closeModal()">Done</button>`);
+}
+function coPrepRegen(pid){ try{ localStorage.removeItem('tuf_coprep_'+pid+'_'+new Date().toISOString().slice(0,10)); }catch(e){} coPrepBrief(pid); }
+function coPrepCopy(){
+  const el=document.getElementById('coprep-text'); if(!el) return;
+  const btn=document.getElementById('coprep-copy');
+  if(navigator.clipboard&&navigator.clipboard.writeText) navigator.clipboard.writeText(el.textContent).then(()=>{ if(btn){btn.textContent='Copied ✓'; setTimeout(()=>{btn.textContent='Copy';},1400);} }).catch(()=>{});
+}
+// Coaching sessions in Danny's calendar today (graceful when no calendar is set up)
+function coTodayCalMatches(){
+  try{
+    const c=ls.get(DC_CACHE_KEY,null); if(!c||!c.ics||!coData.loaded||!coData.people.length) return [];
+    const t=new Date(); const ymd=''+t.getFullYear()+String(t.getMonth()+1).padStart(2,'0')+String(t.getDate()).padStart(2,'0');
+    const ics=c.ics.replace(/\r\n[ \t]/g,'');
+    const out=[];
+    ics.split('BEGIN:VEVENT').slice(1).forEach(ev=>{
+      const m=ev.match(/DTSTART[^:\n]*:(\d{8})/); if(!m||m[1]!==ymd) return;
+      const sm=ev.match(/SUMMARY[^:\n]*:(.*)/); const sum=((sm&&sm[1])||'').trim().toLowerCase();
+      if(!sum) return;
+      coData.people.forEach(p=>{ const first=((p.name||'').split(/\s+/)[0]||'').toLowerCase(); if(first&&sum.indexOf(first)>=0&&out.indexOf(p)<0) out.push(p); });
+    });
+    return out;
+  }catch(e){ return []; }
+}
 // ── Danny view ──
 function coDannyView(){
   const stuck=coStuckActions();
@@ -3747,9 +3824,11 @@ async function coBriefNudges(){
     const r=await coLoad(); if(!r.ok) return;
     const stuck=coStuckActions();
     const stale=coStalePeople().filter(x=>x.days!==null);
+    const todays=coTodayCalMatches();
     const el=document.getElementById('brief-items'); if(!el) return;
     const mk=(type,text)=>`<div class="pi ${type}"><span class="pi-tag ${type}">COACHING</span><span style="font-size:10px;font-weight:700;background:var(--k);color:var(--w);border-radius:20px;padding:2px 9px;flex-shrink:0;margin-top:1px">Danny</span><span style="flex:1;font-size:12.5px;line-height:1.45;margin-left:4px">${text}</span></div>`;
     let html='';
+    if(todays.length) html+=mk('info',`Coaching today: ${todays.map(p=>escHtml(p.name)).join(', ')}. Prep brief${todays.length!==1?'s':''} ready in Coaching (⚡).`);
     const drafts=coData.sessions.filter(s=>s.status==='draft');
     const ready=coData.sessions.filter(s=>s.status==='approved');
     if(ready.length) html+=mk('soon',`${ready.length} approved coaching recap${ready.length!==1?'s':''} ready to send: ${ready.slice(0,3).map(s=>escHtml((coPerson(s.person_id)||{}).name||'')).join(', ')}.`);
