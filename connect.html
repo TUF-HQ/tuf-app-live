@@ -1,0 +1,45 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TUF App — Connect Claude</title>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#0A0A0B;color:#fff;font-family:Montserrat,Arial,sans-serif;display:flex;min-height:100vh;align-items:center;justify-content:center}
+.card{background:#141416;border:1px solid #26262a;border-radius:16px;padding:36px;width:340px}
+h1{font-size:18px;font-weight:800;letter-spacing:.5px;margin:0 0 6px}
+p{font-size:12px;color:#9a9aa2;margin:0 0 20px;line-height:1.5}
+input[type=email],input[type=password]{width:100%;box-sizing:border-box;background:#1c1c20;border:1px solid #2c2c31;border-radius:8px;color:#fff;padding:11px 12px;font-size:14px;margin-bottom:10px;font-family:inherit}
+button{width:100%;background:#FBF000;color:#0A0A0B;font-weight:800;border:0;border-radius:8px;padding:12px;font-size:14px;cursor:pointer;font-family:inherit}
+.err{color:#ff6b6b;font-size:12px;margin:0 0 12px}
+.mark{color:#FBF000;font-size:26px;font-weight:800;margin-bottom:14px}
+</style>
+</head>
+<body>
+<div class="card">
+<div class="mark">&#8734;</div>
+<h1>Connect Claude to the TUF App</h1>
+<p>Sign in with your company account. Claude gets read only access to app data. You can be disconnected at any time.</p>
+<p class="err" id="err" style="display:none"></p>
+<form method="POST" action="https://tzbjikrnvphbbwfxjxdv.supabase.co/functions/v1/tuf-connector/authorize" id="f">
+<input type="email" name="email" placeholder="Work email" required autofocus>
+<input type="password" name="password" placeholder="Password" required>
+<button type="submit">Sign in and connect</button>
+</form>
+</div>
+<script>
+(function(){
+  var q = new URLSearchParams(location.search);
+  var f = document.getElementById('f');
+  ["client_id","redirect_uri","state","code_challenge","code_challenge_method","scope","resource"].forEach(function(k){
+    var i = document.createElement('input');
+    i.type = 'hidden'; i.name = k; i.value = q.get(k) || '';
+    f.appendChild(i);
+  });
+  var err = q.get('err');
+  if (err) { var e = document.getElementById('err'); e.textContent = err; e.style.display = 'block'; }
+})();
+</script>
+</body>
+</html>
