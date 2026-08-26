@@ -136,7 +136,7 @@ body{font-family:'Montserrat',sans-serif;background:var(--bg);color:var(--txt);f
 .form-textarea{resize:vertical;min-height:76px}
 /* tags / badges */
 .tag{font-size:10px;font-weight:700;border-radius:5px;padding:3px 8px;display:inline-block;letter-spacing:.2px}
-.tag-k{background:var(--k);color:var(--w)}.tag-r{background:var(--rbg);color:var(--red)}.tag-a{background:var(--abg);color:var(--amb)}.tag-g{background:var(--gbg);color:var(--grn)}.tag-b{background:var(--bbg);color:var(--blu)}.tag-p{background:var(--pbg);color:var(--pur)}
+.tag-k{background:var(--k);color:var(--w)}.tag-y{background:var(--y);color:var(--k)}.tag-r{background:var(--rbg);color:var(--red)}.tag-a{background:var(--abg);color:var(--amb)}.tag-g{background:var(--gbg);color:var(--grn)}.tag-b{background:var(--bbg);color:var(--blu)}.tag-p{background:var(--pbg);color:var(--pur)}
 .tag-danny{background:#F3E5FF;color:var(--danny)}.tag-joe{background:var(--bbg);color:var(--joe)}.tag-jasper{background:#E8F8F5;color:var(--jasper)}.tag-james{background:var(--abg);color:var(--james)}.tag-chloe{background:#FCE4EC;color:#C2185B}.tag-team{background:#EEE;color:#555}
 /* modal */
 .modal-overlay{position:fixed;inset:0;background:rgba(10,12,18,.55);backdrop-filter:blur(4px);z-index:500;display:flex;align-items:center;justify-content:center;padding:20px;animation:modalfade .18s ease}
@@ -490,19 +490,17 @@ details>summary::-webkit-details-marker{display:none}
     <div class="sb-item" data-page="transcript" onclick="nav('transcript',this)"><span class="ico">🎙</span>Meeting Notes</div>
 
     <div class="sb-section">CRM</div>
-    <div class="sb-item" data-page="people" onclick="nav('people',this)"><span class="ico">🗂</span>People</div>
-    <div class="sb-item" data-page="members" data-filter="all" onclick="navMembers('all',this)"><span class="ico">👤</span>Existing Clients</div>
-    <div class="sb-sub" data-page="members" data-filter="attendees" onclick="navMembers('attendees',this)">Event Attendees</div>
-    <div class="sb-sub" data-page="members" data-filter="boardroom" onclick="navMembers('boardroom',this)">Boardroom Members</div>
-    <div class="sb-sub" data-page="members" data-filter="private" onclick="navMembers('private',this)">Private Clients</div>
+    <div class="sb-item" data-page="people" data-filter="network" onclick="navPeople('network',this)"><span class="ico">🗂</span>Network</div>
+    <div class="sb-item" data-page="people" data-filter="introducers" onclick="navPeople('introducers',this)"><span class="ico">🤝</span>Introducers</div>
+    <div class="sb-item" data-page="pipeline" onclick="nav('pipeline',this)"><span class="ico">💰</span>Pipeline</div>
+    <div class="sb-item" data-page="members" data-filter="boardroom" onclick="navMembers('boardroom',this)"><span class="ico">🏛</span>Boardroom Members</div>
+    <div class="sb-item" data-page="members" data-filter="private121" onclick="navMembers('private121',this)"><span class="ico">🎯</span>Private 121s</div>
     <div class="sb-item" data-page="inbound" onclick="nav('inbound',this)"><span class="ico">📥</span>Inbound <span class="sb-badge amb" id="sb-inbound" style="display:none">0</span></div>
-    <div class="sb-item" data-page="pipeline" onclick="nav('pipeline',this)"><span class="ico">💰</span>Sales Pipeline</div>
-    <div class="sb-item" data-page="onboarding" onclick="nav('onboarding',this)"><span class="ico">📋</span>Onboarding</div>
-    <div class="sb-item" data-page="clientanalysis" onclick="nav('clientanalysis',this)"><span class="ico">🔍</span>Client Analysis</div>
-    <div class="sb-item" data-page="coaching" onclick="nav('coaching',this)"><span class="ico">🎯</span>Coaching</div>
+    <div class="sb-sub" data-page="onboarding" onclick="nav('onboarding',this)">Onboarding</div>
+    <div class="sb-sub" data-page="clientanalysis" onclick="nav('clientanalysis',this)">Client Analysis</div>
+    <div class="sb-sub" data-page="coaching" onclick="nav('coaching',this)">Coaching Workspace</div>
 
     <div class="sb-section">Products</div>
-    <div class="sb-item" data-page="events" onclick="nav('events',this)"><span class="ico">🎟️</span>Event CRM</div>
     <div class="sb-item" data-page="padel" onclick="nav('padel',this)"><span class="ico">🏆</span>Padel Event</div>
     <div class="sb-item" data-page="boardroom" onclick="nav('boardroom',this)"><span class="ico">🏛</span>Boardroom</div>
     <div class="sb-item" data-page="sessions" onclick="nav('sessions',this)"><span class="ico">📅</span>Session Planning</div>
@@ -755,13 +753,9 @@ details>summary::-webkit-details-marker{display:none}
 
     <!-- ═══ SESSION FEEDBACK TRACKER ═══ -->
     <div id="session-feedback-banner" style="display:none"></div>
-    <!-- ═══ EVENTS ═══ -->
-    <div class="page" id="page-events">
-      <div id="events-list"></div>
-    </div>
-
     <!-- ═══ PADEL EVENT ═══ -->
     <div class="page" id="page-padel">
+      <div id="padel-events-panel"></div>
       <div class="grid-4" id="padel-stats" style="margin-bottom:16px"></div>
       <div class="sec-hdr">Event Pipeline</div>
       <div id="padel-pipeline" style="margin-bottom:20px"></div>
@@ -1181,7 +1175,9 @@ const MILESTONES = [
   {date:"2026-09-01",t:"90-day capability map review.",o:"James"},
 ];
 
-const STAGES = ["Prospect","Contacted","Meeting Booked","Proposal Sent","Committed","Won","Lost"];
+const STAGES = ["Prospect","Contacted","Meeting Booked","Dialogue","Proposal Sent","Committed"];
+// Won and Lost are outcomes, not stages: closed rows keep stage 'Won' / 'Lost' as stored history
+// (converted totals, loss reasons) but never appear as pipeline columns. See prospectActive().
 const ONBOARDING_STEPS = [
   {id:"ob1",t:"Send {name} welcome to UF Boardroom message on WhatsApp",o:"Joe",code:"JW"},
   {id:"ob2",t:"Send {name} onboarding email including agreement and payment link",o:"Chloe",code:"CR"},
@@ -1464,7 +1460,7 @@ function initApp(user){
   peopleBuild();
   peopleSweep();
   stripeSyncToCRM();
-  pipelineSweep();
+  crmSegmentMigrate();
   updateInboundBadge();
   renderHome();
   renderCapSidebar();
@@ -1770,11 +1766,11 @@ function seedDefaultData(){
 const PAGE_TITLES = {
   myday:'My Day',
   home:'Morning Brief',teamoverview:'Team Overview',tasks:'Tasks',transcript:'Meeting Notes → Tasks',
-  people:'People',members:'Existing Clients',pipeline:'Sales Pipeline',inbound:'Inbound Leads',dannycal:"Danny's Calendar",
+  people:'Network',members:'Boardroom Members',pipeline:'Pipeline',inbound:'Inbound Leads',dannycal:"Danny's Calendar",
   boardroom:'Boardroom',content:'Content Calendar',social:'Social Media',ideas:'Content Ideas',kpis:'KPIs',aidump:'AI Tool (Dump)',buildreq:'Build Requests',clientanalysis:'Client Analysis',emaillist:'Email List',watemplates:'WhatsApp Templates',
   prospects:'Warm Prospects',testimonials:'Testimonials',
-  onboarding:'Onboarding',sessions:'Session Planner',events:'Event CRM',padel:'Padel Event',
-  calendar:'Content Calendar',podcast:'Podcast Pipeline',coaching:'Coaching Sessions',growthplan:'Growth Plan',ip:'IP Register',files:'Documents',
+  onboarding:'Onboarding',sessions:'Session Planner',padel:'Padel Event',
+  calendar:'Content Calendar',podcast:'Podcast Pipeline',coaching:'Coaching Workspace',growthplan:'Growth Plan',ip:'IP Register',files:'Documents',
   capmap:'Capability Map',goals:'Goals & OKRs',fourbox:'The 4 Box Model',budget:'Budget',
   teamtasks:'Team Tasks',roles:'Roles',reviews:'Weekly Review',kb:'Knowledge Base',notifs:'Notifications',
   csuite:'C-Suite',holidays:'Holidays',daily:'Daily Progress',
@@ -1809,7 +1805,7 @@ function renderPage(page){
     people:renderPeople, members:renderMembers, pipeline:renderPipeline, inbound:renderInbound, dannycal:renderDannyCal,
     boardroom:renderBoardroom, content:renderContent, social:renderSocial, ideas:renderIdeas, kpis:renderKPIs, aidump:renderAIDump, buildreq:renderBuildRequests, clientanalysis:renderClientAnalysis, emaillist:renderEmailList, watemplates:renderWATemplates,
     prospects:renderProspects, testimonials:renderTestimonials,
-    onboarding:renderOnboarding, sessions:renderSessions, events:renderEventCRM, padel:renderPadel,
+    onboarding:renderOnboarding, sessions:renderSessions, padel:renderPadel,
     calendar:renderCalendar, podcast:renderPodcast, coaching:renderCoaching, growthplan:renderGrowthPlan, ip:renderIP, files:renderFiles,
     capmap:renderCapMap, goals:renderGoals, fourbox:renderFourBox, budget:renderBudget,
     teamtasks:renderTeamTasks, roles:renderRoles, reviews:renderReviews, kb:renderKB, notifs:renderNotifs,
@@ -2504,10 +2500,25 @@ function navMembers(filter, el){
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   const pg = document.getElementById('page-members');
   if(pg) pg.classList.add('active');
-  document.getElementById('topbar-title').textContent = filter==='all'?'Existing Clients':filter==='boardroom'?'Boardroom Members':filter==='private'?'Private Clients':'Event Attendees';
+  document.getElementById('topbar-title').textContent = filter==='all'?'Existing Clients':filter==='boardroom'?'Boardroom Members':filter==='private121'?'Private 121s':filter==='private'?'Private Clients':'Event Attendees';
   document.getElementById('topbar-sub').textContent = '';
   document.getElementById('topbar-actions').innerHTML = '';
   renderMembers();
+}
+// People page segment filter (Network / Introducers via the sidebar; all five inside the page)
+let peopleSegFilter='network';
+function navPeople(filter, el){
+  closeSidebarMobile();
+  peopleSegFilter = filter; personSelId=null;
+  document.querySelectorAll('.sb-item,.sb-sub').forEach(x=>x.classList.remove('active'));
+  if(el) el.classList.add('active');
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  const pg = document.getElementById('page-people');
+  if(pg) pg.classList.add('active');
+  document.getElementById('topbar-title').textContent = SEG_LABEL[filter]||'People';
+  document.getElementById('topbar-sub').textContent = '';
+  document.getElementById('topbar-actions').innerHTML = '';
+  renderPeople();
 }
 
 
@@ -3182,8 +3193,8 @@ function gpScoreView(g){
       <b style="font-size:13px">${gpMonthLabel(mk)}</b>
       <button class="btn btn-ghost btn-sm" ${gpScoreOff>=0?'disabled style="opacity:.35"':''} onclick="gpScoreNav(1)">›</button>
     </div>
-    ${(()=>{const pr2=ls.get('tuf_prospects',[])||[];
-      const act=pr2.filter(p=>['Prospect','Contacted','Meeting Booked','Proposal Sent','Committed'].indexOf(p.stage)>=0).length;
+    ${(()=>{const pr2=(ls.get('tuf_prospects',[])||[]).filter(p=>prospectActive(p)||p.stage==='Won');
+      const act=pr2.filter(prospectActive).length;
       const meet=pr2.filter(p=>p.stage==='Meeting Booked').length;
       const prop=pr2.filter(p=>p.stage==='Proposal Sent').length;
       const wonP=pr2.filter(p=>p.stage==='Won').length;
@@ -3329,7 +3340,8 @@ function coPeopleLink(){
     coData.people.forEach(p=>{
       if(p.person_id||!(p.name||'').trim()) return;
       const per=personEnsure(p.name,{co:p.company,email:p.email});
-      if(per){ p.person_id=per.id; coUpd('coaching_people',p.id,{person_id:per.id},true); }
+      if(per){ p.person_id=per.id; coUpd('coaching_people',p.id,{person_id:per.id},true);
+        if(personSegment(per)==='network') setPersonSegment(per.id,'private121','coaching engagement'); }
     });
   }catch(e){ console.warn('coPeopleLink failed',e); }
 }
@@ -3935,10 +3947,10 @@ function renderDailyControl(){
   const notConfirmed=padelLeadsAll.filter(l=>!l.attendance||l.attendance==='Invited').length;
   const tasksOpen=(ls.get('tuf_tasks',[])||[]).filter(t=>t.status!=='Done');
   const overdueTasks=tasksOpen.filter(t=>t.dueDate&&t.dueDate<today).length;
-  const staleProspects=(ls.get('tuf_prospects',[])||[]).filter(p=>p.stage!=='Won'&&p.stage!=='Lost'&&p.lastContact&&daysUntil(p.lastContact)<-7).length;
+  const staleProspects=(ls.get('tuf_prospects',[])||[]).filter(p=>prospectActive(p)&&p.lastContact&&daysUntil(p.lastContact)<=-crmSettings().staleDays).length;
   const followUps=overdueTasks+staleProspects;
   const newInbound=(ls.get('tuf_inbound_leads',[])||[]).filter(l=>l.status==='new').length;
-  const pending=(ls.get('tuf_prospects',[])||[]).filter(p=>p.stage==='Committed'||p.stage==='Proposal Sent').length;
+  const pending=(ls.get('tuf_prospects',[])||[]).filter(p=>prospectActive(p)&&(p.stage==='Committed'||p.stage==='Proposal Sent')).length;
   let renewSoon=0, guestsEnding=0;
   (ls.get('tuf_members',[])||[]).forEach(m=>{ if((m.boardroomGuest||m.type==='guest')&&m.guestUntil){const d=daysUntil(m.guestUntil); if(d>=0&&d<=7)guestsEnding++;} const a=ls.get('tuf_ca_'+m.id,null); if(a&&a.renewalDate){const d=daysUntil(a.renewalDate); if(d>=0&&d<=30)renewSoon++;} });
   const highUnconf=padelLeadsAll.filter(l=>(parseInt(l.score)>=8)&&!(l.attendance==='Confirmed'||l.attendance==='Attended')).length;
@@ -4059,13 +4071,52 @@ function renderMembers(){
     document.getElementById('members-list').innerHTML='<div class="sec-hdr" style="margin-bottom:10px">Boardroom Members</div>'+(boardroom.length?boardroom.map(memberCard).join(''):'<div style="font-size:12px;color:var(--mut);padding:8px 0">No paying Boardroom members yet.</div>')+guestsBlock;
   } else if(memberFilter==='private'){
     document.getElementById('members-list').innerHTML='<div class="sec-hdr" style="margin-bottom:10px">Private Clients</div>'+existing.map(memberCard).join('');
+  } else if(memberFilter==='private121'){
+    document.getElementById('members-list').innerHTML=renderPrivate121s(existing);
   } else if(memberFilter==='attendees'){
     renderBoardroomAttendees();
   }
 
   document.getElementById('topbar-actions').innerHTML=`
     <button class="btn btn-k btn-sm" onclick="addMemberModal('boardroom')">+ Boardroom Member</button>
-    <button class="btn btn-ghost btn-sm" onclick="addMemberModal('existing_client')">+ Private Client</button>`;
+    <button class="btn btn-ghost btn-sm" onclick="addMemberModal('existing_client')">+ Private 121 client</button>`;
+}
+// Private 121s: one roster over two kinds of 121 relationship.
+// Standalone paid = a founder paying their own monthly fee (an existing_client member row).
+// Part of client deal = coached under a company's engagement (known via the coaching workspace).
+let p121Filter='all';
+function renderPrivate121s(existing){
+  let coach={};
+  try{ coach=(JSON.parse(localStorage.getItem('tuf_coaching_summary')||'{}').people)||{}; }catch(e){}
+  const rows=[]; const seen=new Set();
+  existing.forEach(m=>{
+    const k=profileKey(m.name); seen.add(k);
+    rows.push({name:m.name,co:m.co||'',kind:'paid',fee:m.clientFee||0,memberId:m.id,coach:coach[k]||null});
+  });
+  const byKey={}; peopleAll().forEach(p=>{ byKey[profileKey(p.name)]=p; });
+  Object.keys(coach).forEach(k=>{
+    if(seen.has(k)) return;
+    const per=byKey[k];
+    rows.push({name:per?per.name:k.replace(/\b\w/g,c=>c.toUpperCase()),co:per?(per.co||''):'',kind:'deal',fee:0,memberId:null,coach:coach[k]});
+  });
+  const shown=rows.filter(r=>p121Filter==='all'||(p121Filter==='paid'?r.kind==='paid':r.kind==='deal')).sort((a,b)=>a.name.localeCompare(b.name));
+  const chip=(id,label)=>`<button class="btn ${p121Filter===id?'btn-k':'btn-ghost'} btn-sm" onclick="p121Filter='${id}';renderMembers()">${label}</button>`;
+  return `
+    <div style="display:flex;gap:6px;align-items:center;margin-bottom:12px;flex-wrap:wrap">
+      ${chip('all','All '+rows.length)}${chip('paid','Standalone paid '+rows.filter(r=>r.kind==='paid').length)}${chip('deal','Part of client deal '+rows.filter(r=>r.kind==='deal').length)}
+      <button class="btn btn-ghost btn-sm" style="margin-left:auto" onclick="goPage('coaching')">Open Coaching Workspace →</button>
+    </div>
+    ${shown.length?shown.map(r=>`<div class="card" style="margin-bottom:8px">
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+        <div style="flex:1;min-width:160px;cursor:pointer" onclick="openProfile('${escAttr(r.name)}','${escAttr(r.co)}')">
+          <div style="font-weight:700;font-size:14px">${escHtml(r.name)}${r.co?` <span style="font-weight:400;color:var(--mut)">· ${escHtml(r.co)}</span>`:''}</div>
+          ${r.coach?`<div style="font-size:11px;color:var(--mut);margin-top:3px">${r.coach.sessions||0} session${(r.coach.sessions||0)!==1?'s':''} · ${r.coach.open||0} open action${(r.coach.open||0)!==1?'s':''}${r.coach.last?' · last '+fmtShort(r.coach.last):''}</div>`:'<div style="font-size:11px;color:var(--mut);margin-top:3px">No coaching sessions filed yet</div>'}
+        </div>
+        <span class="tag ${r.kind==='paid'?'tag-g':'tag-b'}" style="font-size:9px">${r.kind==='paid'?'Standalone paid · £'+(r.fee||0).toLocaleString()+'/mo':'Part of client deal'}</span>
+        ${r.memberId?`<button class="btn btn-ghost btn-sm" onclick="showMemberDetail('${r.memberId}')">Details</button>`:''}
+        <button class="btn btn-ghost btn-sm" onclick="goPage('coaching')">Sessions →</button>
+      </div>
+    </div>`).join(''):'<div class="empty"><div class="ico">🎯</div>Nobody here yet. Standalone clients are added with the button above; coached people appear automatically from the Coaching Workspace.</div>'}`;
 }
 function showMemberDetail(id){
   const m = ls.get('tuf_members',[]).find(x=>x.id===id);
@@ -4150,6 +4201,7 @@ function saveMember(){
   members.push(newM);
   personTag(members);
   ls.set('tuf_members',members);
+  const perNM=personEnsure(name,{co:newM.co,email:newM.email}); if(perNM) setPersonSegment(perNM.id,type==='existing_client'?'private121':'boardroom','added manually');
   addNotif(`New ${type==='boardroom'?'Boardroom member':'private client'} added: ${name}`);
   journeyLog(name,type==='boardroom'?'Became a Boardroom member':'Added as a private client');
   closeModal();renderMembers();
@@ -4228,9 +4280,11 @@ function memberToPipeline(id){
   const fs=prompt('Future start date if known (YYYY-MM-DD), or leave blank:','');
   const prospects=ls.get('tuf_prospects',[]);
   prospects.push({id:uid(),name:m.name,co:m.co||'',email:m.email||'',phone:m.phone||'',stage:'Committed',temp:'Hot',score:m.retention||null,nextAction:'Confirm next start date',notes:('Returned from Boardroom. '+(m.notes||'')).trim(),lastContact:new Date().toISOString().slice(0,10),futureStart:(fs&&/^\d{4}-\d{2}-\d{2}$/.test(fs))?fs:'',sourceEvent:m.sourceEvent||''});
+  prospects[prospects.length-1].auto=false;
   personTag(prospects);
   const i=members.findIndex(x=>x.id===id); members[i].status='paused';
   ls.set('tuf_prospects',prospects); ls.set('tuf_members',members);
+  const back=personOf(m); if(back) setPersonSegment(back.id,'pipeline','delayed start');
   addNotif(`${m.name} moved back to Sales Pipeline${(fs&&/^\d{4}-\d{2}-\d{2}$/.test(fs))?' (start '+fs+')':''}`);
   journeyLog(m.name,'Boardroom member → back to Sales Pipeline (delayed start)');
   renderMembers();
@@ -4263,9 +4317,9 @@ function profileAddTo(name,target){
   const co=(f.member&&f.member.co)||(f.prospect&&f.prospect.co)||(f.lead&&f.lead.co)||(f.warm&&f.warm.co)||'';
   const email=(f.member&&f.member.email)||(f.prospect&&f.prospect.email)||(f.lead&&f.lead.email)||'';
   const phone=(f.member&&f.member.phone)||(f.prospect&&f.prospect.phone)||(f.lead&&f.lead.phone)||'';
-  if(target==='pipeline'){ const l=ls.get('tuf_prospects',[]); l.push({id:uid(),name,co,email,phone:'',stage:'Prospect',temp:'Warm',score:null,nextAction:'',notes:'',lastContact:new Date().toISOString().slice(0,10)}); personTag(l); ls.set('tuf_prospects',l); try{ if(document.getElementById('pipeline-tab-content')) renderPipeline(); }catch(e){} addNotif(name+' added to Sales Pipeline'); journeyLog(name,'Added to the Sales Pipeline (from profile)'); }
+  if(target==='pipeline'){ const l=ls.get('tuf_prospects',[]); l.push({id:uid(),name,co,email,phone:'',stage:'Prospect',temp:'Warm',score:null,nextAction:'',notes:'',lastContact:new Date().toISOString().slice(0,10),auto:false}); personTag(l); ls.set('tuf_prospects',l); const perP=personEnsure(name,{co,email}); if(perP) setPersonSegment(perP.id,'pipeline','from profile'); try{ if(document.getElementById('pipeline-tab-content')) renderPipeline(); }catch(e){} addNotif(name+' added to Sales Pipeline'); journeyLog(name,'Added to the Sales Pipeline (from profile)'); }
   else if(target==='padel'){ const l=ls.get('tuf_event_leads',[]); l.push({id:uid(),name,co,email,phone:'',event:'Padel',assignedTo:CURRENT_USER,notes:'',status:'New Lead',attendance:'Invited',score:'',lastContact:new Date().toISOString().slice(0,10),addedDate:new Date().toISOString().slice(0,10)}); personTag(l); ls.set('tuf_event_leads',l); try{ if(document.getElementById('padel-pipeline')) renderPadel(); }catch(e){} addNotif(name+' added to Padel pipeline'); journeyLog(name,'Added to the Padel pipeline (from profile)'); }
-  else if(target==='member'){ const m=ls.get('tuf_members',[]); m.push({id:uid(),name,co,email,phone:'',stage:3,notes:'',status:'active',type:'boardroom',clientFee:0,boardroomFee:1000,sessions:[],touchpoint:new Date().toISOString().slice(0,10),retention:null,onboardingComplete:true}); personTag(m); ls.set('tuf_members',m); try{ if(document.getElementById('members-list')) renderMembers(); }catch(e){} addNotif(name+' added as a Boardroom member'); journeyLog(name,'Became a Boardroom member (from profile)'); }
+  else if(target==='member'){ const m=ls.get('tuf_members',[]); m.push({id:uid(),name,co,email,phone:'',stage:3,notes:'',status:'active',type:'boardroom',clientFee:0,boardroomFee:1000,sessions:[],touchpoint:new Date().toISOString().slice(0,10),retention:null,onboardingComplete:true}); personTag(m); ls.set('tuf_members',m); const perM=personEnsure(name,{co,email}); if(perM) setPersonSegment(perM.id,'boardroom','from profile'); try{ if(document.getElementById('members-list')) renderMembers(); }catch(e){} addNotif(name+' added as a Boardroom member'); journeyLog(name,'Became a Boardroom member (from profile)'); }
   else if(target==='event'){ const l=ls.get('tuf_event_attendees',[]); if(!l.some(x=>profileKey(x.name)===profileKey(name))){ l.push({id:uid(),name,co,email,phone,event:'',eventDate:'',score:null,owner:CURRENT_USER,notes:'',addedDate:new Date().toISOString().slice(0,10)}); personTag(l); ls.set('tuf_event_attendees',l); addNotif(name+' added to the Event CRM'); journeyLog(name,'Added to the Event CRM (from profile)'); } try{ refreshAttendees(); }catch(e){} }
   else if(target==='blead'){ const l=ls.get('tuf_boardroom_leads',[])||[]; if(!l.some(x=>profileKey(x.name)===profileKey(name))){ l.push({id:uid(),name,co,email,phone,source:'Added from pipeline',stage:'invited',custom:[],notes:'',addedDate:new Date().toISOString().slice(0,10)}); personTag(l); ls.set('tuf_boardroom_leads',l); addNotif(name+' added as a Boardroom lead'); journeyLog(name,'Added as a Boardroom lead (from profile)'); } if(typeof brxRefresh==='function') brxRefresh(); }
   else if(target==='onboarding'){ const m=ls.get('tuf_members',[]); const i=m.findIndex(x=>profileKey(x.name)===profileKey(name)); if(i>=0){ m[i].onboardingComplete=false; m[i].status='active'; } else { m.push({id:uid(),name,co,email,phone:'',stage:3,notes:'',status:'active',type:'boardroom',clientFee:0,boardroomFee:1000,sessions:[],touchpoint:new Date().toISOString().slice(0,10),retention:null,onboardingComplete:false,onboardingType:'new'}); personTag(m); } ls.set('tuf_members',m); try{ if(document.getElementById('ob-member-list')) renderOnboarding(); }catch(e){} addNotif(name+' added to Onboarding'); journeyLog(name,'Entered Onboarding'); }
@@ -4293,7 +4347,7 @@ function dupCheckWarn(name,email){
   const places=[];
   const scan=(arr,label)=>{ (arr||[]).forEach(x=>{ if(profileKey(x.name)===k||(em&&(x.email||'').trim().toLowerCase()===em)) places.push(label); }); };
   scan(ls.get('tuf_members',[]),'Clients and Members');
-  scan(ls.get('tuf_prospects',[]),'Sales Pipeline');
+  scan((ls.get('tuf_prospects',[])||[]).filter(prospectActive),'Sales Pipeline');
   scan(ls.get('tuf_event_attendees',[]),'Event CRM');
   scan(ls.get('tuf_boardroom_attendees',[]),'Boardroom Attendees');
   if(!places.length) return true;
@@ -4302,6 +4356,59 @@ function dupCheckWarn(name,email){
 }
 // ═══ PEOPLE MASTER DATABASE — one core record per person, linked across every section ═══
 const PEOPLE_LINK_STORES=['tuf_members','tuf_prospects','tuf_warm','tuf_boardroom_attendees','tuf_event_attendees','tuf_event_leads','tuf_inbound_leads','tuf_boardroom_leads'];
+// ═══ CRM SEGMENTS — every person sits in exactly one of five segments ═══
+const SEGMENTS=[
+  {id:'network',label:'Network'},
+  {id:'introducers',label:'Introducers'},
+  {id:'pipeline',label:'Pipeline'},
+  {id:'boardroom',label:'Boardroom Members'},
+  {id:'private121',label:'Private 121s'}
+];
+const SEG_LABEL=Object.fromEntries(SEGMENTS.map(s=>[s.id,s.label]));
+function crmSettings(){ return {nudgeDays:7,staleDays:14,...(ls.get('tuf_crm_settings',{})||{})}; }
+function personSegment(p){ return (p&&p.segment)||'network'; }
+// A prospect row is "in the pipeline" only while open: Won/Lost rows are kept history, archived rows are the old auto pool.
+function prospectActive(p){ return !!p && !p.archived && p.stage!=='Won' && p.stage!=='Lost'; }
+// The one write path for segment moves. Enforces exactly-one membership:
+// entering pipeline creates a manual prospect row if none is open; leaving pipeline archives the open row.
+function setPersonSegment(personId, seg, why){
+  const ppl=peopleAll(); const p=ppl.find(x=>x.id===personId); if(!p) return false;
+  const old=personSegment(p); if(old===seg) return true;
+  p.segment=seg; p.segmentAt=new Date().toISOString(); ls.set('tuf_people',ppl);
+  const pros=ls.get('tuf_prospects',[])||[];
+  const openRow=pros.find(r=>prospectActive(r)&&(r.personId===personId||(!r.personId&&profileKey(r.name)===profileKey(p.name))));
+  let touched=false;
+  if(seg==='pipeline'&&!openRow){
+    pros.push({id:uid(),name:p.name,co:p.co||'',email:p.email||'',phone:p.phone||'',stage:'Prospect',temp:'Warm',score:null,
+      nextAction:'',nextActionDate:'',notes:'',lastContact:new Date().toISOString().slice(0,10),personId:personId,auto:false});
+    touched=true;
+  }
+  if(old==='pipeline'&&seg!=='pipeline'&&openRow&&openRow.stage!=='Won'&&openRow.stage!=='Lost'){
+    openRow.archived=true; openRow.closedAt=new Date().toISOString().slice(0,10); touched=true;
+  }
+  if(touched) ls.set('tuf_prospects',pros);
+  try{ journeyLog(p.name,'Segment: '+(SEG_LABEL[old]||old)+' → '+(SEG_LABEL[seg]||seg)+(why?' ('+why+')':'')); }catch(e){}
+  return true;
+}
+function personEventTags(p){ return (p&&Array.isArray(p.tags))?p.tags:[]; }
+function personAddTag(personId, tag){
+  if(!tag) return; const ppl=peopleAll(); const p=ppl.find(x=>x.id===personId); if(!p) return;
+  p.tags=personEventTags(p); if(!p.tags.includes(tag)){ p.tags.push(tag); ls.set('tuf_people',ppl); }
+}
+function crmSettingsModal(){
+  const s=crmSettings();
+  showModal('Contact recency thresholds',`
+    <div style="font-size:12px;color:var(--mut);margin-bottom:12px">How many days without contact before a prospect gets flagged. Tune these once you see real data.</div>
+    <div class="form-row"><label class="form-label">Nudge after (days, amber)</label><input class="form-input" type="number" id="crm-nudge" min="1" max="60" value="${s.nudgeDays}"></div>
+    <div class="form-row"><label class="form-label">Stale after (days, red)</label><input class="form-input" type="number" id="crm-stale" min="2" max="120" value="${s.staleDays}"></div>
+  `,`<button class="btn btn-ghost" onclick="closeModal()">Cancel</button><button class="btn btn-k" onclick="crmSettingsSave()">Save</button>`);
+}
+function crmSettingsSave(){
+  const nudge=Math.max(1,parseInt(document.getElementById('crm-nudge').value)||7);
+  const stale=Math.max(nudge+1,parseInt(document.getElementById('crm-stale').value)||14);
+  ls.set('tuf_crm_settings',{nudgeDays:nudge,staleDays:stale});
+  closeModal(); renderPage(document.querySelector('.page.active')?.id?.replace('page-','')||'pipeline');
+}
 function peopleAll(){ return ls.get('tuf_people',[])||[]; }
 function personById(id){ return peopleAll().find(p=>p.id===id)||null; }
 function personOf(rec){ if(!rec) return null; const ppl=peopleAll(); return (rec.personId&&ppl.find(p=>p.id===rec.personId))||ppl.find(p=>profileKey(p.name)===profileKey(rec.name))||null; }
@@ -4405,7 +4512,12 @@ function personSectionChips(p){
     else if(m.type==='guest'||m.boardroomGuest){ out.push({label:'Boardroom · guest'+(m.lostLead?' (lost)':''),cls:'tag-a'}); }
     else out.push({label:'Boardroom · £'+bFee(m).toLocaleString()+'/mo'+(dead?' ('+m.status+')':''),cls:'tag-g'});
   });
-  L.prospects.forEach(x=>out.push({label:'Pipeline · '+(x.stage||''),cls:'tag-a'}));
+  L.prospects.forEach(x=>{
+    if(prospectActive(x)) out.push({label:'Pipeline · '+(x.stage||''),cls:'tag-a'});
+    else if(x.stage==='Won') out.push({label:'Converted'+(x.wonTo==='private121'?' · Private 121':x.wonTo==='boardroom'?' · Boardroom':''),cls:'tag-g'});
+    else if(x.stage==='Lost') out.push({label:'Lost'+(x.lostReason?': '+x.lostReason.slice(0,30):''),cls:''});
+    // archived auto pool rows get no chip
+  });
   L.bleads.forEach(x=>out.push({label:'Boardroom lead · '+(x.stage||''),cls:'tag-a'}));
   L.padel.forEach(x=>out.push({label:'Padel · '+(x.status||''),cls:'tag-b'}));
   L.ea.forEach(x=>out.push({label:'Event · '+(x.event||'CRM'),cls:'tag-b'}));
@@ -4417,25 +4529,114 @@ function renderPeople(){
   const host=document.getElementById('people-render'); if(!host) return;
   if(personSelId){ renderPersonProfile(personSelId); return; }
   const ppl=peopleAll().slice().sort((a,b)=>(a.name||'').localeCompare(b.name||''));
+  const counts={all:ppl.length};
+  SEGMENTS.forEach(sg=>counts[sg.id]=ppl.filter(p=>personSegment(p)===sg.id).length);
+  const segList=(peopleSegFilter&&peopleSegFilter!=='all')?ppl.filter(p=>personSegment(p)===peopleSegFilter):ppl;
   const q=peopleSearch.trim().toLowerCase();
-  const list=q?ppl.filter(p=>((p.name||'')+' '+(p.co||'')+' '+(p.email||'')).toLowerCase().includes(q)):ppl;
-  const ta=document.getElementById('topbar-actions'); if(ta) ta.innerHTML=`<button class="btn btn-k btn-sm" onclick="personAddModal()">+ Add person</button>`;
+  const list=q?segList.filter(p=>((p.name||'')+' '+(p.co||'')+' '+(p.email||'')).toLowerCase().includes(q)):segList;
+  const ta=document.getElementById('topbar-actions'); if(ta) ta.innerHTML=`<button class="btn btn-ghost btn-sm" onclick="renderReclassify()">Reclassify</button><button class="btn btn-k btn-sm" onclick="personAddModal()">+ Add person</button>`;
+  const segChip=(id,label,n)=>`<button class="btn ${peopleSegFilter===id?'btn-k':'btn-ghost'} btn-sm" onclick="peopleSegFilter='${id}';renderPeople()">${label} <span style="opacity:.6">${n}</span></button>`;
   host.innerHTML=`
+    <div style="display:flex;gap:6px;align-items:center;margin-bottom:10px;flex-wrap:wrap">
+      ${segChip('all','All',counts.all)}${SEGMENTS.map(sg=>segChip(sg.id,sg.label,counts[sg.id])).join('')}
+    </div>
     <div style="display:flex;gap:10px;align-items:center;margin-bottom:14px;flex-wrap:wrap">
       <input class="form-input" id="people-search" placeholder="Search people…" value="${escAttr(peopleSearch)}" style="max-width:280px" oninput="peopleSearch=this.value;renderPeople();const s=document.getElementById('people-search');if(s){s.focus();s.setSelectionRange(s.value.length,s.value.length);}">
-      <span style="font-size:12px;color:var(--mut)">${list.length} of ${ppl.length} people · one core record each, with tags for every section they sit in</span>
+      <span style="font-size:12px;color:var(--mut)">${list.length} ${peopleSegFilter==='all'?'people':'in '+(SEG_LABEL[peopleSegFilter]||'')}${peopleSegFilter==='network'?' · this is the mailing list source':''}</span>
     </div>
     ${list.length?list.map(p=>`<div class="card" style="margin-bottom:8px;cursor:pointer" onclick="personOpen('${p.id}')">
       <div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start;flex-wrap:wrap">
         <div style="min-width:0">
           <div style="font-weight:700;font-size:14px">${escHtml(p.name)}${p.co?` <span style="font-weight:400;color:var(--mut)">· ${escHtml(p.co)}</span>`:''}</div>
           <div style="font-size:11px;color:var(--mut);margin-top:3px">${[p.email,p.phone].filter(Boolean).map(escHtml).join(' · ')||'<span style="color:var(--amb)">No contact details</span>'}</div>
+          ${personEventTags(p).length?`<div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:4px">${personEventTags(p).map(t=>`<span class="tag tag-b" style="font-size:9px">🎟 ${escHtml(t)}</span>`).join('')}</div>`:''}
         </div>
-        <div style="display:flex;gap:4px;flex-wrap:wrap;justify-content:flex-end;max-width:60%">${personSectionChips(p).map(c=>`<span class="tag ${c.cls}" style="font-size:9px">${escHtml(c.label)}</span>`).join('')||'<span class="tag" style="font-size:9px">No sections yet</span>'}</div>
+        <div style="display:flex;gap:4px;flex-wrap:wrap;justify-content:flex-end;max-width:60%"><span class="tag tag-y" style="font-size:9px;font-weight:800">${SEG_LABEL[personSegment(p)]}</span>${personSectionChips(p).map(c=>`<span class="tag ${c.cls}" style="font-size:9px">${escHtml(c.label)}</span>`).join('')}</div>
       </div>
-    </div>`).join(''):'<div class="empty"><div class="ico">🗂</div>No people yet. They are created automatically as records are added anywhere in the CRM.</div>'}`;
+    </div>`).join(''):'<div class="empty"><div class="ico">🗂</div>Nobody in this segment yet.</div>'}`;
 }
 function personOpen(id){ personSelId=id; renderPeople(); }
+// ═══ RECLASSIFY TOOL — bulk-sort every person into one of the five segments ═══
+let rcSearch='', rcSeg='all';
+function renderReclassify(){
+  const host=document.getElementById('people-render'); if(!host) return;
+  const ppl=peopleAll().slice().sort((a,b)=>(a.name||'').localeCompare(b.name||''));
+  const reviewed=new Set(ls.get('tuf_segment_reviewed',[])||[]);
+  const q=rcSearch.trim().toLowerCase();
+  const list=ppl.filter(p=>(rcSeg==='all'||personSegment(p)===rcSeg)&&(!q||((p.name||'')+' '+(p.co||'')).toLowerCase().includes(q)));
+  const counts={}; SEGMENTS.forEach(sg=>counts[sg.id]=ppl.filter(p=>personSegment(p)===sg.id).length);
+  const ta=document.getElementById('topbar-actions'); if(ta) ta.innerHTML=`<button class="btn btn-ghost btn-sm" onclick="renderPeople()">← Back to People</button>`;
+  const segBtns=p=>SEGMENTS.map(sg=>`<button class="btn ${personSegment(p)===sg.id?'btn-k':'btn-ghost'} btn-sm" style="font-size:10px;padding:3px 8px" onclick="rcAssign('${p.id}','${sg.id}')">${sg.label.replace(' Members','')}</button>`).join('');
+  host.innerHTML=`
+    <div class="card" style="position:sticky;top:0;z-index:5;margin-bottom:12px">
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+        <b style="font-size:14px">Sorted ${reviewed.size} of ${ppl.length}</b>
+        <span style="font-size:11px;color:var(--mut)">${SEGMENTS.map(sg=>sg.label+' '+counts[sg.id]).join(' · ')}</span>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center;margin-top:10px;flex-wrap:wrap">
+        <input class="form-input" placeholder="Search…" value="${escAttr(rcSearch)}" style="max-width:200px" oninput="rcSearch=this.value;renderReclassify()">
+        <select class="form-select" style="width:auto" onchange="rcSeg=this.value;renderReclassify()">
+          <option value="all"${rcSeg==='all'?' selected':''}>All segments</option>
+          ${SEGMENTS.map(sg=>`<option value="${sg.id}"${rcSeg===sg.id?' selected':''}>${sg.label}</option>`).join('')}
+        </select>
+        <span style="font-size:11px;color:var(--mut)">Bulk: tick people, then</span>
+        <select class="form-select" style="width:auto" id="rc-bulk-seg">${SEGMENTS.map(sg=>`<option value="${sg.id}">${sg.label}</option>`).join('')}</select>
+        <button class="btn btn-k btn-sm" onclick="rcBulkAssign()">Assign selected</button>
+        <label style="font-size:11px;color:var(--mut);display:flex;gap:4px;align-items:center;cursor:pointer"><input type="checkbox" onchange="document.querySelectorAll('.rc-pick').forEach(c=>c.checked=this.checked)"> all visible</label>
+      </div>
+    </div>
+    ${list.map(p=>{
+      const notes=(profileNotesGet(p.name)||'').trim();
+      return `<div class="card" style="margin-bottom:6px;${reviewed.has(p.id)?'opacity:.75':''}">
+      <div style="display:flex;gap:10px;align-items:flex-start;flex-wrap:wrap">
+        <input type="checkbox" class="rc-pick" data-id="${p.id}" style="margin-top:4px">
+        <div style="flex:1;min-width:170px">
+          <div style="font-weight:700;font-size:13px;cursor:pointer" onclick="personOpen('${p.id}')">${escHtml(p.name)}${p.co?` <span style="font-weight:400;color:var(--mut)">· ${escHtml(p.co)}</span>`:''} ${reviewed.has(p.id)?'<span style="color:var(--grn);font-size:11px">✓</span>':''}</div>
+          <div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:3px">
+            ${personSectionChips(p).map(c=>`<span class="tag ${c.cls}" style="font-size:8.5px">${escHtml(c.label)}</span>`).join('')}
+            ${personEventTags(p).map(t=>`<span class="tag tag-b" style="font-size:8.5px">🎟 ${escHtml(t)}</span>`).join('')}
+          </div>
+          ${notes?`<div style="font-size:10.5px;color:var(--mut);margin-top:3px">${escHtml(notes.slice(0,80))}${notes.length>80?'…':''}</div>`:''}
+        </div>
+        <div style="display:flex;gap:4px;flex-wrap:wrap">${segBtns(p)}</div>
+      </div>
+    </div>`;}).join('')||'<div class="empty"><div class="ico">✅</div>Nothing matches.</div>'}`;
+}
+function rcMarkReviewed(ids){
+  const reviewed=ls.get('tuf_segment_reviewed',[])||[];
+  const set=new Set(reviewed); let changed=false;
+  ids.forEach(id=>{ if(!set.has(id)){ reviewed.push(id); set.add(id); changed=true; } });
+  if(changed) ls.set('tuf_segment_reviewed',reviewed);
+}
+function rcAssign(personId, seg){
+  setPersonSegment(personId, seg, 'reclassify');
+  rcMarkReviewed([personId]);
+  renderReclassify();
+}
+function rcBulkAssign(){
+  const seg=document.getElementById('rc-bulk-seg')?.value; if(!seg) return;
+  const ids=[...document.querySelectorAll('.rc-pick:checked')].map(c=>c.dataset.id);
+  if(!ids.length){ alert('Tick at least one person first.'); return; }
+  // One write per store for the whole batch (whole blob saves are shared between devices).
+  const ppl=peopleAll(); const pros=ls.get('tuf_prospects',[])||[];
+  const today=new Date().toISOString().slice(0,10); let prosTouched=false;
+  ids.forEach(id=>{
+    const p=ppl.find(x=>x.id===id); if(!p) return;
+    const old=personSegment(p); if(old===seg) return;
+    p.segment=seg; p.segmentAt=new Date().toISOString();
+    const openRow=pros.find(r=>prospectActive(r)&&(r.personId===id||(!r.personId&&profileKey(r.name)===profileKey(p.name))));
+    if(seg==='pipeline'&&!openRow){
+      pros.push({id:uid(),name:p.name,co:p.co||'',email:p.email||'',phone:p.phone||'',stage:'Prospect',temp:'Warm',score:null,nextAction:'',nextActionDate:'',notes:'',lastContact:today,personId:id,auto:false});
+      prosTouched=true;
+    }
+    if(old==='pipeline'&&seg!=='pipeline'&&openRow){ openRow.archived=true; openRow.closedAt=today; prosTouched=true; }
+  });
+  ls.set('tuf_people',ppl);
+  if(prosTouched) ls.set('tuf_prospects',pros);
+  rcMarkReviewed(ids);
+  addNotif(ids.length+' people moved to '+(SEG_LABEL[seg]||seg));
+  renderReclassify();
+}
 function personAddModal(){
   showModal('Add a person to the core database',`
     <div class="grid-2"><div class="form-row"><label class="form-label">Name</label><input class="form-input" id="pp-name"></div><div class="form-row"><label class="form-label">Business</label><input class="form-input" id="pp-co"></div></div>
@@ -4523,7 +4724,7 @@ function renderPersonProfile(id){
   L.ea.forEach(x=>{
     panels+=panel('Event CRM',`<span class="tag tag-b" style="font-size:9px">${escHtml(x.event||'Event')}</span>`,
       `${kv('Event date',x.eventDate?fmtDate(x.eventDate):'')}${kv('Likelihood',(x.score!=null&&x.score!=='')?x.score+'/10':'')}${kv('Owner',escHtml(x.owner||''))}${x.notes?`<div style="font-size:11.5px;color:var(--mut);white-space:pre-wrap;margin-top:6px">${escHtml(x.notes)}</div>`:''}`,
-      'Event CRM',`goPage('events')`);
+      'Padel Event',`goPage('padel')`);
   });
   L.padel.forEach(x=>{
     panels+=panel('Padel pipeline',`<span class="tag tag-b" style="font-size:9px">${escHtml(x.status||'')}</span>`,
@@ -4705,38 +4906,47 @@ function memberFormOpen(id){
 }
 
 // ═══ SALES PIPELINE ══════════════════════════════════════════════════════════
-// Every CRM profile starts in the Sales Pipeline: any person without an active
-// member/client record and without a prospect record gets one at the Prospect stage.
-// Ledger tuf_pipeline_swept means deleting someone from the pipeline sticks.
-function pipelineSweep(){
+// The pipeline is manual only: people enter it when someone deliberately flags them.
+// crmSegmentMigrate is the one-shot v53 reorganisation: it archives the old auto-seeded
+// pool (rows kept, hidden), assigns every person an initial segment, and backfills
+// event attendance tags. Ledger tuf_segment_migrated means it can never run twice.
+function crmSegmentMigrate(){
   try{
-    if(!sbLoadOK) return 0;
-    const ppl=peopleAll(); if(!ppl.length) return 0;
-    const swept=ls.get('tuf_pipeline_swept',[])||[]; const sweptSet=new Set(swept);
-    const prospects=ls.get('tuf_prospects',[])||[];
+    if(!sbLoadOK) return;
+    if(ls.get('tuf_segment_migrated',null)==='1') return;
+    const ppl=peopleAll(); if(!ppl.length) return;
+    const pros=ls.get('tuf_prospects',[])||[];
     const members=ls.get('tuf_members',[])||[];
-    const inPipe=new Set(prospects.map(p=>p.personId).filter(Boolean));
-    const pipeNames=new Set(prospects.map(p=>profileKey(p.name)));
-    const activeMember=new Set(members.filter(m=>m.status==='active').map(m=>m.personId).filter(Boolean));
-    const activeNames=new Set(members.filter(m=>m.status==='active').map(m=>profileKey(m.name)));
     const today=new Date().toISOString().slice(0,10);
-    let added=0, marked=false;
-    ppl.forEach(p=>{
-      if(sweptSet.has(p.id)) return;
-      const k=profileKey(p.name);
-      if(inPipe.has(p.id)||pipeNames.has(k)||activeMember.has(p.id)||activeNames.has(k)){ swept.push(p.id); sweptSet.add(p.id); marked=true; return; }
-      // best known origin for context
-      let src='';
-      try{ const L=personLinks(p); src=(L.ea[0]&&L.ea[0].event)||(L.ba[0]&&L.ba[0].sessionName)||(L.padel[0]&&'Padel')||(L.inbound[0]&&inbSrcName(L.inbound[0]))||''; }catch(_){ }
-      prospects.push({id:uid(),name:p.name,co:p.co||'',email:p.email||'',phone:p.phone||'',stage:'Prospect',temp:'Warm',score:null,nextAction:'',notes:'Every CRM profile starts in the pipeline.'+(src?' Origin: '+src+'.':''),lastContact:today,personId:p.id,sourceEvent:src&&src!=='Website signup'&&src!=='Founder Diagnostic'?src:'',auto:true});
-      journeyLog(p.name,'Entered the Sales Pipeline (every profile starts here)');
-      swept.push(p.id); sweptSet.add(p.id); marked=true; added++;
-    });
-    if(added) ls.set('tuf_prospects',prospects);
-    if(marked) ls.set('tuf_pipeline_swept',swept);
-    if(added) addNotif(added+' CRM profile'+(added>1?'s':'')+' added to the Sales Pipeline pool');
-    return added;
-  }catch(e){ console.warn('pipelineSweep failed',e); return 0; }
+    const byId={}, byName={};
+    ppl.forEach(p=>{ byId[p.id]=p; byName[profileKey(p.name)]=p; });
+    const findPerson=r=>r?((r.personId&&byId[r.personId])||byName[profileKey(r.name||'')]||null):null;
+    // 1. Archive the auto-seeded pool (rows kept for history, hidden everywhere)
+    let archivedN=0;
+    pros.forEach(r=>{ if(r.auto===true&&r.stage!=='Won'&&r.stage!=='Lost'&&!r.archived){ r.archived=true; r.closedAt=today; archivedN++; } });
+    // 2. Initial segment per person
+    const mark=(p,seg)=>{ if(p&&!p.segment){ p.segment=seg; p.segmentAt=new Date().toISOString(); } };
+    members.filter(m=>m.status==='active'&&m.type==='existing_client').forEach(m=>mark(findPerson(m),'private121'));
+    members.filter(m=>m.status==='active'&&(!m.type||m.type==='boardroom')).forEach(m=>mark(findPerson(m),'boardroom'));
+    try{
+      const cs=JSON.parse(localStorage.getItem('tuf_coaching_summary')||'{}');
+      Object.keys(cs.people||{}).forEach(k=>mark(byName[k],'private121'));
+    }catch(e){}
+    pros.filter(r=>prospectActive(r)&&r.auto!==true).forEach(r=>mark(findPerson(r),'pipeline'));
+    // everyone else stays unset, which reads as Network by default
+    const counts={network:0,introducers:0,pipeline:0,boardroom:0,private121:0};
+    ppl.forEach(p=>{ counts[personSegment(p)]=(counts[personSegment(p)]||0)+1; });
+    // 3. Event attendance tags (set union, idempotent)
+    const monYear=d=>{ try{ return d?new Date(d).toLocaleDateString('en-GB',{month:'short',year:'numeric'}):''; }catch(e){ return ''; } };
+    const addTag=(p,tag)=>{ if(!p||!tag) return; p.tags=Array.isArray(p.tags)?p.tags:[]; if(!p.tags.includes(tag)) p.tags.push(tag); };
+    (ls.get('tuf_event_attendees',[])||[]).forEach(a=>{ const my=monYear(a.eventDate); addTag(findPerson(a),(a.event||'Event')+(my?' · '+my:'')); });
+    (ls.get('tuf_boardroom_attendees',[])||[]).forEach(b=>{ const my=monYear(b.sessionDate); addTag(findPerson(b),(b.sessionName||'Boardroom session')+(my?' · '+my:'')); });
+    (ls.get('tuf_event_leads',[])||[]).forEach(l=>{ if(l.attendance==='Attended') addTag(findPerson(l),(l.event||'Padel')+' · attended'); });
+    ls.set('tuf_people',ppl);
+    ls.set('tuf_prospects',pros);
+    ls.set('tuf_segment_migrated','1');
+    addNotif('CRM segments assigned: '+counts.boardroom+' Boardroom, '+counts.private121+' Private 121s, '+counts.pipeline+' Pipeline, rest Network. '+archivedN+' auto pipeline records archived.');
+  }catch(e){ console.warn('crmSegmentMigrate failed',e); }
 }
 function renderPipeline(){
   const tabBar = document.getElementById('pipeline-tabs');
@@ -4754,10 +4964,10 @@ function renderPipeline(){
 function setPipelineTab(t){pipelineTab=t;renderPipeline();}
 let pipelineTab='followups';
 function prospectDue(p, today){
-  if(p.stage==='Won'||p.stage==='Lost'||p.convertedToMemberId) return null;
+  if(!prospectActive(p)||p.convertedToMemberId) return null;
   if(p.auto&&!p.nextActionDate&&!p.nextAction) return null; // pool prospects only chase once engaged
   if(p.nextActionDate && p.nextActionDate < today) return 'overdue';
-  if(!p.nextActionDate && p.lastContact && daysUntil(p.lastContact) < -7) return 'overdue';
+  if(!p.nextActionDate && p.lastContact && daysUntil(p.lastContact) < -crmSettings().nudgeDays) return 'overdue';
   if(p.nextActionDate === today) return 'today';
   return null;
 }
@@ -4789,19 +4999,32 @@ function renderFollowups(){
   const overdue=ps.filter(p=>prospectDue(p,today)==='overdue').sort((a,b)=>((a.nextActionDate||a.lastContact||'').localeCompare(b.nextActionDate||b.lastContact||'')));
   const dueToday=ps.filter(p=>prospectDue(p,today)==='today');
   const won=ps.filter(p=>p.stage==='Won').length, lost=ps.filter(p=>p.stage==='Lost').length;
-  const active=ps.filter(p=>p.stage!=='Won'&&p.stage!=='Lost').length;
+  const active=ps.filter(prospectActive).length;
   const winRate=(won+lost)?Math.round(won/(won+lost)*100):0;
   let html=`<div class="grid-4" style="margin-bottom:14px">
     <div class="stat ${overdue.length?'r':''}"><div class="n">${overdue.length}</div><div class="l">Overdue</div></div>
     <div class="stat ${dueToday.length?'a':''}"><div class="n">${dueToday.length}</div><div class="l">Due today</div></div>
     <div class="stat"><div class="n">${active}</div><div class="l">Active</div></div>
-    <div class="stat g"><div class="n">${winRate}%</div><div class="l">Win rate</div></div>
+    <div class="stat g"><div class="n">${won}</div><div class="l">Converted</div></div>
   </div>`;
   if(!overdue.length&&!dueToday.length){
     html+=`<div class="empty"><div class="ico">✅</div>All caught up — no follow-ups due.<div style="font-size:11px;margin-top:8px">Set a "next action date" on a prospect (or use Log contact) to schedule your next chase.</div></div>`;
   } else {
     if(overdue.length){ html+=`<div class="sec-hdr" style="color:var(--red)">Overdue · ${overdue.length}</div>`+overdue.map(followupRow).join(''); }
     if(dueToday.length){ html+=`<div class="sec-hdr" style="margin-top:16px">Due today · ${dueToday.length}</div>`+dueToday.map(followupRow).join(''); }
+  }
+  const closed=ps.filter(p=>(p.stage==='Won'||p.stage==='Lost')&&!p.auto).sort((a,b)=>((b.closedAt||'').localeCompare(a.closedAt||'')));
+  if(closed.length){
+    html+=`<details style="margin-top:18px"><summary style="cursor:pointer;font-size:12px;color:var(--mut);font-weight:700">Closed · ${won} converted, ${lost} lost${(won+lost)?` · ${winRate}% win rate`:''}</summary>
+      ${closed.map(p=>`<div class="card" style="margin-top:8px;border-left:4px solid ${p.stage==='Won'?'var(--grn)':'var(--mut)'}">
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+          <div style="flex:1;min-width:150px"><strong style="font-size:13px">${escHtml(p.name)}</strong> <span style="font-size:11px;color:var(--mut)">${escHtml(p.co||'')}</span></div>
+          <span class="tag ${p.stage==='Won'?'tag-g':'tag-a'}" style="font-size:10px">${p.stage==='Won'?('Converted'+(p.wonTo==='private121'?' · Private 121':p.wonTo==='boardroom'?' · Boardroom':'')):'Lost'}</span>
+          ${p.closedAt?`<span style="font-size:10px;color:var(--mut)">${fmtShort(p.closedAt)}</span>`:''}
+        </div>
+        ${p.stage==='Lost'&&p.lostReason?`<div style="font-size:11px;color:var(--mut);margin-top:4px">Reason: ${escHtml(p.lostReason)}</div>`:''}
+      </div>`).join('')}
+    </details>`;
   }
   el.innerHTML=html;
   document.getElementById('topbar-actions').innerHTML=`<button class="btn btn-k btn-sm" onclick="addProspectModal()">+ Add Prospect</button>`;
@@ -4869,21 +5092,24 @@ function fuSaveNote(id){ const ta=document.getElementById('fu-draft'); const v=(
 
 let pipelineSearch='';
 function renderKanban(){
-  const all=ls.get('tuf_prospects',[]);
+  const s=crmSettings();
+  const raw=ls.get('tuf_prospects',[]);
+  const all=raw.filter(prospectActive);
   const q=pipelineSearch.trim().toLowerCase();
   const prospects=q?all.filter(p=>(((p.name||'')+' '+(p.co||''))).toLowerCase().includes(q)):all;
-  const won=all.filter(p=>p.stage==='Won').length;
-  const active=all.filter(p=>p.stage!=='Won'&&p.stage!=='Lost').length;
+  const won=raw.filter(p=>p.stage==='Won').length;
+  const stale=all.filter(p=>p.lastContact&&daysUntil(p.lastContact)<=-s.staleDays).length;
   document.getElementById('pipeline-tab-content').innerHTML=`
     <div style="display:flex;gap:10px;align-items:center;margin-bottom:12px;flex-wrap:wrap">
       <input class="form-input" id="pipe-search" placeholder="Search the pipeline…" value="${escAttr(pipelineSearch)}" style="max-width:260px" oninput="pipelineSearch=this.value;renderKanban();const s=document.getElementById('pipe-search');if(s){s.focus();s.setSelectionRange(s.value.length,s.value.length);}">
-      <span style="font-size:11.5px;color:var(--mut)">${q?prospects.length+' match'+(prospects.length!==1?'es':''):'Every CRM profile lives here. Search, open a card, and add them to Padel, Boardroom leads or the Event CRM.'}</span>
+      <span style="font-size:11.5px;color:var(--mut)">${q?prospects.length+' match'+(prospects.length!==1?'es':''):'Only people deliberately flagged as prospects live here.'}</span>
+      <button class="btn btn-ghost btn-sm" style="margin-left:auto" onclick="crmSettingsModal()" title="Contact recency thresholds">⚙ ${s.nudgeDays}d / ${s.staleDays}d</button>
     </div>
     <div class="grid-4" style="margin-bottom:14px">
-      <div class="stat y"><div class="n">${active}</div><div class="l">Active</div></div>
+      <div class="stat y"><div class="n">${all.length}</div><div class="l">In pipeline</div></div>
       <div class="stat r"><div class="n">${all.filter(p=>p.temp==='Hot').length}</div><div class="l">Hot</div></div>
-      <div class="stat g"><div class="n">${won}</div><div class="l">Won</div></div>
-      <div class="stat"><div class="n">${all.length}</div><div class="l">Total</div></div>
+      <div class="stat g"><div class="n">${won}</div><div class="l">Converted</div></div>
+      <div class="stat ${stale?'r':''}"><div class="n">${stale}</div><div class="l">Stale ${s.staleDays}d+</div></div>
     </div>
     <div class="kanban" style="grid-template-columns:repeat(${STAGES.length},1fr)">
       ${STAGES.map(stage=>{
@@ -4900,10 +5126,10 @@ function renderKanban(){
               ${getStaleLabel(p.lastContact)?`<span class="tag tag-r" style="font-size:9px">${getStaleLabel(p.lastContact)}</span>`:''}
             </div>
             ${p.email||p.phone?`<div style="display:flex;gap:6px;margin-top:4px">${p.email?`<a href="mailto:${escHtml(p.email)}" style="font-size:9px;color:var(--blu)" onclick="event.stopPropagation()">✉️</a>`:''} ${p.phone?`<a href="tel:${escHtml(p.phone)}" style="font-size:9px;color:var(--grn)" onclick="event.stopPropagation()">📞</a>`:''}</div>`:''}
-            ${(p.nextAction||p.nextActionDate)?`<div style="font-size:10px;color:var(--mut);margin-top:4px">${escHtml(p.nextAction||'')}${p.nextActionDate?` <span style="font-weight:700;color:${(p.nextActionDate<new Date().toISOString().slice(0,10)&&p.stage!=='Won'&&p.stage!=='Lost')?'var(--red)':'var(--blu)'}">· ${fmtShort(p.nextActionDate)}</span>`:''}</div>`:''}
+            ${(p.nextAction||p.nextActionDate)?`<div style="font-size:10px;color:var(--mut);margin-top:4px">${escHtml(p.nextAction||'')}${p.nextActionDate?` <span style="font-weight:700;color:${(p.nextActionDate<new Date().toISOString().slice(0,10))?'var(--red)':'var(--blu)'}">· ${fmtShort(p.nextActionDate)}</span>`:''}</div>`:''}
             ${p.futureStart?`<div style="font-size:9px;font-weight:700;color:var(--blu);margin-top:3px">Starts ${fmtShort(p.futureStart)}</div>`:''}
           </div>`).join('')}
-          ${stage!=='Won'&&stage!=='Lost'?`<button class="btn btn-ghost btn-sm" style="width:100%;margin-top:4px" onclick="addProspectModal('${stage}')">+ Add</button>`:''}
+          <button class="btn btn-ghost btn-sm" style="width:100%;margin-top:4px" onclick="addProspectModal('${stage}')">+ Add</button>
         </div>`;
       }).join('')}
     </div>`;
@@ -4980,7 +5206,9 @@ function elSaveNotes(id){ const ta=document.getElementById('eln-'+id); if(!ta)re
 function elEventNameOpts(){ const fromEv=(ls.get('tuf_events',[])||[]).map(e=>e.name); const fromAtt=(ls.get('tuf_event_attendees',[])||[]).map(a=>a.event); return [...new Set([...fromEv,...fromAtt].filter(Boolean))]; }
 function elFillEventDate(nameId,dateId){ const n=((document.getElementById(nameId)||{}).value||'').trim().toLowerCase(); const ev=(ls.get('tuf_events',[])||[]).find(e=>(e.name||'').toLowerCase()===n); const di=document.getElementById(dateId); if(ev&&ev.date&&di&&!di.value) di.value=ev.date; }
 function renderEventCRM(){
-  const el=document.getElementById('events-list'); if(!el) return;
+  // The Event CRM page is gone (v53): attendance lives as person tags, event dates on the Padel page.
+  const el=document.getElementById('events-list');
+  if(!el){ try{ const pp=document.getElementById('page-padel'); if(pp&&pp.classList.contains('active')) renderPadel(); }catch(e){} return; }
   const all=ls.get('tuf_event_attendees',[])||[];
   const events=ls.get('tuf_events',[])||[];
   const eventNames=[...new Set(all.map(a=>a.event).filter(Boolean))];
@@ -5037,7 +5265,7 @@ function saveEL(){
 function refreshAttendees(){ const mp=document.getElementById('page-members'); if(mp&&mp.classList.contains('active')){ renderMembers(); return; } try{ renderEventCRM(); }catch(e){} }
 // Add existing people (members / clients / guests / prospects) to the Event CRM.
 function elAddFromModal(){
-  const members=ls.get('tuf_members',[])||[]; const prospects=ls.get('tuf_prospects',[])||[];
+  const members=ls.get('tuf_members',[])||[]; const prospects=(ls.get('tuf_prospects',[])||[]).filter(prospectActive);
   const evNames=elEventNameOpts();
   const row=(p,src)=>`<label style="display:flex;align-items:center;gap:8px;padding:5px 0;cursor:pointer;font-size:12.5px;border-bottom:1px solid var(--bdr)"><input type="checkbox" class="el-pick" data-src="${src}" data-id="${p.id}"><span style="flex:1">${escHtml(p.name||'(no name)')}${p.co?` <span style="color:var(--mut)">· ${escHtml(p.co)}</span>`:''}</span><span style="font-size:9px;color:${(p.email||p.phone)?'var(--grn)':'var(--amb)'}">${(p.email||p.phone)?'has contact':'no contact'}</span></label>`;
   const group=(label,arr,src)=> arr.length?`<div style="font-size:11px;font-weight:700;color:var(--mut);margin:10px 0 2px">${label} (${arr.length})</div>`+arr.map(p=>row(p,src)).join(''):'';
@@ -5061,7 +5289,7 @@ function elAddFromSave(){
   const eventDate=document.getElementById('elf-evdate').value||'';
   const score=elClampScore(document.getElementById('elf-score').value);
   const owner=document.getElementById('elf-owner').value;
-  const members=ls.get('tuf_members',[])||[]; const prospects=ls.get('tuf_prospects',[])||[];
+  const members=ls.get('tuf_members',[])||[]; const prospects=(ls.get('tuf_prospects',[])||[]).filter(prospectActive);
   const att=ls.get('tuf_event_attendees',[])||[];
   let n=0, dup=0;
   picks.forEach(chk=>{ const src=chk.getAttribute('data-src'); const id=chk.getAttribute('data-id'); const p=(src==='p'?prospects:members).find(x=>x.id===id); if(!p) return;
@@ -5094,9 +5322,9 @@ function baSave(){ const f=baReadForm(); if(!f.name){alert('Add a name.');return
 function baEditModal(id){ const a=baStore().find(x=>x.id===id); if(!a)return; showModal('Edit Boardroom attendee',baFormRows(a)+baFormsHtml(a),`<button class="btn btn-red btn-sm" onclick="baDelete('${id}')">Delete</button><button class="btn btn-ghost" onclick="closeModal()">Cancel</button><button class="btn btn-k" onclick="baUpdate('${id}')">Save</button>`); }
 function baUpdate(id){ const f=baReadForm(); const l=baStore(); const i=l.findIndex(x=>x.id===id); if(i<0)return; l[i]={...l[i],...f}; ls.set('tuf_boardroom_attendees',l); personAbsorb(l[i]); closeModal(); renderMembers(); brxRefresh(); }
 function baDelete(id){ if(!confirm('Remove this attendee?'))return; ls.set('tuf_boardroom_attendees',baStore().filter(x=>x.id!==id)); closeModal(); renderMembers(); brxRefresh(); }
-function baToPipeline(id){ const a=baStore().find(x=>x.id===id); if(!a)return; const list=ls.get('tuf_prospects',[]); if(list.some(p=>(p.name||'').toLowerCase()===(a.name||'').toLowerCase())&&!confirm(a.name+' may already be in the pipeline. Add again?')) return; const today=new Date().toISOString().slice(0,10); list.push({id:uid(),name:a.name||'',co:a.co||'',email:a.email||'',phone:a.phone||'',stage:'Prospect',temp:'Warm',score:null,nextAction:'Follow up after Boardroom event',nextActionDate:today,notes:('From Boardroom event'+(a.sessionName?': '+a.sessionName:'')+(a.notes?'\n'+a.notes:'')),lastContact:today,sourceEvent:a.sessionName||'Boardroom event'}); personTag(list); ls.set('tuf_prospects',list); addNotif(`${a.name} added to Sales Pipeline`); journeyLog(a.name,'Boardroom event attendee → Sales Pipeline'+(a.sessionName?' (from '+a.sessionName+')':'')); }
+function baToPipeline(id){ const a=baStore().find(x=>x.id===id); if(!a)return; const list=ls.get('tuf_prospects',[]); if(list.some(p=>prospectActive(p)&&(p.name||'').toLowerCase()===(a.name||'').toLowerCase())&&!confirm(a.name+' may already be in the pipeline. Add again?')) return; const today=new Date().toISOString().slice(0,10); list.push({id:uid(),name:a.name||'',co:a.co||'',email:a.email||'',phone:a.phone||'',stage:'Prospect',temp:'Warm',score:null,nextAction:'Follow up after Boardroom event',nextActionDate:today,notes:('From Boardroom event'+(a.sessionName?': '+a.sessionName:'')+(a.notes?'\n'+a.notes:'')),lastContact:today,sourceEvent:a.sessionName||'Boardroom event',auto:false}); personTag(list); ls.set('tuf_prospects',list); const perBA=personOf(a); if(perBA) setPersonSegment(perBA.id,'pipeline','boardroom event follow up'); addNotif(`${a.name} added to Sales Pipeline`); journeyLog(a.name,'Boardroom event attendee → Sales Pipeline'+(a.sessionName?' (from '+a.sessionName+')':'')); }
 function baAddFromModal(sid){
-  const members=ls.get('tuf_members',[])||[]; const prospects=ls.get('tuf_prospects',[])||[];
+  const members=ls.get('tuf_members',[])||[]; const prospects=(ls.get('tuf_prospects',[])||[]).filter(prospectActive);
   const row=(p,src)=>`<label style="display:flex;align-items:center;gap:8px;padding:5px 0;cursor:pointer;font-size:12.5px;border-bottom:1px solid var(--bdr)"><input type="checkbox" class="ba-pick" data-src="${src}" data-id="${p.id}"><span style="flex:1">${escHtml(p.name||'(no name)')}${p.co?` <span style="color:var(--mut)">· ${escHtml(p.co)}</span>`:''}</span><span style="font-size:9px;color:${(p.email||p.phone)?'var(--grn)':'var(--amb)'}">${(p.email||p.phone)?'has contact':'no contact'}</span></label>`;
   const group=(label,arr,src)=>arr.length?`<div style="font-size:11px;font-weight:700;color:var(--mut);margin:10px 0 2px">${label} (${arr.length})</div>`+arr.map(p=>row(p,src)).join(''):'';
   const bMembers=members.filter(m=>m.status==='active'&&(!m.type||m.type==='boardroom')&&!m.boardroomGuest);
@@ -5112,7 +5340,7 @@ function baAddFromModal(sid){
 function baAddFromSave(){
   const picks=[...document.querySelectorAll('.ba-pick:checked')]; if(!picks.length){alert('Tick at least one person first.');return;}
   const sid=document.getElementById('baf-session').value; const meta=baSessionMeta(sid); const owner=document.getElementById('baf-owner').value;
-  const members=ls.get('tuf_members',[])||[]; const prospects=ls.get('tuf_prospects',[])||[];
+  const members=ls.get('tuf_members',[])||[]; const prospects=(ls.get('tuf_prospects',[])||[]).filter(prospectActive);
   const l=baStore(); let n=0,dup=0;
   picks.forEach(chk=>{ const src=chk.getAttribute('data-src'); const id=chk.getAttribute('data-id'); const p=(src==='p'?prospects:members).find(x=>x.id===id); if(!p)return;
     if(l.some(a=>(a.name||'').toLowerCase()===(p.name||'').toLowerCase()&&a.sessionId===sid)){dup++;return;}
@@ -5141,9 +5369,11 @@ function convertELtoPipeline(id){
   if(!confirm(`Send ${a.name} to the Sales Pipeline as a prospect?`))return;
   const prospects=ls.get('tuf_prospects',[]);const newId=uid();
   prospects.push({id:newId,name:a.name,co:a.co||'',email:a.email||'',phone:a.phone||'',stage:'Prospect',temp:'Warm',notes:`Attended ${a.event||'an event'}${a.eventDate?' on '+a.eventDate:''}. ${a.notes||''}`.trim(),nextAction:'Follow up call',lastContact:new Date().toISOString().slice(0,10),sourceEvent:a.event||'',fromLeadId:id});
+  prospects[prospects.length-1].auto=false;
   personTag(prospects);
   ls.set('tuf_prospects',prospects);
   const i=list.findIndex(x=>x.id===id);list[i].promotedToProspectId=newId;ls.set('tuf_event_attendees',list);
+  const perEL=personOf(a); if(perEL) setPersonSegment(perEL.id,'pipeline','event follow up');
   addNotif(`${a.name} sent to the Sales Pipeline`);
   journeyLog(a.name,'Event CRM → Sales Pipeline'+(a.event?' (from '+a.event+')':''));
   renderEventCRM();
@@ -5172,8 +5402,11 @@ function saveProspect(){
   if(!dupCheckWarn(name,document.getElementById('np-email')?.value.trim()||''))return;
   const list=ls.get('tuf_prospects',[]);
   list.push({id:uid(),name,co:document.getElementById('np-co').value.trim(),email:document.getElementById('np-email')?.value.trim()||'',phone:document.getElementById('np-phone')?.value.trim()||'',stage:document.getElementById('np-stage').value,temp:document.getElementById('np-temp').value,score:parseInt(document.getElementById('np-score').value)||null,nextAction:document.getElementById('np-action').value.trim(),nextActionDate:document.getElementById('np-actiondate')?.value||'',notes:document.getElementById('np-notes').value.trim(),lastContact:new Date().toISOString().slice(0,10)});
+  list[list.length-1].auto=false;
   personTag(list);
-  ls.set('tuf_prospects',list);closeModal();renderPipeline();
+  ls.set('tuf_prospects',list);
+  const perNP=personEnsure(name,{co:list[list.length-1].co,email:list[list.length-1].email}); if(perNP) setPersonSegment(perNP.id,'pipeline','added manually');
+  closeModal();renderPipeline();
   journeyLog(name,'Entered the Sales Pipeline ('+list[list.length-1].stage+')');
 }
 
@@ -5215,7 +5448,7 @@ function renderInbound(){
   const head=`
     <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px">
       <div style="display:flex;gap:6px;flex-wrap:wrap">${tab('new','New')}${tab('converted','Added')}${tab('archived','Archived')}<button class="btn btn-sm ${inboundFilter==='all'?'btn-k':'btn-ghost'}" onclick="setInboundFilter('all')">All</button><button class="btn btn-sm ${inboundSrc==='diag'?'btn-k':'btn-ghost'}" onclick="setInboundSrc(inboundSrc==='diag'?'all':'diag')">🧭 Diagnostic${diagCount?` (${diagCount})`:''}</button></div>
-      <div style="font-size:12px;color:var(--mut)">Website signups and diagnostic results land here. Review, then add the good ones to the pipeline.</div>
+      <div style="font-size:12px;color:var(--mut)">Signups land in Network automatically. Review here, then flag the strong ones to the Pipeline.</div>
     </div>
     ${inboundSrc==='diag'?`<div style="display:flex;gap:6px;flex-wrap:wrap;margin:-4px 0 14px">${[0,1,2,3,4,5].map(n=>`<button class="btn btn-sm ${inbStage===n?'btn-k':'btn-ghost'}" onclick="setInbStage(${n})">${n?'Stage '+n:'All stages'}</button>`).join('')}</div>`:''}`;
   if(!list.length){ el.innerHTML=head+`<div class="empty"><div class="ico">📥</div>${inboundSrc==='diag'?'No diagnostic results'+(inbStage?' at Stage '+inbStage:'')+' yet.':inboundFilter==='new'?'No new website signups right now.':'Nothing here.'}</div>`; updateInboundBadge(); return; }
@@ -5238,7 +5471,7 @@ function renderInbound(){
       : `<span style="background:rgba(0,0,0,.06);color:var(--mut);font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;text-transform:uppercase;letter-spacing:.04em">Website</span>`;
     const attempts=(l.diagnosticHistory||[]).length?`<div style="font-size:10px;color:var(--mut);margin-top:2px">×${l.diagnosticHistory.length+1} attempts</div>`:'';
     const actions = l.status==='new'
-      ? `<button class="btn btn-k btn-sm" onclick="inbConvert('${l.id}')">+ Add to Pipeline</button><button class="btn btn-ghost btn-sm" onclick="inbArchive('${l.id}')">Archive</button>`
+      ? `<button class="btn btn-k btn-sm" onclick="inbConvert('${l.id}')">Flag to Pipeline</button><button class="btn btn-ghost btn-sm" onclick="inbArchive('${l.id}')">Archive</button>`
       : l.status==='archived'
         ? `<button class="btn btn-ghost btn-sm" onclick="inbRestore('${l.id}')">Restore</button><button class="btn btn-red btn-sm" onclick="inbDelete('${l.id}')">Delete</button>`
         : `<span style="font-size:12px;color:var(--grn);font-weight:600">✓ In pipeline</span>`;
@@ -5300,8 +5533,11 @@ function inbConvert(id){
   if(l.heardVia) notes.push('\nHeard about us via: '+l.heardVia);
   const prospects=ls.get('tuf_prospects',[]); const pid=uid();
   prospects.push({ id:pid, name:l.name||'', co:l.company||'', email:l.email||'', phone:l.phone||'', stage:'Prospect', temp:'Warm', score:null, nextAction:l.source==='Diagnostic'?'First response to diagnostic result':'First response to website signup', nextActionDate:today, notes:notes.join('\n'), lastContact:today, source:l.source||'Website', fromInboundId:l.id });
+  prospects[prospects.length-1].auto=false;
   personTag(prospects);
   ls.set('tuf_prospects',prospects);
+  const perInb=personOf(l)||personEnsure(l.name||l.email||'Lead',{co:l.company||'',email:l.email||'',phone:l.phone||''});
+  if(perInb) setPersonSegment(perInb.id,'pipeline','inbound flagged');
   l.status='converted'; l.prospectId=pid; ls.set('tuf_inbound_leads',leads);
   addNotif(`${srcName} added to pipeline: ${l.name||l.email||'lead'}`);
   journeyLog(l.name,srcName+' → Sales Pipeline');
@@ -5340,22 +5576,60 @@ function editProspectModal(id){
     </div>
     <div class="form-row"><label class="form-label">Future start date <span style="font-weight:400;color:var(--mut)">(delayed clients)</span></label><input class="form-input" type="date" id="ep-future" value="${p.futureStart||''}"></div>
     <div class="form-row"><label class="form-label">Notes</label><textarea class="form-textarea" id="ep-notes">${escHtml(p.notes||'')}</textarea></div>
-  `,`<button class="btn btn-red btn-sm" onclick="deleteProspect('${id}')">Delete</button><button class="btn btn-ghost btn-sm" onclick="openProfile('${escAttr(p.name)}','${escAttr(p.co)}')">Profile</button>${p.convertedToMemberId?'':`<button class="btn btn-ghost btn-sm" onclick="convertProspectToMember('${id}')">Convert to Member →</button>`}<button class="btn btn-ghost" onclick="closeModal()">Cancel</button><button class="btn btn-k" onclick="updateProspect('${id}')">Save</button>`);
+  `,`<button class="btn btn-red btn-sm" onclick="deleteProspect('${id}')">Delete</button><button class="btn btn-ghost btn-sm" onclick="openProfile('${escAttr(p.name)}','${escAttr(p.co)}')">Profile</button>${p.convertedToMemberId?'':`<button class="btn btn-ghost btn-sm" style="color:var(--grn)" onclick="prospectWonModal('${id}')">Won ✓</button><button class="btn btn-ghost btn-sm" onclick="prospectLostModal('${id}')">Lost</button>`}<button class="btn btn-ghost" onclick="closeModal()">Cancel</button><button class="btn btn-k" onclick="updateProspect('${id}')">Save</button>`);
 }
-function convertProspectToMember(id){
-  const list=ls.get('tuf_prospects',[]);const p=list.find(x=>x.id===id);if(!p)return;
-  if(p.convertedToMemberId){ alert('This prospect has already been converted to a member.'); return; }
-  if(!confirm(`Convert ${p.name} into a Boardroom member? You can change the type, fee and stage in Clients afterwards.`)) return;
+// Won: the record leaves the pipeline and becomes a Boardroom member or a Private 121 client.
+// The prospect row is kept as stage Won so the converted total is a real running count.
+function prospectWonModal(id){
+  const p=(ls.get('tuf_prospects',[])||[]).find(x=>x.id===id); if(!p) return;
+  if(p.convertedToMemberId){ alert('Already converted.'); return; }
+  showModal(`Won — ${escHtml(p.name)}`,`
+    <div style="font-size:12px;color:var(--mut);margin-bottom:12px">Where are they joining? They move out of the Pipeline into that segment.</div>
+    <div class="form-row"><label style="display:flex;gap:8px;align-items:center;font-size:13px;cursor:pointer"><input type="radio" name="pw-to" value="boardroom" checked onchange="document.getElementById('pw-fee-row').style.display='none'"> Boardroom Member</label></div>
+    <div class="form-row"><label style="display:flex;gap:8px;align-items:center;font-size:13px;cursor:pointer"><input type="radio" name="pw-to" value="private121" onchange="document.getElementById('pw-fee-row').style.display='block'"> Private 121 client</label></div>
+    <div class="form-row" id="pw-fee-row" style="display:none"><label class="form-label">Monthly fee (£)</label><input class="form-input" type="number" id="pw-fee" value="1500"></div>
+  `,`<button class="btn btn-ghost" onclick="closeModal()">Cancel</button><button class="btn btn-k" onclick="prospectWonSave('${id}')">Convert</button>`);
+}
+function prospectWonSave(id){
+  const list=ls.get('tuf_prospects',[]);const i=list.findIndex(x=>x.id===id);if(i<0)return;const p=list[i];
+  const to=document.querySelector('input[name="pw-to"]:checked')?.value||'boardroom';
+  const fee=parseInt(document.getElementById('pw-fee')?.value)||0;
   const members=ls.get('tuf_members',[]);
   const newId=uid();
-  members.push({id:newId,name:p.name,co:p.co||'',email:p.email||'',phone:p.phone||'',stage:3,notes:`Converted from sales pipeline.${p.sourceEvent?' Originally an event lead from '+p.sourceEvent+'.':''} ${p.notes||''}`.trim(),status:'active',type:'boardroom',clientFee:0,sessions:[],touchpoint:new Date().toISOString().slice(0,10),retention:null,fromProspectId:id,sourceEvent:p.sourceEvent||''});
+  members.push({id:newId,name:p.name,co:p.co||'',email:p.email||'',phone:p.phone||'',stage:3,
+    notes:`Converted from sales pipeline.${p.sourceEvent?' Originally an event lead from '+p.sourceEvent+'.':''} ${p.notes||''}`.trim(),
+    status:'active',type:to==='private121'?'existing_client':'boardroom',clientFee:to==='private121'?fee:0,
+    sessions:[],touchpoint:new Date().toISOString().slice(0,10),retention:null,fromProspectId:id,sourceEvent:p.sourceEvent||''});
   personTag(members);
   ls.set('tuf_members',members);
-  const i=list.findIndex(x=>x.id===id);list[i].convertedToMemberId=newId;list[i].stage='Won';ls.set('tuf_prospects',list);
-  addNotif(`${p.name} converted from pipeline to a Boardroom member`);
-  journeyLog(p.name,'Sales Pipeline → Boardroom member');
+  const today=new Date().toISOString().slice(0,10);
+  list[i].convertedToMemberId=newId; list[i].stage='Won'; list[i].wonTo=to; list[i].closedAt=today;
+  ls.set('tuf_prospects',list);
+  const per=personOf(p); if(per) setPersonSegment(per.id,to,'Won');
+  addNotif(`${p.name} converted: pipeline → ${to==='private121'?'Private 121s':'Boardroom Members'}`);
+  journeyLog(p.name,'Sales Pipeline → '+(to==='private121'?'Private 121 client':'Boardroom member')+' (Won)');
   closeModal();renderPipeline();
 }
+// Lost: reason is required. The record returns to Network so it can be revisited later.
+function prospectLostModal(id){
+  const p=(ls.get('tuf_prospects',[])||[]).find(x=>x.id===id); if(!p) return;
+  showModal(`Lost — ${escHtml(p.name)}`,`
+    <div style="font-size:12px;color:var(--mut);margin-bottom:10px">They go back into Network, not deleted. The reason matters because circumstances change and we may revisit.</div>
+    <div class="form-row"><label class="form-label">Reason for loss (required)</label><textarea class="form-textarea" id="pl-reason" style="min-height:70px" oninput="document.getElementById('pl-save').disabled=!this.value.trim()"></textarea></div>
+  `,`<button class="btn btn-ghost" onclick="closeModal()">Cancel</button><button class="btn btn-k" id="pl-save" disabled onclick="prospectLostSave('${id}')">Mark as Lost</button>`);
+}
+function prospectLostSave(id){
+  const reason=(document.getElementById('pl-reason')?.value||'').trim(); if(!reason) return;
+  const list=ls.get('tuf_prospects',[]);const i=list.findIndex(x=>x.id===id);if(i<0)return;const p=list[i];
+  list[i].stage='Lost'; list[i].lostReason=reason; list[i].closedAt=new Date().toISOString().slice(0,10);
+  ls.set('tuf_prospects',list);
+  const per=personOf(p); if(per) setPersonSegment(per.id,'network','Lost: '+reason);
+  addNotif(`${p.name} marked Lost — back in Network`);
+  journeyLog(p.name,'Pipeline → Lost ('+reason+'). Returned to Network.');
+  closeModal();renderPipeline();
+}
+// Kept for any legacy callers; routes into the Won flow.
+function convertProspectToMember(id){ prospectWonModal(id); }
 function updateProspect(id){
   const list=ls.get('tuf_prospects',[]);const i=list.findIndex(x=>x.id===id);if(i<0)return;
   const oldStage=list[i].stage;
@@ -5823,6 +6097,7 @@ function stripeSyncToCRM(){
       if(dup) return;
       att.push({id:uid(),name,co:'',email:p.email||'',phone:p.phone||'',event:'Padel Event',eventDate:paid,score:null,owner:'Danny',notes:'Paid £'+(((p.amount||0)/100).toLocaleString('en-GB'))+' via Stripe on '+fmtDate(paid)+'.',addedDate:new Date().toISOString().slice(0,10),source:'Stripe',stripeCharge:p.charge||''});
       personTag(att);
+      try{ const perT=personOf(att[att.length-1]); if(perT) personAddTag(perT.id,'Padel Event · '+new Date(paid).toLocaleDateString('en-GB',{month:'short',year:'numeric'})); }catch(e){}
       journeyLog(name,'Entered the system: Event CRM (Stripe payment)');
       added++;
     });
@@ -5879,6 +6154,8 @@ function renderPadel(){
   const total=pay.reduce((s,p)=>s+(p.amount||0),0);
   const leads=padelLeads();
   const confirmedCount=leads.filter(l=>l.attendance==='Confirmed'||l.attendance==='Attended').length;
+  const evPanelHost=document.getElementById('padel-events-panel');
+  if(evPanelHost) evPanelHost.innerHTML=elEventsPanel(ls.get('tuf_events',[])||[]);
   document.getElementById('padel-stats').innerHTML=`
     <div class="stat y"><div class="n">${pay.length}</div><div class="l">Tickets Paid</div></div>
     <div class="stat g"><div class="n">£${(total/100).toLocaleString('en-GB')}</div><div class="l">Revenue</div></div>
@@ -7739,7 +8016,7 @@ function caFootprintHtml(m){
   const co=(m.co||'').trim().toLowerCase();
   const hit=(s)=>{s=(s||'').toLowerCase();return (nm&&nm.length>2&&s.includes(nm))||(co&&co.length>2&&s.includes(co));};
   const pm=(name,company)=>{const a=(name||'').toLowerCase(),b=(company||'').toLowerCase();return (nm&&a&&(a.includes(nm)||nm.includes(a)))||(co&&co.length>2&&b&&(b.includes(co)||co.includes(b)));};
-  const prospects=ls.get('tuf_prospects',[]).filter(p=>pm(p.name,p.co));
+  const prospects=ls.get('tuf_prospects',[]).filter(p=>(prospectActive(p)||!p.auto)&&pm(p.name,p.co));
   const leads=ls.get('tuf_event_leads',[]).filter(l=>pm(l.name,l.co));
   const tasks=ls.get('tuf_tasks',[]).filter(t=>t.status!=='Done'&&hit((t.title||'')+' '+(t.notes||'')));
   const tests=ls.get('tuf_testimonials',[]).filter(t=>pm(t.name,t.co));
@@ -8417,6 +8694,7 @@ function renderEmailSegments(){
         <div class="card" style="margin-top:10px">
           <div class="card-title">Quick Actions</div>
           <button class="btn btn-ghost btn-sm" style="width:100%;margin-bottom:6px" onclick="syncBoardroomToEmailList()">Sync Boardroom Members → Email List</button>
+          <button class="btn btn-ghost btn-sm" style="width:100%;margin-bottom:6px" onclick="syncNetworkToEmailList()">Sync Network → Email List</button>
           <div style="font-size:11px;color:var(--mut)">Adds all active Boardroom members as subscribers with the Boardroom tag.</div>
         </div>
       </div>
@@ -8429,12 +8707,29 @@ function syncBoardroomToEmailList(){
   let added=0;
   members.forEach(m=>{
     if(!subs.find(s=>s.memberId===m.id)){
-      subs.push({id:uid(),firstName:m.name.split(' ')[0],lastName:m.name.split(' ').slice(1).join(' '),email:'',source:'Boardroom Member',tags:['Boardroom','Founders'],status:'Active',addedDate:new Date().toISOString().slice(0,10),memberId:m.id,notes:m.co});
+      subs.push({id:uid(),firstName:m.name.split(' ')[0],lastName:m.name.split(' ').slice(1).join(' '),email:m.email||'',source:'Boardroom Member',tags:['Boardroom','Founders'],status:'Active',addedDate:new Date().toISOString().slice(0,10),memberId:m.id,notes:m.co});
       added++;
     }
   });
   ls.set('tuf_emaillist',subs);
   alert(added>0?`${added} Boardroom member${added!==1?'s':''} added to email list.`:'All Boardroom members already in the list.');
+  renderEmailList();
+}
+// Network is the mailing list source: pull everyone in the Network segment with an email address.
+function syncNetworkToEmailList(){
+  const ppl=peopleAll().filter(p=>personSegment(p)==='network'&&(p.email||'').trim());
+  const subs=ls.get('tuf_emaillist',[]);
+  const haveP=new Set(subs.map(x=>x.personId).filter(Boolean));
+  const haveE=new Set(subs.map(x=>(x.email||'').trim().toLowerCase()).filter(Boolean));
+  let added=0;
+  ppl.forEach(p=>{
+    const em=(p.email||'').trim().toLowerCase();
+    if(haveP.has(p.id)||haveE.has(em)) return;
+    subs.push({id:uid(),firstName:(p.name||'').split(' ')[0],lastName:(p.name||'').split(' ').slice(1).join(' '),email:p.email.trim(),source:'Network',tags:['Network'],status:'Active',addedDate:new Date().toISOString().slice(0,10),personId:p.id,notes:p.co||''});
+    haveP.add(p.id); haveE.add(em); added++;
+  });
+  ls.set('tuf_emaillist',subs);
+  alert(added>0?`${added} Network ${added!==1?'people':'person'} added to the email list.`:'Everyone in Network with an email is already on the list.');
   renderEmailList();
 }
 
@@ -9416,7 +9711,7 @@ function brxLeadsView(){
       <div style="font-size:11px;color:var(--mut);margin-top:2px">${m.sourceEvent?`From ${escHtml(m.sourceEvent)} · `:''}<span style="color:${dl!==null&&dl<0?'#F27D72':(dl!==null&&dl<=7?'#E8B33C':'var(--mut)')}">${lbl}</span>${fCount?` · ${fCount} form${fCount>1?'s':''} on file`:''}</div></div>
       <span style="display:flex;gap:6px;flex-shrink:0"><button class="btn btn-ghost btn-sm" onclick="brxLeadNotes('${m.id}')">Notes</button><button class="btn btn-ghost btn-sm" onclick="editMemberModal('${m.id}')">Edit</button><button class="btn btn-k btn-sm" onclick="brConvertGuest('${m.id}')">Convert →</button><button class="btn btn-ghost btn-sm" onclick="brxGuestLost('${m.id}')">Lost</button></span>
     </div>`; };
-  const baRow=a=>{ const inPipe=(ls.get('tuf_prospects',[])||[]).some(p=>profileKey(p.name)===profileKey(a.name));
+  const baRow=a=>{ const inPipe=(ls.get('tuf_prospects',[])||[]).some(p=>prospectActive(p)&&profileKey(p.name)===profileKey(a.name));
     const fCount=files.filter(f=>f.baId===a.id).length;
     return `<div class="brx-row">
       <div style="min-width:0"><div style="font-weight:700;font-size:13px;color:#fff">${escHtml(a.name)}${a.co?` <span style="font-weight:500;color:var(--mut)">· ${escHtml(a.co)}</span>`:''}</div>
@@ -9755,7 +10050,7 @@ function brAddRosterModal(){
   const add=(label,name,co,email,phone,ref)=>{ const k=(name||'').trim().toLowerCase(); if(!k||seen.has(k)) return; seen.add(k); opts.push({label,name,co:co||'',email:email||'',phone:phone||'',ref}); };
   const room=new Set(brxRoomMembers().map(m=>(m.name||'').trim().toLowerCase()));
   members.forEach(m=>{ const k=(m.name||'').trim().toLowerCase(); if(room.has(k)) {seen.add(k); return;} add('CRM · '+(m.type==='guest'||m.boardroomGuest?'guest':(m.type==='existing_client'?'private client':'member'))+(m.status!=='active'?' ('+m.status+')':''),m.name,m.co,m.email,m.phone,'m:'+m.id); });
-  (ls.get('tuf_prospects',[])||[]).forEach(p=>add('Sales Pipeline · '+(p.stage||''),p.name,p.co,p.email,p.phone,'p:'+p.id));
+  (ls.get('tuf_prospects',[])||[]).filter(p=>prospectActive(p)||((p.stage==='Won'||p.stage==='Lost')&&!p.auto)).forEach(p=>add('Sales Pipeline · '+(p.stage||''),p.name,p.co,p.email,p.phone,'p:'+p.id));
   (typeof brxLeads==='function'?brxLeads():[]).forEach(l=>add('Boardroom lead',l.name,l.co,l.email,l.phone,'bl:'+l.id));
   (ls.get('tuf_boardroom_attendees',[])||[]).forEach(a=>add('Session attendee',a.name,a.co,a.email,a.phone,'ba:'+a.id));
   (ls.get('tuf_event_attendees',[])||[]).forEach(a=>add('Event CRM'+(a.event?' · '+a.event:''),a.name,a.co,a.email,a.phone,'ea:'+a.id));
@@ -10206,8 +10501,9 @@ function getStaleClass(lastContact){
   const days=daysUntil(lastContact);// negative = past
   const daysPast=Math.abs(days);
   if(days>0) return ''; // future = fine
-  if(daysPast>14) return 'red';
-  if(daysPast>7) return 'amber';
+  const s=crmSettings();
+  if(daysPast>=s.staleDays) return 'red';
+  if(daysPast>=s.nudgeDays) return 'amber';
   return '';
 }
 function getStaleLabel(lastContact){
@@ -10215,18 +10511,19 @@ function getStaleLabel(lastContact){
   const days=daysUntil(lastContact);
   if(days>0) return '';
   const daysPast=Math.abs(days);
-  if(daysPast>14) return `${daysPast}d stale`;
-  if(daysPast>7) return `${daysPast}d stale`;
+  const s=crmSettings();
+  if(daysPast>=s.staleDays) return `${daysPast}d stale`;
+  if(daysPast>=s.nudgeDays) return `${daysPast}d, nudge`;
   return '';
 }
 function renderStaleProspectsAlert(){
-  const today=new Date().toISOString().slice(0,10);
-  const prospects=ls.get('tuf_prospects',[]).filter(p=>p.stage!=='Won'&&p.stage!=='Lost');
+  const s=crmSettings();
+  const prospects=ls.get('tuf_prospects',[]).filter(prospectActive);
   const stale=prospects.filter(p=>{
     if(!p.lastContact) return false;
-    return daysUntil(p.lastContact)<-7;
+    return daysUntil(p.lastContact)<=-s.staleDays;
   });
-  return stale.length?`<div class="pi soon" style="margin-bottom:5px"><span class="pi-tag soon">PIPELINE</span><span class="pi-owner">Danny</span><span style="flex:1;font-size:12px;margin-left:6px">${stale.length} prospect${stale.length!==1?'s have':' has'} not been contacted in 7+ days: ${stale.map(p=>p.name).join(', ')}</span></div>`:'';
+  return stale.length?`<div class="pi soon" style="margin-bottom:5px"><span class="pi-tag soon">PIPELINE</span><span class="pi-owner">Danny</span><span style="flex:1;font-size:12px;margin-left:6px">${stale.length} prospect${stale.length!==1?'s have':' has'} not been contacted in ${s.staleDays}+ days: ${stale.map(p=>p.name).join(', ')}</span></div>`:'';
 }
 
 // ═══ ASK HQ ASSISTANT ════════════════════════════════════════════════════════════════
@@ -10282,8 +10579,9 @@ function hqConfirm(pid){
     msg=`Task created and assigned to ${escHtml(t.owner)}. No email was sent.`;
   } else if(a.type==='add_prospect'){
     const list=ls.get('tuf_prospects',[]);
-    const p={id:uid(),name:a.name||'Unnamed',co:(a.company||a.co||''),email:a.email||'',phone:a.phone||'',stage:(STAGES.includes(a.stage)?a.stage:'Prospect'),temp:(['Hot','Warm','Cold'].includes(a.temp)?a.temp:'Warm'),score:parseInt(a.score)||null,nextAction:a.nextAction||'',notes:a.notes||'',lastContact:new Date().toISOString().slice(0,10)};
-    list.push(p); ls.set('tuf_prospects',list);
+    const p={id:uid(),name:a.name||'Unnamed',co:(a.company||a.co||''),email:a.email||'',phone:a.phone||'',stage:(STAGES.includes(a.stage)?a.stage:'Prospect'),temp:(['Hot','Warm','Cold'].includes(a.temp)?a.temp:'Warm'),score:parseInt(a.score)||null,nextAction:a.nextAction||'',notes:a.notes||'',lastContact:new Date().toISOString().slice(0,10),auto:false};
+    list.push(p); personTag(list); ls.set('tuf_prospects',list);
+    try{ const per=personEnsure(p.name,{co:p.co,email:p.email,phone:p.phone}); if(per) setPersonSegment(per.id,'pipeline','Ask HQ'); }catch(e){}
     addNotif(`Prospect added via Ask HQ: ${p.name}`);
     try{renderPipeline();}catch(e){}
     msg=`${escHtml(p.name)} added to the pipeline at stage ${escHtml(p.stage)}.`;
@@ -10356,7 +10654,7 @@ function buildHQContext(){
   const open=tasks.filter(t=>t.status!=='Done');
   const overdue=open.filter(t=>t.dueDate&&t.dueDate<today);
   const members=(ls.get('tuf_members',[])||[]);
-  const prospects=(ls.get('tuf_prospects',[])||[]);
+  const prospects=(ls.get('tuf_prospects',[])||[]).filter(prospectActive);
   const warm=(ls.get('tuf_warm',[])||[]);
   const events=(ls.get('tuf_events',[])||[]);
   const sessions=(ls.get('tuf_sessions',[])||[]);
@@ -10456,7 +10754,7 @@ ACTIONS: You can propose changes that the user confirms with a button before any
 \`\`\`
 Available action types and their fields:
 - create_task: title, owner (Danny, Joe, Jasper, James, Chloe), priority, dueDate, notes
-- add_prospect: name, company, stage (Prospect, Contacted, Meeting Booked, Proposal Sent, Committed, Won, Lost), temp (Hot|Warm|Cold), score, nextAction, notes
+- add_prospect: name, company, stage (Prospect, Contacted, Meeting Booked, Dialogue, Proposal Sent, Committed), temp (Hot|Warm|Cold), score, nextAction, notes. Only add a prospect when the user clearly wants them worked as a sales prospect; the pipeline is manual and deliberate.
 - add_event_lead: name, company, source (Danny|Jasper|Joe|James), status (New Lead, Contacted, Conversation, Meeting Booked, Converted, Not Interested), attendance (Invited|Confirmed|Attended|Declined), notes. This adds a contact to the Padel event pipeline.
 - add_idea: title, platform (LinkedIn|Instagram|YouTube|Podcast), desc. A content idea.
 - add_member: name, company, fee. A Boardroom member, fee is pounds per month.
