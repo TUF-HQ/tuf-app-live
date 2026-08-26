@@ -481,7 +481,7 @@ details>summary::-webkit-details-marker{display:none}
       </div>
     </div>
 
-    <!-- ARCHIVED v55 (hidden, data kept): budget, content (calendar), daily (progress), watemplates. Restore any of them by re-adding its sb-item row. -->
+    <!-- ARCHIVED v55 (hidden, data kept): budget, content (calendar), daily (progress), watemplates. v56: fourbox (its four boxes now live on the KPIs page). Restore any of them by re-adding its sb-item row. -->
     <div class="sb-section">Overview</div>
     <div class="sb-item" data-page="myday" onclick="nav('myday',this)"><span class="ico">☀️</span>My Day</div>
     <div class="sb-item active" data-page="home" onclick="nav('home',this)"><span class="ico">🌅</span>Morning Brief</div>
@@ -518,7 +518,6 @@ details>summary::-webkit-details-marker{display:none}
     <div class="sb-section">Intelligence</div>
     <div class="sb-item" data-page="capmap" onclick="nav('capmap',this)"><span class="ico">📊</span>Capability Map <span class="sb-badge" id="sb-red" style="display:none">—</span></div>
     <div class="sb-item" data-page="goals" onclick="nav('goals',this)"><span class="ico">🎯</span>Goals & OKRs</div>
-    <div class="sb-item" data-page="fourbox" onclick="nav('fourbox',this)"><span class="ico">🧭</span>4 Box Model <span class="sb-badge" id="sb-fb" style="background:var(--red);display:none">0</span></div>
 
     <div class="sb-section">Team</div>
     <div class="sb-item" data-page="dannycal" onclick="nav('dannycal',this)"><span class="ico">📆</span>Danny's Calendar</div>
@@ -566,10 +565,8 @@ details>summary::-webkit-details-marker{display:none}
 
       <div class="grid-2">
         <div>
-          <div class="sec-hdr">Today's Priorities</div>
+          <div class="sec-hdr">Your Priorities</div>
           <div id="brief-items"></div>
-          <div class="sec-hdr" style="margin-top:16px">Session 2 Prep (2 July)</div>
-          <div id="s2-chk"></div>
         </div>
         <div>
           <div class="sec-hdr" style="margin-top:16px">Daily Note</div>
@@ -1119,32 +1116,6 @@ const CAP_DETAIL = {
   "sys-monday":{pr:`Low`,gap:`No gap. S1 attendee board working well. Needs extending to full sales pipeline.`,dep:`None`,unl:`Pipeline visibility; Follow-up tracking; Conversion data`,p1:`Extend to cover full sales pipeline (not just post-event attendees)`,p2:`Pipeline board active alongside attendee board`,p3:`Pipeline data feeding into sales decisions`,grn:`Already green. Extended to cover full prospect pipeline as well as attendee tracking.`,note:``},
   "sys-ai":{pr:`High`,gap:`Team not systematically using AI. Jasper has no laptop. Joe aware of Claude but no workflow.`,dep:`Jasper's laptop (immediate); James training sessions`,unl:`Team output capacity; Faster builds; Future client AI offering`,p1:`Jasper's laptop ordered. James introduces Claude to team with one practical use case each.`,p2:`Every team member has one AI workflow embedded; Jasper using tools on new laptop`,p3:`AI tooling embedded in every daily workflow; team producing at 2x capacity`,grn:`Every team member uses Claude daily. Output quality and speed reflect AI advantage. Client-facing AI capability scoped.`,note:`Danny: 'I want a highly profitable business with a small team using AI tools.'`},
 };
-
-const S2_CHECKS = [
-  {id:"s2a",t:"Pod groups confirmed at 4-5 (not 6)",o:"joe"},
-  {id:"s2b",t:"Danny's Close — 20 minutes protected at end",o:"danny"},
-  {id:"s2c",t:"Hard time caps agreed for all sessions",o:"danny"},
-  {id:"s2d",t:"Pod briefing cards prepared with timer",o:"joe"},
-  {id:"s2e",t:"Written Commit cards printed and collected on day",o:"joe"},
-  {id:"s2f",t:"Guest speaker confirmed (different from Guy Warren)",o:"danny"},
-  {id:"s2g",t:"Room logistics brief sent to Chloe",o:"jasper"},
-  {id:"s2h",t:"Final attendee list confirmed, name badges ready",o:"james"},
-  {id:"s2i",t:"S1 recap slides prepared (first 10 minutes)",o:"danny"},
-  {id:"s2j",t:"August implementation session dates shared — members to book on day",o:"joe"},
-];
-
-const MILESTONES = [
-  {date:"2026-06-13",t:"Sales framework documented. WhatsApp governance ready.",o:"Danny/Joe"},
-  {date:"2026-06-20",t:"Onboarding playbook complete. Sales materials drafted. Padel logistics confirmed.",o:"Joe/Jasper"},
-  {date:"2026-06-25",t:"Padel Event — testimonials captured within 24 hours.",o:"Jasper",key:true},
-  {date:"2026-07-02",t:"SESSION 2 — target 10+ confirmed paying members.",o:"Danny/Team",key:true},
-  {date:"2026-07-30",t:"PADEL EVENT — capture testimonials within 24 hours, follow up every booking.",o:"Jasper",key:true},
-  {date:"2026-08-13",t:"Leadership & Implementation Session (online).",o:"Danny/Joe",key:true},
-  {date:"2026-09-10",t:"BOARDROOM SESSION 3 — next Boardroom Day.",o:"Danny/Team",key:true},
-  {date:"2026-07-31",t:"Content calendar live. Website in progress. 3 podcast guests confirmed.",o:"Joe/James"},
-  {date:"2026-08-31",t:"Service model complete. LinkedIn posting weekly.",o:"Joe/Jasper"},
-  {date:"2026-09-01",t:"90-day capability map review.",o:"James"},
-];
 
 const STAGES = ["Prospect","Contacted","Meeting Booked","Dialogue","Proposal Sent","Committed"];
 // Won and Lost are outcomes, not stages: closed rows keep stage 'Won' / 'Lost' as stored history
@@ -3757,11 +3728,47 @@ async function coBriefNudges(){
     if(drafts.length) html+=mk('urgent',`${drafts.length} coaching recap${drafts.length!==1?'s':''} awaiting approval: ${drafts.slice(0,3).map(s=>escHtml((coPerson(s.person_id)||{}).name||'')).join(', ')}${drafts.length>3?'…':''}. Review and approve in Coaching.`);
     if(stuck.length) html+=mk('soon',`${stuck.length} coaching action${stuck.length!==1?'s':''} carried more than once: ${stuck.slice(0,3).map(a=>escHtml(((coPerson(a.person_id)||{}).name||'')+': '+String(a.text||'').slice(0,40))).join(' · ')}${stuck.length>3?'…':''}`);
     if(stale.length) html+=mk('soon',`No coaching session for ${CO_STALE_DAYS}+ days: ${stale.slice(0,4).map(x=>escHtml(x.p.name)+' ('+x.days+'d)').join(', ')}${stale.length>4?'…':''}`);
-    if(html){ const clear=el.querySelector('.pi.good'); if(clear) clear.remove(); el.insertAdjacentHTML('beforeend',html); }
+    if(html) briefAppend(html,'Danny');
   }catch(e){}
 }
 
 // ═══ HOME / MORNING BRIEF ═══════════════════════════════════════════════════
+// Personalised brief (v56): every tile and Daily Control cell belongs to a topic.
+// Role defaults below; anyone can override via Customise my brief. Priorities are
+// routed by their owner: yours and whole team items on top, the rest collapsed.
+const BRIEF_ALL=['Danny','Joe','Jasper','James','Chloe'];
+const BRIEF_TOPICS=[
+  {k:'money',label:'Members and MRR tiles',def:BRIEF_ALL},
+  {k:'session',label:'Next session countdown',def:BRIEF_ALL},
+  {k:'padel',label:'Padel event: countdown, tickets, signups',def:['Jasper','Danny']},
+  {k:'inbound',label:'New website signups',def:['Danny','Joe','Chloe']},
+  {k:'pipeline',label:'Pipeline follow ups and pending payments',def:['Danny','James']},
+  {k:'clients',label:'Client care, renewals and guest trials',def:['Danny','Joe']},
+];
+function briefPrefs(){ const all=ls.get('tuf_brief_prefs',{})||{}; return all[CURRENT_USER]||{}; }
+function briefShow(k){ const p=briefPrefs(); if(typeof p[k]==='boolean') return p[k]; const t=BRIEF_TOPICS.find(x=>x.k===k); return t?t.def.includes(CURRENT_USER):true; }
+function briefOwnerMine(o){ const s=String(o||''); if(!s) return true; if(/team|review|all|everyone/i.test(s)) return true; return !!CURRENT_USER && s.toLowerCase().indexOf(CURRENT_USER.toLowerCase())>=0; }
+function briefPrefsModal(){
+  const body=`<div style="font-size:12px;color:var(--mut);margin-bottom:10px">Choose what your Morning Brief shows. Priorities owned by teammates stay available under Rest of the team.</div>`+
+    BRIEF_TOPICS.map(t=>`<label style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--bdr);cursor:pointer;font-size:12.5px">
+      <input type="checkbox" id="bp-${t.k}"${briefShow(t.k)?' checked':''} style="width:16px;height:16px;accent-color:var(--k);flex-shrink:0">
+      <span style="flex:1">${t.label}</span>
+      <span style="font-size:10px;color:var(--mut);flex-shrink:0">default: ${t.def.length===BRIEF_ALL.length?'everyone':t.def.join(', ')}</span>
+    </label>`).join('');
+  showModal('Customise my brief',body,`<button class="btn btn-ghost" onclick="closeModal()">Cancel</button><button class="btn btn-k" onclick="briefPrefsSave()">Save</button>`);
+}
+function briefPrefsSave(){
+  const all=ls.get('tuf_brief_prefs',{})||{}; const mine=all[CURRENT_USER]||{};
+  BRIEF_TOPICS.forEach(t=>{ const el=document.getElementById('bp-'+t.k); if(el) mine[t.k]=el.checked; });
+  all[CURRENT_USER]=mine; ls.set('tuf_brief_prefs',all); closeModal(); renderHome();
+}
+function briefPiRow(i){ return `<div class="pi ${i.type}"><span class="pi-tag ${i.type}">${i.tag}</span><span style="font-size:10px;font-weight:700;background:var(--k);color:var(--w);border-radius:20px;padding:2px 9px;flex-shrink:0;margin-top:1px">${i.owner}</span><span style="flex:1;font-size:12.5px;line-height:1.45;margin-left:4px">${i.text}</span></div>`; }
+// Async nudge writers (coaching) route through here so grouping stays correct.
+function briefAppend(html,owner){
+  const mineEl=document.getElementById('brief-mine'); const restEl=document.getElementById('brief-rest-items'); if(!mineEl||!restEl) return;
+  if(briefOwnerMine(owner)){ const clear=mineEl.querySelector('.pi.good'); if(clear) clear.remove(); mineEl.insertAdjacentHTML('beforeend',html); }
+  else { restEl.insertAdjacentHTML('beforeend',html); const det=document.getElementById('brief-rest'); if(det) det.hidden=false; const n=document.getElementById('brief-rest-n'); if(n) n.textContent=restEl.querySelectorAll('.pi').length; }
+}
 function renderHome(){
   // North Star
   const allMembers = ls.get('tuf_members',[]).filter(m=>m.status==='active');
@@ -3776,15 +3783,19 @@ function renderHome(){
   const nextSess=(ls.get('tuf_sessions',[])||[]).filter(x=>x.date&&x.date>=_t0).sort((a,b)=>a.date.localeCompare(b.date))[0]||null;
   const padel=nextPadelEv?daysUntil(nextPadelEv.date):null;
   const s2=nextSess?daysUntil(nextSess.date):null;
-  document.getElementById('ns-strip').innerHTML = `
-    <div class="ns-box key" onclick="goPage('boardroom')" title="Open Boardroom"><div class="ns-l">Boardroom Members</div><div class="ns-n" style="color:var(--grn)">${bCount}/20</div><div class="ns-t">Target: 20 × £1,000/mo</div><div class="ns-bar"><div class="ns-fill" style="width:${Math.min(100,(bCount/20)*100)}%"></div></div></div>
-    <div class="ns-box" onclick="goPage('boardroom')" title="Open Boardroom"><div class="ns-l">Boardroom MRR</div><div class="ns-n" style="color:var(--grn)">£${boardroomMRR.toLocaleString()}</div><div class="ns-t">Target: £20,000</div><div class="ns-bar"><div class="ns-fill warn" style="width:${Math.min(100,(boardroomMRR/20000)*100)}%"></div></div></div>
-    <div class="ns-box" onclick="goPage('members')" title="Open Existing Clients"><div class="ns-l">Private Client MRR</div><div class="ns-n" style="color:var(--blu)">£${privateMRR.toLocaleString()}</div><div class="ns-t">${existingClients.length} client${existingClients.length!==1?'s':''}</div></div>
-    <div class="ns-box key" style="border-color:var(--blu)" onclick="goPage('kpis')" title="Open KPIs"><div class="ns-l">Total MRR</div><div class="ns-n" style="color:var(--blu)">£${totalMRR.toLocaleString()}</div><div class="ns-t">Boardroom + Private</div><div class="ns-bar"><div class="ns-fill" style="width:${Math.min(100,(totalMRR/20000)*100)}%;background:var(--blu)"></div></div></div>
-    <div class="ns-box" onclick="goPage('padel')" title="Open Padel Event"><div class="ns-l">Days to Padel</div><div class="ns-n" style="color:${padel!=null&&padel<=7?'var(--red)':'var(--amb)'}">${padel==null?'—':(padel===0?'TODAY':(padel>0?padel:'PAST'))}</div><div class="ns-t">${nextPadelEv?fmtDate(nextPadelEv.date):'No padel event booked'}</div></div>
-    <div class="ns-box" onclick="goPage('boardroom')" title="Open the Boardroom calendar"><div class="ns-l">${nextSess?'Days to '+escHtml(nextSess.name):'Next session'}</div><div class="ns-n" style="color:${s2!=null&&s2<=7?'var(--red)':'var(--amb)'}">${s2==null?'—':(s2===0?'TODAY':s2)}</div><div class="ns-t">${nextSess?fmtDate(nextSess.date)+(nextSess.type==='Implementation Session'?' · online':''):'None booked'}</div></div>
-  `;
-  // Priorities
+  const tiles=[];
+  if(briefShow('money')){
+    tiles.push(`<div class="ns-box key" onclick="goPage('boardroom')" title="Open Boardroom"><div class="ns-l">Boardroom Members</div><div class="ns-n" style="color:var(--grn)">${bCount}/20</div><div class="ns-t">Target: 20 × £1,000/mo</div><div class="ns-bar"><div class="ns-fill" style="width:${Math.min(100,(bCount/20)*100)}%"></div></div></div>`);
+    tiles.push(`<div class="ns-box" onclick="goPage('boardroom')" title="Open Boardroom"><div class="ns-l">Boardroom MRR</div><div class="ns-n" style="color:var(--grn)">£${boardroomMRR.toLocaleString()}</div><div class="ns-t">Target: £20,000</div><div class="ns-bar"><div class="ns-fill warn" style="width:${Math.min(100,(boardroomMRR/20000)*100)}%"></div></div></div>`);
+    tiles.push(`<div class="ns-box" onclick="goPage('members')" title="Open Existing Clients"><div class="ns-l">Private Client MRR</div><div class="ns-n" style="color:var(--blu)">£${privateMRR.toLocaleString()}</div><div class="ns-t">${existingClients.length} client${existingClients.length!==1?'s':''}</div></div>`);
+    tiles.push(`<div class="ns-box key" style="border-color:var(--blu)" onclick="goPage('kpis')" title="Open KPIs"><div class="ns-l">Total MRR</div><div class="ns-n" style="color:var(--blu)">£${totalMRR.toLocaleString()}</div><div class="ns-t">Boardroom + Private</div><div class="ns-bar"><div class="ns-fill" style="width:${Math.min(100,(totalMRR/20000)*100)}%;background:var(--blu)"></div></div></div>`);
+  }
+  if(briefShow('padel')) tiles.push(`<div class="ns-box" onclick="goPage('padel')" title="Open Padel Event"><div class="ns-l">Days to Padel</div><div class="ns-n" style="color:${padel!=null&&padel<=7?'var(--red)':'var(--amb)'}">${padel==null?'—':(padel===0?'TODAY':(padel>0?padel:'PAST'))}</div><div class="ns-t">${nextPadelEv?fmtDate(nextPadelEv.date):'No padel event booked'}</div></div>`);
+  if(briefShow('session')) tiles.push(`<div class="ns-box" onclick="goPage('boardroom')" title="Open the Boardroom calendar"><div class="ns-l">${nextSess?'Days to '+escHtml(nextSess.name):'Next session'}</div><div class="ns-n" style="color:${s2!=null&&s2<=7?'var(--red)':'var(--amb)'}">${s2==null?'—':(s2===0?'TODAY':s2)}</div><div class="ns-t">${nextSess?fmtDate(nextSess.date)+(nextSess.type==='Implementation Session'?' · online':''):'None booked'}</div></div>`);
+  const nsEl=document.getElementById('ns-strip');
+  nsEl.innerHTML=tiles.join('');
+  nsEl.style.display=tiles.length?'':'none';
+  // Priorities — all built from live data, each with an owner
   const pis = [];
   if(padel!=null&&padel<=7&&padel>0) pis.push({type:'urgent',tag:'PADEL',text:`Padel event in ${padel} days. Logistics and invitations must be ready.`,owner:'Jasper'});
   if(nextSess&&s2!=null&&s2<=7&&s2>0) pis.push({type:'urgent',tag:'SESSION',text:`${nextSess.name} in ${s2} days. Prep forms out and confirmations chased.`,owner:'Danny'});
@@ -3792,10 +3803,16 @@ function renderHome(){
   const _today=new Date().toISOString().slice(0,10);
   const dueLeads=ls.get('tuf_prospects',[]).filter(p=>prospectDue(p,_today));
   if(dueLeads.length){ const od=dueLeads.filter(p=>prospectDue(p,_today)==='overdue').length; pis.push({type:od?'urgent':'soon',tag:'FOLLOW-UPS',text:`${dueLeads.length} prospect${dueLeads.length!==1?'s':''} need a follow-up${od?` (${od} overdue)`:''}: ${dueLeads.slice(0,6).map(p=>p.name).join(', ')}${dueLeads.length>6?'…':''}`,owner:'Danny'}); }
-  MILESTONES.forEach(m=>{const d=daysUntil(m.date);if(d===0)pis.push({type:'urgent',tag:'TODAY',text:m.t,owner:m.o});else if(d>0&&d<=3)pis.push({type:'urgent',tag:d+'d',text:m.t,owner:m.o});else if(d>3&&d<=7)pis.push({type:'soon',tag:d+'d',text:m.t,owner:m.o});});
   const redCaps=CAPS.filter(c=>(ls.str('tuf_rag_'+c.id)||c.d)==='red');
   if(redCaps.length) pis.push({type:'info',tag:'RED',text:`${redCaps.length} RED capabilities: ${redCaps.map(c=>c.n).join(' · ')}`,owner:'Review'});
-  // Boardroom WhatsApp group cadence (waDue is false unless the group is live)
+  // Rolling 90 day capability cycle
+  try{ const ph=capPhase(); if(ph.ended) pis.push({type:ph.endedDays>14?'urgent':'soon',tag:'CAPMAP',owner:'James',text:`The 90 day capability cycle ended ${ph.by}. Re-score the map and start the next cycle.`}); }catch(e){}
+  // Monthly social stats reminder: nudge until last month is logged
+  try{ const sm=ls.get('tuf_social',{})||{}; const _d=new Date(); const pm=new Date(_d.getFullYear(),_d.getMonth()-1,1);
+    const pk=pm.getFullYear()+'-'+String(pm.getMonth()+1).padStart(2,'0');
+    const logged=sm[pk]&&Object.keys(sm[pk]).some(p=>Object.values(sm[pk][p]||{}).some(v=>v||v===0));
+    if(!logged) pis.push({type:'info',tag:'SOCIAL',owner:'Joe',text:`Log ${pm.toLocaleString('en-GB',{month:'long'})}'s social media stats. Two minutes in Social Media.`});
+  }catch(e){}
   // Podcast plan: 2 episodes a month, recorded back to back on one day
   { const pdd=podDue();
     if(pdd.due) pis.push({type:pdd.urgent?'urgent':'soon',tag:'PODCAST',owner:'James',text:`No podcast recording day booked: ${pdd.monthCount} of ${pdd.target} episodes this month. Book the next batch.`});
@@ -3822,19 +3839,16 @@ function renderHome(){
     if(d>=0&&d<=7) pis.push({type:d<=3?'urgent':'soon',tag:'GUEST',text:`${escHtml(m.name)}'s Boardroom guest trial ends in ${d} day${d!==1?'s':''}. Decide on conversion.`,owner:'Danny'});
     else if(d<0) pis.push({type:'soon',tag:'GUEST',text:`${escHtml(m.name)}'s guest trial ended ${-d} day${-d!==1?'s':''} ago. Convert or close out.`,owner:'Danny'});
   });
-  document.getElementById('brief-items').innerHTML = pis.length
-    ? pis.map(i=>`<div class="pi ${i.type}"><span class="pi-tag ${i.type}">${i.tag}</span><span style="font-size:10px;font-weight:700;background:var(--k);color:var(--w);border-radius:20px;padding:2px 9px;flex-shrink:0;margin-top:1px">${i.owner}</span><span style="flex:1;font-size:12.5px;line-height:1.45;margin-left:4px">${i.text}</span></div>`).join('')
-    : '<div class="pi good"><span class="pi-tag good">CLEAR</span><span style="flex:1;font-size:12.5px;margin-left:4px">No urgent items today.</span></div>';
-  // S2 checklist
-  document.getElementById('s2-chk').innerHTML = S2_CHECKS.map(c=>{
-    const done=ls.str('tuf_s2_'+c.id)==='1';
-    return `<div class="chk-row${done?' done':''}" onclick="toggleS2('${c.id}')"><div class="chk-box">${done?'✓':''}</div><span class="chk-text" style="flex:1;font-size:12px">${c.t}</span><span class="tag-${c.o}" style="font-size:9px;font-weight:700;border-radius:3px;padding:1px 5px;background:#f0f0f0;color:#666">${c.o.charAt(0).toUpperCase()+c.o.slice(1)}</span></div>`;
-  }).join('');
+  const mine=pis.filter(i=>briefOwnerMine(i.owner));
+  const rest=pis.filter(i=>!briefOwnerMine(i.owner));
+  document.getElementById('brief-items').innerHTML=
+    `<div id="brief-mine">${mine.length?mine.map(briefPiRow).join(''):'<div class="pi good"><span class="pi-tag good">CLEAR</span><span style="flex:1;font-size:12.5px;margin-left:4px">Nothing urgent for you today.</span></div>'}</div>`+
+    `<details id="brief-rest" style="margin-top:8px"${rest.length?'':' hidden'}><summary style="cursor:pointer;font-size:11px;font-weight:700;color:var(--mut);text-transform:uppercase;letter-spacing:.5px;padding:4px 0">Rest of the team (<span id="brief-rest-n">${rest.length}</span>)</summary><div id="brief-rest-items">${rest.map(briefPiRow).join('')}</div></details>`;
   const dn=document.getElementById('daily-note');
   if(dn) dn.value=ls.str('tuf_note_'+new Date().toISOString().slice(0,10),'');
   document.getElementById('topbar-actions').innerHTML=`
     <button class="btn btn-k btn-sm" onclick="nav('tasks',document.querySelector('[data-page=tasks]'))">+ Add Task</button>
-    <button class="btn btn-ghost btn-sm" onclick="editMetric('members')">Update Metrics</button>`;
+    <button class="btn btn-ghost btn-sm" onclick="briefPrefsModal()">⚙ Customise my brief</button>`;
   renderDailyControl();
   renderBriefTasks();
   updateTaskBadge();
@@ -3860,25 +3874,21 @@ function renderDailyControl(){
   const highUnconf=padelLeadsAll.filter(l=>(parseInt(l.score)>=8)&&!(l.attendance==='Confirmed'||l.attendance==='Attended')).length;
   const risks=highUnconf+renewSoon+guestsEnding;
   const cell=(n,label,color,go)=>`<div class="ns-box" style="cursor:pointer" onclick="${go}"><div class="ns-l">${label}</div><div class="ns-n" style="color:${color}">${n}</div></div>`;
+  const cells=[];
+  if(briefShow('inbound')) cells.push(cell(newInbound,'New signups',newInbound?'var(--amb)':'var(--grn)',"nav('inbound',document.querySelector('[data-page=inbound]'))"));
+  if(briefShow('padel')){
+    cells.push(cell(paidCount,'Tickets paid','var(--grn)',"nav('padel',document.querySelector('[data-page=padel]'))"));
+    cells.push(cell(confirmed,'Confirmed coming','var(--grn)',"nav('padel',document.querySelector('[data-page=padel]'))"));
+    cells.push(cell(notConfirmed,'Not confirmed',notConfirmed?'var(--amb)':'var(--grn)',"nav('padel',document.querySelector('[data-page=padel]'))"));
+  }
+  if(briefShow('pipeline')){
+    cells.push(cell(followUps,'Follow-ups due',followUps?'var(--red)':'var(--grn)',"nav('pipeline',document.querySelector('[data-page=pipeline]'))"));
+    cells.push(cell(pending,'Payments pending',pending?'var(--amb)':'var(--grn)',"nav('pipeline',document.querySelector('[data-page=pipeline]'))"));
+  }
+  if(briefShow('clients')) cells.push(cell(risks,'Key risks',risks?'var(--red)':'var(--grn)',"nav('members',document.querySelector('[data-page=members]'))"));
+  if(!cells.length){ el.innerHTML=''; return; }
   el.innerHTML=`<div class="sec-hdr">Daily Control</div>
-    <div class="ns-row">
-      ${cell(newInbound,'New signups',newInbound?'var(--amb)':'var(--grn)',"nav('inbound',document.querySelector('[data-page=inbound]'))")}
-      ${cell(paidCount,'Tickets paid','var(--grn)',"nav('padel',document.querySelector('[data-page=padel]'))")}
-      ${cell(confirmed,'Confirmed coming','var(--grn)',"nav('padel',document.querySelector('[data-page=padel]'))")}
-      ${cell(notConfirmed,'Not confirmed',notConfirmed?'var(--amb)':'var(--grn)',"nav('padel',document.querySelector('[data-page=padel]'))")}
-      ${cell(followUps,'Follow-ups due',followUps?'var(--red)':'var(--grn)',"nav('pipeline',document.querySelector('[data-page=pipeline]'))")}
-      ${cell(pending,'Payments pending',pending?'var(--amb)':'var(--grn)',"nav('pipeline',document.querySelector('[data-page=pipeline]'))")}
-      ${cell(risks,'Key risks',risks?'var(--red)':'var(--grn)',"nav('members',document.querySelector('[data-page=members]'))")}
-    </div>`;
-}
-function toggleS2(id){ls.setStr('tuf_s2_'+id,ls.str('tuf_s2_'+id)==='1'?'0':'1');renderHome();}
-function editMetric(key){
-  const labels={members:'Number of paying Boardroom members',mrr:'Boardroom MRR (£/month)',private:'Private client MRR (£/month)'};
-  const cur=ls.get('tuf_metrics',{});
-  const v=prompt(labels[key],cur[key]||'');
-  if(v===null)return;
-  const n=parseFloat(v);
-  if(!isNaN(n)){const m=ls.get('tuf_metrics',{});m[key]=n;ls.set('tuf_metrics',m);renderHome();}
+    <div class="ns-row">${cells.join('')}</div>`;
 }
 
 // ═══ MEMBERS CRM ════════════════════════════════════════════════════════════
@@ -6803,7 +6813,22 @@ let capView='all'; // 'all' | 'attention' | 'owner'
 function setCapView(v){ capView=v; renderCapMap(); }
 function ragCounts(caps){ const c={red:0,amber:0,green:0}; caps.forEach(x=>c[getRAG(x.id)]++); return c; }
 function ragBar(c){ const tot=c.red+c.amber+c.green||1; return `<div style="display:flex;height:8px;border-radius:20px;overflow:hidden;background:var(--bg-2)">${c.red?`<div style="width:${c.red/tot*100}%;background:var(--red)"></div>`:''}${c.amber?`<div style="width:${c.amber/tot*100}%;background:var(--amb)"></div>`:''}${c.green?`<div style="width:${c.green/tot*100}%;background:var(--grn)"></div>`:''}</div>`; }
-function capPhase(){ const d=new Date().toISOString().slice(0,10); if(d<='2026-07-02')return{n:'Phase 1',by:'2 Jul 2026',key:'p1'}; if(d<='2026-07-31')return{n:'Phase 2',by:'31 Jul 2026',key:'p2'}; if(d<='2026-09-01')return{n:'Phase 3',by:'1 Sep 2026',key:'p3'}; return{n:'Beyond the 90-day plan',by:'',key:'p3'}; }
+// Rolling 90 day cycles (v56). The legacy Session 1 cycle stands until someone
+// starts the next one; new cycles run phases at 30, 60 and 90 days from start.
+function capCycleGet(){ const c=ls.get('tuf_capmap_cycle',null); if(c&&c.start) return c; return {start:'2026-06-03',ends:['2026-07-02','2026-07-31','2026-09-01']}; }
+function capCycleEnds(c){ if(c.ends&&c.ends.length===3) return c.ends; const d0=new Date(c.start+'T00:00:00'); const add=n=>{const d=new Date(d0);d.setDate(d.getDate()+n);return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}; return [add(30),add(60),add(90)]; }
+function capPhase(){ const e=capCycleEnds(capCycleGet()); const d=new Date().toISOString().slice(0,10);
+  if(d<=e[0])return{n:'Phase 1',by:fmtDate(e[0]),key:'p1',ends:e};
+  if(d<=e[1])return{n:'Phase 2',by:fmtDate(e[1]),key:'p2',ends:e};
+  if(d<=e[2])return{n:'Phase 3',by:fmtDate(e[2]),key:'p3',ends:e};
+  const days=Math.floor((new Date(d+'T00:00:00')-new Date(e[2]+'T00:00:00'))/86400000);
+  return{n:'Cycle complete',by:fmtDate(e[2]),key:'p3',ends:e,ended:true,endedDays:days}; }
+function capCycleModal(){ const c=ls.get('tuf_capmap_cycle',null)||{};
+  showModal('Start a 90 day cycle',
+   `<div style="font-size:12px;color:var(--mut);margin-bottom:10px">Sets the start of the next rolling 90 day capability cycle. Phases run 30, 60 and 90 days from the start date. Re-score the map as you go.</div>
+    <div class="form-row"><label class="form-label">Cycle start date</label><input class="form-input" type="date" id="cc-start" value="${escHtml(c.start||new Date().toISOString().slice(0,10))}"></div>`,
+   `<button class="btn btn-ghost" onclick="closeModal()">Cancel</button><button class="btn btn-k" onclick="capCycleSave()">Start cycle</button>`); }
+function capCycleSave(){ const v=document.getElementById('cc-start').value; if(!v)return; ls.set('tuf_capmap_cycle',{start:v}); closeModal(); renderCapMap(); addNotif('New 90 day capability cycle started from '+fmtDate(v)); }
 function capUpdatedLabel(id){ const ts=ls.str('tuf_capupd_'+id,''); if(!ts)return''; const days=Math.floor((Date.now()-new Date(ts).getTime())/86400000); return days<=0?'updated today':days===1?'updated 1d ago':'updated '+days+'d ago'; }
 function ownersOf(c){ return (c.o||'').split('/').map(s=>s.trim()).filter(Boolean); }
 function capCard(c){
@@ -6828,7 +6853,7 @@ function capCard(c){
         <div style="flex:1;min-width:150px"><div style="font-size:9px;font-weight:700;text-transform:uppercase;color:var(--mut);letter-spacing:.5px">Unlocks</div><div style="font-size:11.5px;color:var(--mut)">${escHtml(d.unl||'—')}</div></div></div>`:''}
       <div style="background:var(--bg-2);border-radius:8px;padding:10px 12px;margin-bottom:10px">
         <div style="font-size:9px;font-weight:700;text-transform:uppercase;color:var(--mut);letter-spacing:.5px;margin-bottom:4px">Phase targets</div>
-        ${tRow('by 2 Jul',d.p1,phase.key==='p1')}${tRow('by 31 Jul',d.p2,phase.key==='p2')}${tRow('by 1 Sep',d.p3,phase.key==='p3')}
+        ${tRow('by '+fmtShort(phase.ends[0]),d.p1,phase.key==='p1'&&!phase.ended)}${tRow('by '+fmtShort(phase.ends[1]),d.p2,phase.key==='p2'&&!phase.ended)}${tRow('by '+fmtShort(phase.ends[2]),d.p3,phase.key==='p3'&&!phase.ended)}
       </div>
       <div style="margin-bottom:10px"><span style="font-weight:700;color:var(--grn)">Green state:</span> <span style="color:var(--mut)">${escHtml(d.grn||'—')}</span></div>
       ${d.note?`<div style="border-left:3px solid var(--y);padding:5px 10px;font-style:italic;color:var(--mut);margin-bottom:10px">${escHtml(d.note)}</div>`:''}
@@ -6846,7 +6871,8 @@ function renderCapMap(){
     <div class="stat g"><div class="n">${counts.green}</div><div class="l">Green</div></div>
     <div class="stat y"><div class="n">${Math.round(counts.green/tot*100)}%</div><div class="l">Green Rate</div></div>`;
   const phase=capPhase(), pillars=[...new Set(CAPS.map(c=>c.p))], owners=['Danny','Joe','Jasper','James','Team'];
-  let html=`<div class="card" style="display:flex;align-items:center;gap:10px;background:var(--bg-2);border-style:dashed;margin-bottom:14px"><span class="tag tag-k" style="font-size:10px;flex-shrink:0">CURRENT</span><span style="font-size:12px"><strong>${phase.n}</strong>${phase.by?` — target by ${phase.by}`:''}. Each capability's current-phase target is highlighted.</span></div>`;
+  let html=`<div class="card" style="display:flex;align-items:center;gap:10px;background:var(--bg-2);border-style:dashed;margin-bottom:14px"><span class="tag tag-k" style="font-size:10px;flex-shrink:0">CURRENT</span><span style="font-size:12px;flex:1"><strong>${phase.n}</strong>${phase.by?` — target by ${phase.by}`:''}. Each capability's current-phase target is highlighted.</span><button class="btn btn-ghost btn-sm" style="flex-shrink:0" onclick="capCycleModal()">↻ New cycle</button></div>`;
+  if(phase.ended) html=`<div class="card" style="border-left:4px solid var(--red);margin-bottom:14px;display:flex;align-items:center;gap:10px;flex-wrap:wrap"><span style="font-size:12px;flex:1;min-width:200px">This 90 day cycle ended ${phase.by}. Re-score the map and start the next one.</span><button class="btn btn-k btn-sm" onclick="capCycleModal()">Start next cycle</button></div>`+html;
   html+=`<div style="display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap">${[['all','All'],['attention','Needs attention'],['owner','By owner']].map(([k,l])=>`<button class="btn btn-sm ${capView===k?'btn-k':'btn-ghost'}" onclick="setCapView('${k}')">${l}</button>`).join('')}</div>`;
   html+=`<div class="sec-hdr">Health by pillar</div><div class="grid-2" style="margin-bottom:18px">`+pillars.map(p=>{ const c=ragCounts(CAPS.filter(x=>x.p===p)); return `<div class="card" style="margin-bottom:0"><div style="display:flex;justify-content:space-between;margin-bottom:6px"><span style="font-weight:700;font-size:12px">${p}</span><span style="font-size:10px;color:var(--mut)">${c.red}R · ${c.amber}A · ${c.green}G</span></div>${ragBar(c)}</div>`; }).join('')+`</div>`;
   html+=`<div class="sec-hdr">Accountability by owner</div><div class="grid-3" style="margin-bottom:20px">`+owners.map(o=>{ const mine=CAPS.filter(x=>ownersOf(x).includes(o)); if(!mine.length)return''; const c=ragCounts(mine); return `<div class="card" style="margin-bottom:0;border-left:4px solid ${USER_COLOURS[o]||'#888'}"><div style="font-weight:700;font-size:12px;margin-bottom:6px">${o} <span style="font-weight:400;color:var(--mut);font-size:10px">· ${mine.length}</span></div>${ragBar(c)}<div style="font-size:10px;color:var(--mut);margin-top:5px">${c.red} red · ${c.amber} amber · ${c.green} green</div></div>`; }).filter(Boolean).join('')+`</div>`;
@@ -6869,9 +6895,15 @@ function saveCapNote(id){ ls.setStr('tuf_capnote_'+id,document.getElementById('c
 function renderCapSidebar(){const r=CAPS.filter(c=>getRAG(c.id)==='red').length;const b=document.getElementById('sb-red');if(b){b.textContent=r;b.style.display=r?'inline':'none';}}
 
 // ═══ GOALS ═══════════════════════════════════════════════════════════════════
-const GOAL_QUARTERS=['2026-Q1','2026-Q2','2026-Q3','2026-Q4'];
+// Quarters are detected automatically (v56): show last, current and next.
 function currentQuarterKey(){const d=new Date();return d.getFullYear()+'-Q'+(Math.floor(d.getMonth()/3)+1);}
-let goalsQuarter=GOAL_QUARTERS.includes(currentQuarterKey())?currentQuarterKey():'2026-Q2';
+const GOAL_QUARTERS=(()=>{const d=new Date();const out=[];for(let n=-1;n<=1;n++){const dd=new Date(d.getFullYear(),d.getMonth()+n*3,1);out.push(dd.getFullYear()+'-Q'+(Math.floor(dd.getMonth()/3)+1));}return out;})();
+function qLabel(q){const [y,qq]=String(q||'').split('-');return qq+(y!==String(new Date().getFullYear())?' '+y:'');}
+function qLabelFull(q){const [y,qq]=String(q||'').split('-');return qq+' '+y;}
+function qEndLabel(q){const [y,qq]=String(q||'').split('-Q');return ['31 Mar','30 Jun','30 Sep','31 Dec'][Number(qq)-1]+' '+y;}
+// Per-quarter company goal lives in goals.quarterly[key]; the legacy goals.q1 text was the 2026-Q2 entry.
+function qGoalText(goals,q){const v=(goals.quarterly||{})[q];if(v!==undefined)return v;return q==='2026-Q2'?(goals.q1||''):'';}
+let goalsQuarter=currentQuarterKey();
 function setGoalsQuarter(q){goalsQuarter=q;renderGoals();}
 function editIndivGoalQ(person){const goals=ls.get('tuf_goals',{});const cur=((goals.indivQ||{})[goalsQuarter]||{})[person]||'';showModal(`${person} · ${goalsQuarter.replace('-',' ')}`,`<div class="form-row"><label class="form-label">Goals for ${goalsQuarter.replace('-',' ')}</label><textarea class="form-textarea" id="eigq-val" style="min-height:110px">${escHtml(cur)}</textarea></div>`,`<button class="btn btn-ghost" onclick="closeModal()">Cancel</button><button class="btn btn-k" onclick="saveIndivGoalQ('${person}')">Save</button>`);}
 function saveIndivGoalQ(person){const goals=ls.get('tuf_goals',{});if(!goals.indivQ)goals.indivQ={};if(!goals.indivQ[goalsQuarter])goals.indivQ[goalsQuarter]={};goals.indivQ[goalsQuarter][person]=document.getElementById('eigq-val').value.trim();ls.set('tuf_goals',goals);closeModal();renderGoals();}
@@ -7100,17 +7132,17 @@ function okrObjectiveCard(o){
 function okrSectionHtml(){
   const saved=ls.get('tuf_okr_session',null);
   const hasResume=saved && saved.status==='active';
-  const resumeNote=hasResume?` <span style="font-size:10px;color:var(--mut)">(paused: ${saved.quarter.replace('2026-','')})</span>`:'';
-  const qLabel=goalsQuarter.replace('2026-','');
+  const resumeNote=hasResume?` <span style="font-size:10px;color:var(--mut)">(paused: ${qLabel(saved.quarter)})</span>`:'';
+  const qlab=qLabel(goalsQuarter);
   const list=okrForQuarter(goalsQuarter);
   const body=list.length
     ? list.map(okrObjectiveCard).join('')
-    : `<div class="card" style="text-align:center;color:var(--mut);font-size:13px">No objectives set for ${qLabel} yet. Run a live session to build them with the team, or add one by hand.</div>`;
+    : `<div class="card" style="text-align:center;color:var(--mut);font-size:13px">No objectives set for ${qlab} yet. Run a live session to build them with the team, or add one by hand.</div>`;
   return `<div class="sec-hdr" style="margin-top:18px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
-      <span>Objectives &amp; Key Results · ${qLabel}${resumeNote}</span>
+      <span>Objectives &amp; Key Results · ${qlab}${resumeNote}</span>
       <span style="display:flex;gap:6px;flex-wrap:wrap">
         ${hasResume?`<button class="btn btn-y btn-sm" onclick="okrStartSession(true)">▶ Resume session</button>`:''}
-        <button class="btn btn-k btn-sm" onclick="okrStartSession(false)">✦ Run ${qLabel} session</button>
+        <button class="btn btn-k btn-sm" onclick="okrStartSession(false)">✦ Run ${qlab} session</button>
         <button class="btn btn-ghost btn-sm" onclick="okrAddObjective()">+ Add objective</button>
       </span>
     </div>${body}`;
@@ -7128,7 +7160,13 @@ function renderGoals(){
   if(!goals.indivQ){ goals.indivQ={}; }
   if(!goals.indivQ[goalsQuarter] && goals.individual && goalsQuarter===currentQuarterKey()){ goals.indivQ[goalsQuarter]={...goals.individual}; ls.set('tuf_goals',goals); }
   const qGoals=goals.indivQ[goalsQuarter]||{};
+  // Quarter rollover: when a new quarter starts with nothing set, prompt once at the top
+  const curQ=currentQuarterKey(), prevQ=GOAL_QUARTERS[0];
+  const hasCur=!!qGoalText(goals,curQ)||okrForQuarter(curQ).length>0;
+  const hadPrev=!!qGoalText(goals,prevQ)||okrForQuarter(prevQ).length>0;
+  const rollover=(!hasCur&&hadPrev)?`<div class="card" style="border-left:4px solid var(--y);margin-bottom:12px;display:flex;align-items:center;gap:10px;flex-wrap:wrap"><span style="font-size:12px;flex:1;min-width:200px"><strong>New quarter: ${qLabelFull(curQ)}.</strong> Set this quarter's goal and run the OKR session with the team. ${qLabelFull(prevQ)} is kept in its own tab.</span><button class="btn btn-k btn-sm" onclick="editGoalModal('quarterly:${curQ}','')">Set quarter goal</button></div>`:'';
   document.getElementById('goals-render').innerHTML=`
+    ${rollover}
     <div class="card" style="margin-bottom:12px">
       <div class="card-title">Vision</div>
       <div style="font-style:italic;font-size:13px;color:var(--txt);margin-bottom:10px">"${escHtml(goals.vision)}"</div>
@@ -7141,18 +7179,18 @@ function renderGoals(){
         <button class="btn btn-ghost btn-sm" onclick="editGoalModal('annual','${escHtml(goals.annual)}')">Edit</button>
       </div>
       <div class="card">
-        <div class="card-title">Q2 Goal (by 30 June)</div>
-        <div style="font-size:13px;margin-bottom:10px">${escHtml(goals.q1)}</div>
-        <button class="btn btn-ghost btn-sm" onclick="editGoalModal('q1','${escHtml(goals.q1)}')">Edit</button>
+        <div class="card-title">This Quarter · ${qLabelFull(goalsQuarter)} (ends ${qEndLabel(goalsQuarter)})</div>
+        <div style="font-size:13px;margin-bottom:10px">${escHtml(qGoalText(goals,goalsQuarter)||'Not set yet.')}</div>
+        <button class="btn btn-ghost btn-sm" onclick="editGoalModal('quarterly:${goalsQuarter}','${escHtml(qGoalText(goals,goalsQuarter))}')">Edit</button>
       </div>
     </div>
     <div class="sec-hdr" style="margin-top:16px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
       <span>Individual Quarterly Goals</span>
-      <span style="display:flex;gap:4px">${GOAL_QUARTERS.map(q=>`<button class="btn ${q===goalsQuarter?'btn-k':'btn-ghost'} btn-sm" onclick="setGoalsQuarter('${q}')">${q.replace('2026-','')}</button>`).join('')}</span>
+      <span style="display:flex;gap:4px">${GOAL_QUARTERS.map(q=>`<button class="btn ${q===goalsQuarter?'btn-k':'btn-ghost'} btn-sm" onclick="setGoalsQuarter('${q}')">${qLabel(q)}</button>`).join('')}</span>
     </div>
     <div class="grid-2">
       ${['Danny','Joe','Jasper','James'].map(p=>`<div class="card">
-        <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px"><div style="width:10px;height:10px;border-radius:50%;background:${USER_COLOURS[p]}"></div><strong style="font-family:'Montserrat',sans-serif">${p}</strong><span style="font-size:10px;color:var(--mut);margin-left:auto">${goalsQuarter.replace('2026-','')} 2026</span></div>
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px"><div style="width:10px;height:10px;border-radius:50%;background:${USER_COLOURS[p]}"></div><strong style="font-family:'Montserrat',sans-serif">${p}</strong><span style="font-size:10px;color:var(--mut);margin-left:auto">${qLabelFull(goalsQuarter)}</span></div>
         <div style="font-size:12px;margin-bottom:8px;white-space:pre-wrap">${escHtml((qGoals[p]||'').trim()||'Not set')}</div>
         <button class="btn btn-ghost btn-sm" onclick="editIndivGoalQ('${p}')">Edit</button>
       </div>`).join('')}
@@ -7161,7 +7199,7 @@ function renderGoals(){
   `;
 }
 function editGoalModal(key,current){showModal('Edit Goal',`<div class="form-row"><textarea class="form-textarea" id="eg-val" style="min-height:100px">${current}</textarea></div>`,`<button class="btn btn-ghost" onclick="closeModal()">Cancel</button><button class="btn btn-k" onclick="saveGoal('${key}')">Save</button>`);}
-function saveGoal(key){const goals=ls.get('tuf_goals',{});goals[key]=document.getElementById('eg-val').value.trim();ls.set('tuf_goals',goals);closeModal();renderGoals();}
+function saveGoal(key){const goals=ls.get('tuf_goals',{});const v=document.getElementById('eg-val').value.trim();if(key.indexOf('quarterly:')===0){if(!goals.quarterly)goals.quarterly={};goals.quarterly[key.slice(10)]=v;}else goals[key]=v;ls.set('tuf_goals',goals);closeModal();renderGoals();}
 function editIndivGoal(person){const goals=ls.get('tuf_goals',{});const cur=(goals.individual||{})[person]||'';showModal(`${person}'s Goal`,`<div class="form-row"><textarea class="form-textarea" id="eig-val" style="min-height:80px">${escHtml(cur)}</textarea></div>`,`<button class="btn btn-ghost" onclick="closeModal()">Cancel</button><button class="btn btn-k" onclick="saveIndivGoal('${person}')">Save</button>`);}
 function saveIndivGoal(person){const goals=ls.get('tuf_goals',{});if(!goals.individual)goals.individual={};goals.individual[person]=document.getElementById('eig-val').value.trim();ls.set('tuf_goals',goals);closeModal();renderGoals();}
 
@@ -7241,10 +7279,10 @@ function fbSaveMetric(){
   const rec={name,current:document.getElementById('fb-current').value.trim(),target:document.getElementById('fb-target').value.trim(),freq:document.getElementById('fb-freq').value,rag:document.getElementById('fb-rag').value,plan:document.getElementById('fb-plan').value.trim()};
   if(FB_EDIT.metricId){const m=b.metrics.find(x=>x.id===FB_EDIT.metricId); if(m)Object.assign(m,rec);}
   else { rec.id=uid(); b.metrics.push(rec); }
-  ls.set('tuf_fourbox',d); closeModal(); renderFourBox();
+  ls.set('tuf_fourbox',d); closeModal(); fbRefresh();
 }
-function fbDeleteMetric(){const d=fbData();const b=d.boxes.find(x=>x.id===FB_EDIT.boxId);if(b)b.metrics=b.metrics.filter(x=>x.id!==FB_EDIT.metricId);ls.set('tuf_fourbox',d);closeModal();renderFourBox();}
-function fbCycleRAG(boxId,metricId){const d=fbData();const b=d.boxes.find(x=>x.id===boxId);const m=b&&b.metrics.find(x=>x.id===metricId);if(m){m.rag=m.rag==='green'?'amber':m.rag==='amber'?'red':'green';ls.set('tuf_fourbox',d);renderFourBox();}}
+function fbDeleteMetric(){const d=fbData();const b=d.boxes.find(x=>x.id===FB_EDIT.boxId);if(b)b.metrics=b.metrics.filter(x=>x.id!==FB_EDIT.metricId);ls.set('tuf_fourbox',d);closeModal();fbRefresh();}
+function fbCycleRAG(boxId,metricId){const d=fbData();const b=d.boxes.find(x=>x.id===boxId);const m=b&&b.metrics.find(x=>x.id===metricId);if(m){m.rag=m.rag==='green'?'amber':m.rag==='amber'?'red':'green';ls.set('tuf_fourbox',d);fbRefresh();}}
 
 // ═══ BUDGET ══════════════════════════════════════════════════════════════════
 function renderBudget(){
@@ -9718,50 +9756,84 @@ function saveBoardroomModel(){const items=document.getElementById('bm-items').va
 
 // ═══ KPIS ═════════════════════════════════════════════════════════════════════
 function renderKPIs(){
+  // Everything on this page is derived live from real data (v56). The four
+  // True North groups below are the 4 Box Model, editable here.
+  const today=new Date().toISOString().slice(0,10);
   const members=ls.get('tuf_members',[]).filter(m=>m.status==='active');
   const boardroom=members.filter(m=>!m.type||m.type==='boardroom');
   const priv=members.filter(m=>m.type==='existing_client');
   const boardroomMRR=boardroomMRRof(boardroom);
-  const privMRR=priv.reduce((s,c)=>s+(c.clientFee||0),0);
-  const tasks=ls.get('tuf_tasks',[]);
-  const doneTasks=tasks.filter(t=>t.status==='Done').length;
-  const content=ls.get('tuf_content',[]);
-  const published=content.filter(p=>p.status==='Posted').length;
-  const kpis=ls.get('tuf_kpis',{nps:73,s1Score:9.1,eventAttendance:18,podcastEps:0,websiteLaunched:false,notes:''});
+  const privMRR=priv.reduce((sum,c)=>sum+(c.clientFee||0),0);
+  const totalMRR=boardroomMRR+privMRR;
+  const prospects=ls.get('tuf_prospects',[])||[];
+  const activeP=prospects.filter(prospectActive);
+  const won=prospects.filter(p=>p.stage==='Won').length;
+  const dueP=activeP.filter(p=>prospectDue(p,today)).length;
+  const tasks=ls.get('tuf_tasks',[])||[];
+  const openT=tasks.filter(t=>t.status!=='Done');
+  const overdueT=openT.filter(t=>t.dueDate&&t.dueDate<today).length;
+  const eps=ls.get('tuf_episodes',[])||[];
+  const epsPub=eps.filter(e=>e.status==='Published').length;
+  const epsMonth=eps.filter(e=>(e.recordDate||'').slice(0,7)===today.slice(0,7)).length;
+  const sessAhead=(ls.get('tuf_sessions',[])||[]).filter(x=>x.date&&x.date>=today).length;
+  const kpis=ls.get('tuf_kpis',{});
+  const stat=(n,l,cls)=>`<div class="stat ${cls||''}"><div class="n">${n}</div><div class="l">${l}</div></div>`;
+  const d=fbData();
+  const tn=d.boxes.map(b=>{
+    const rows=b.metrics.length?b.metrics.map(m=>`<div style="display:flex;align-items:flex-start;gap:8px;padding:7px 0;border-top:1px solid var(--bdr)">
+      <div onclick="fbCycleRAG('${b.id}','${m.id}')" title="Click to change status" style="width:12px;height:12px;border-radius:50%;background:${fbRagColor(m.rag)};cursor:pointer;flex-shrink:0;margin-top:2px"></div>
+      <div style="flex:1;min-width:0"><div style="font-size:12px;font-weight:600">${escHtml(m.name)}</div><div style="font-size:10.5px;color:var(--mut)">Now ${escHtml(m.current||'—')} → Target ${escHtml(m.target||'—')}${m.freq?' · '+escHtml(m.freq):''}</div>${m.rag==='red'&&m.plan?`<div style="font-size:10.5px;color:var(--red);margin-top:2px">Plan: ${escHtml(m.plan)}</div>`:''}</div>
+      <button class="btn btn-ghost btn-sm" onclick="fbEditMetric('${b.id}','${m.id}')">Edit</button></div>`).join(''):`<div style="font-size:11px;color:var(--mut);padding:7px 0;border-top:1px solid var(--bdr)">No metrics yet. Aim for three.</div>`;
+    return `<div class="card"><div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start"><div><div style="font-family:var(--font-display);font-size:14px;font-weight:700">${escHtml(b.name)}</div><div style="font-size:11px;color:var(--mut)">${escHtml(b.sub)}</div></div><span class="tag ${b.metrics.length>3?'tag-a':'tag-g'}" style="font-size:10px;white-space:nowrap">${b.metrics.length}/3</span></div>${rows}<button class="btn btn-ghost btn-sm" style="margin-top:8px" onclick="fbAddMetric('${b.id}')">+ Add metric</button></div>`;
+  }).join('');
   document.getElementById('kpis-render').innerHTML=`
-    <div class="sec-hdr">Commercial KPIs</div>
+    <div class="sec-hdr">Commercial</div>
     <div class="grid-4" style="margin-bottom:20px">
-      <div class="stat y"><div class="n">${boardroom.length}/20</div><div class="l">Boardroom Members</div></div>
-      <div class="stat g"><div class="n">£${(boardroomMRR+privMRR).toLocaleString()}</div><div class="l">Total MRR</div></div>
-      <div class="stat"><div class="n">${priv.length}</div><div class="l">Private Clients</div></div>
-      <div class="stat g"><div class="n">£${((boardroom.length/20)*100).toFixed(0)}%</div><div class="l">To MRR Target</div></div>
+      ${stat(boardroom.length+'/20','Boardroom Members','y')}
+      ${stat('£'+totalMRR.toLocaleString(),'Total MRR','g')}
+      ${stat(priv.length,'Private 121 Clients · £'+privMRR.toLocaleString(),'')}
+      ${stat(((totalMRR/20000)*100).toFixed(0)+'%','To £20k MRR Target','g')}
     </div>
-    <div class="sec-hdr">Product KPIs</div>
+    <div class="sec-hdr">Pipeline</div>
     <div class="grid-4" style="margin-bottom:20px">
-      <div class="stat g"><div class="n">${kpis.nps}</div><div class="l">NPS Score (S1)</div></div>
-      <div class="stat g"><div class="n">${kpis.s1Score}/10</div><div class="l">Avg Rating (S1)</div></div>
-      <div class="stat"><div class="n">${kpis.eventAttendance}</div><div class="l">S1 Attendees</div></div>
-      <div class="stat a"><div class="n">${kpis.podcastEps}</div><div class="l">Podcast Episodes</div></div>
+      ${stat(activeP.length,'Active Prospects','')}
+      ${stat(dueP,'Follow-ups Due',dueP?'a':'g')}
+      ${stat(won,'Converted So Far','g')}
+      ${stat((ls.get('tuf_inbound_leads',[])||[]).filter(l=>l.status==='new').length,'New Inbound','')}
     </div>
-    <div class="sec-hdr">Operations KPIs</div>
+    <div class="sec-hdr">Delivery</div>
     <div class="grid-4" style="margin-bottom:20px">
-      <div class="stat g"><div class="n">${doneTasks}/${tasks.length}</div><div class="l">Tasks Done</div></div>
-      <div class="stat"><div class="n">${published}</div><div class="l">Posts Published</div></div>
-      <div class="stat ${kpis.websiteLaunched?'g':'r'}"><div class="n">${kpis.websiteLaunched?'Live':'Pending'}</div><div class="l">Website</div></div>
-      <div class="stat"><div class="n">${ls.get('tuf_podcast',[]).filter(g=>g.status==='Published').length}</div><div class="l">Podcast Eps Live</div></div>
+      <div class="stat"><div class="n" id="kpi-co-month">…</div><div class="l">Coaching Sessions This Month</div></div>
+      <div class="stat"><div class="n" id="kpi-co-open">…</div><div class="l">Open Coaching Actions</div></div>
+      ${stat(sessAhead,'Sessions Booked Ahead',sessAhead?'g':'r')}
+      ${stat(epsMonth+'/2 · '+epsPub+' live','Podcast Eps (month · published)',epsMonth>=2?'g':'a')}
     </div>
-    <div class="sec-hdr">Notes & Targets</div>
+    <div class="sec-hdr">Operations</div>
+    <div class="grid-4" style="margin-bottom:20px">
+      ${stat(tasks.filter(t=>t.status==='Done').length+'/'+tasks.length,'Tasks Done','g')}
+      ${stat(overdueT,'Tasks Overdue',overdueT?'r':'g')}
+      ${stat(CAPS.filter(c=>getRAG(c.id)==='red').length,'RED Capabilities',CAPS.some(c=>getRAG(c.id)==='red')?'r':'g')}
+      ${stat((ls.get('tuf_testimonials',[])||[]).length,'Testimonials Captured','')}
+    </div>
+    <div class="sec-hdr">True North · The 4 Box Model <span style="font-size:11px;font-weight:400;color:var(--mut)">Guy Warren · three metrics per box, twelve in total</span></div>
+    <div class="grid-2" style="margin-bottom:20px">${tn}</div>
+    <div class="sec-hdr">Notes &amp; Targets</div>
     <div class="card">
       <textarea class="form-textarea" id="kpi-notes" style="min-height:80px" placeholder="Notes on KPI performance, targets, commentary…">${escHtml(kpis.notes||'')}</textarea>
-      <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap">
-        <button class="btn btn-ghost btn-sm" onclick="updateKPIField('podcastEps',prompt('Podcast episodes published:',${kpis.podcastEps}))">Update Podcast Count</button>
-        <button class="btn btn-ghost btn-sm" onclick="toggleWebsite()">Mark Website ${kpis.websiteLaunched?'Pending':'Live'}</button>
-        <button class="btn btn-k btn-sm" onclick="saveKPINotes()">Save Notes</button>
-      </div>
+      <div style="display:flex;gap:8px;margin-top:8px"><button class="btn btn-k btn-sm" onclick="saveKPINotes()">Save Notes</button></div>
     </div>`;
+  // Coaching tiles fill in once the row-per-record tables load
+  if(typeof coLoad==='function'){ coLoad().then(r=>{
+    if(!r||!r.ok) return;
+    const mEl=document.getElementById('kpi-co-month'), oEl=document.getElementById('kpi-co-open');
+    if(mEl) mEl.textContent=(coData.sessions||[]).filter(x=>(x.date||'').slice(0,7)===today.slice(0,7)).length;
+    if(oEl) oEl.textContent=(coData.actions||[]).filter(a=>a.status==='open').length;
+  }).catch(()=>{}); }
 }
-function updateKPIField(field,val){if(val===null)return;const k=ls.get('tuf_kpis',{});k[field]=isNaN(val)?val:parseFloat(val);ls.set('tuf_kpis',k);renderKPIs();}
-function toggleWebsite(){const k=ls.get('tuf_kpis',{websiteLaunched:false});k.websiteLaunched=!k.websiteLaunched;ls.set('tuf_kpis',k);renderKPIs();}
+function fbRefresh(){
+  const k=document.getElementById('page-kpis'); if(k&&k.classList.contains('active')){ renderKPIs(); return; }
+  const f=document.getElementById('page-fourbox'); if(f&&f.classList.contains('active')) renderFourBox();
+}
 function saveKPINotes(){const k=ls.get('tuf_kpis',{});k.notes=document.getElementById('kpi-notes').value;ls.set('tuf_kpis',k);}
 
 // ═══ BUILD REQUESTS ══════════════════════════════════════════════════════════
@@ -10187,7 +10259,6 @@ function buildHQContext(){
   const prospects=(ls.get('tuf_prospects',[])||[]).filter(prospectActive);
   const events=(ls.get('tuf_events',[])||[]);
   const sessions=(ls.get('tuf_sessions',[])||[]);
-  const metrics=(ls.get('tuf_metrics',{})||{});
   const reds=(typeof CAPS!=='undefined'?CAPS.filter(c=>getRAG(c.id)==='red'):[]);
   const ambers=(typeof CAPS!=='undefined'?CAPS.filter(c=>getRAG(c.id)==='amber'):[]);
   const tline=t=>`- [${t.owner||'?'}] ${t.title} (${t.priority||'-'}, due ${t.dueDate||'none'}, ${t.status||'To Do'})`;
@@ -10196,7 +10267,6 @@ function buildHQContext(){
   s+=`OPEN TASKS (${open.length}, ${overdue.length} overdue):\n`+open.slice(0,45).map(tline).join('\n')+'\n\n';
   s+=`CLIENTS/MEMBERS (${members.length}):\n`+members.slice(0,40).map(m=>`- ${m.name||'?'}${m.company?' ('+m.company+')':''} | ${m.type||'member'} | status ${m.status||'-'}${m.fee?' | £'+m.fee:''}`).join('\n')+'\n\n';
   s+=`SALES PIPELINE PROSPECTS (${prospects.length}):\n`+prospects.slice(0,40).map(p=>`- ${p.name||'?'}${p.company?' ('+p.company+')':''} | stage ${p.stage||'-'} | ${p.temp||'-'}${p.score?' | score '+p.score:''}`).join('\n')+'\n\n';
-  s+=`BOARDROOM METRICS: members ${metrics.members??'-'}, MRR £${metrics.mrr??'-'}, private MRR £${metrics.private??'-'}.\n\n`;
   if(sessions.length) s+=`SESSIONS:\n`+sessions.slice(0,12).map(x=>`- ${x.title||x.name||'session'} | ${x.date||'-'} | ${x.status||'-'}`).join('\n')+'\n\n';
   if(events.length) s+=`EVENTS:\n`+events.slice(0,12).map(x=>`- ${x.title||x.name||'event'} | ${x.date||'-'} | ${x.status||'-'}`).join('\n')+'\n\n';
   s+=`CAPABILITY MAP: ${reds.length} RED, ${ambers.length} AMBER.`;
@@ -10223,12 +10293,12 @@ function buildHQContext(){
     s+=`\n\nSOCIAL MEDIA STATS: none logged yet. The user can log them in the Social Media section.`;
   }
   const g2=ls.get('tuf_goals',{})||{};
-  s+=`\n\nGOALS: Vision: ${g2.vision||'-'}. Annual: ${g2.annual||'-'}. This quarter: ${g2.q1||'-'}.`;
+  s+=`\n\nGOALS: Vision: ${g2.vision||'-'}. Annual: ${g2.annual||'-'}. This quarter (${currentQuarterKey()}): ${qGoalText(g2,currentQuarterKey())||'not set'}.`;
   const iq=(g2.indivQ&&g2.indivQ[currentQuarterKey()])||g2.individual||{};
   const iqE=Object.entries(iq).filter(([k,v])=>v);
   if(iqE.length) s+=` Individual quarterly goals: `+iqE.map(([p,v])=>`${p}: ${v}`).join(' | ');
-  const kp=ls.get('tuf_kpis',{})||{};
-  s+=`\n\nKPIs: NPS ${kp.nps??'-'}, Session 1 score ${kp.s1Score??'-'}/10, event attendance ${kp.eventAttendance??'-'}, podcast episodes ${kp.podcastEps??'-'}, website launched ${kp.websiteLaunched?'yes':'no'}.`;
+  const okrsCur=(ls.get('tuf_okrs',[])||[]).filter(o=>o.quarter===currentQuarterKey());
+  if(okrsCur.length) s+=`\n\nOKRs THIS QUARTER (${currentQuarterKey()}):\n`+okrsCur.map(o=>`- ${o.statement||'?'} [${o.owner||'no owner'}]`+(o.keyResults||[]).map(k=>`\n  · KR: ${k.description||''} (${k.baseline||'?'} → ${k.target||'?'}${k.dueDate?' by '+k.dueDate:''})`).join('')).join('\n');
   const brList=members.filter(m=>(!m.type||m.type==='boardroom')&&m.status==='active'); const brCount=brList.length;
   const privMRR=members.filter(m=>m.type==='existing_client'&&m.status==='active').reduce((a,c)=>a+(c.clientFee||0),0);
   const brMRR=boardroomMRRof(brList); const totalMRR=brMRR+privMRR;
