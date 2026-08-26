@@ -498,7 +498,7 @@ details>summary::-webkit-details-marker{display:none}
     <div class="sb-item" data-page="inbound" onclick="nav('inbound',this)"><span class="ico">📥</span>Inbound <span class="sb-badge amb" id="sb-inbound" style="display:none">0</span></div>
     <div class="sb-sub" data-page="onboarding" onclick="nav('onboarding',this)">Onboarding</div>
     <div class="sb-sub" data-page="clientanalysis" onclick="nav('clientanalysis',this)">Client Analysis</div>
-    <div class="sb-sub" data-page="coaching" onclick="nav('coaching',this)">Coaching Workspace</div>
+    <div class="sb-item" data-page="coaching" onclick="nav('coaching',this)"><span class="ico">🎯</span>Coaching</div>
 
     <div class="sb-section">Products</div>
     <div class="sb-item" data-page="padel" onclick="nav('padel',this)"><span class="ico">🏆</span>Padel Event</div>
@@ -1461,6 +1461,7 @@ function initApp(user){
   peopleSweep();
   stripeSyncToCRM();
   crmSegmentMigrate();
+  crmSegmentFixV2();
   updateInboundBadge();
   renderHome();
   renderCapSidebar();
@@ -1770,7 +1771,7 @@ const PAGE_TITLES = {
   boardroom:'Boardroom',content:'Content Calendar',social:'Social Media',ideas:'Content Ideas',kpis:'KPIs',aidump:'AI Tool (Dump)',buildreq:'Build Requests',clientanalysis:'Client Analysis',emaillist:'Email List',watemplates:'WhatsApp Templates',
   prospects:'Warm Prospects',testimonials:'Testimonials',
   onboarding:'Onboarding',sessions:'Session Planner',padel:'Padel Event',
-  calendar:'Content Calendar',podcast:'Podcast Pipeline',coaching:'Coaching Workspace',growthplan:'Growth Plan',ip:'IP Register',files:'Documents',
+  calendar:'Content Calendar',podcast:'Podcast Pipeline',coaching:'Coaching',growthplan:'Growth Plan',ip:'IP Register',files:'Documents',
   capmap:'Capability Map',goals:'Goals & OKRs',fourbox:'The 4 Box Model',budget:'Budget',
   teamtasks:'Team Tasks',roles:'Roles',reviews:'Weekly Review',kb:'Knowledge Base',notifs:'Notifications',
   csuite:'C-Suite',holidays:'Holidays',daily:'Daily Progress',
@@ -3340,8 +3341,7 @@ function coPeopleLink(){
     coData.people.forEach(p=>{
       if(p.person_id||!(p.name||'').trim()) return;
       const per=personEnsure(p.name,{co:p.company,email:p.email});
-      if(per){ p.person_id=per.id; coUpd('coaching_people',p.id,{person_id:per.id},true);
-        if(personSegment(per)==='network') setPersonSegment(per.id,'private121','coaching engagement'); }
+      if(per){ p.person_id=per.id; coUpd('coaching_people',p.id,{person_id:per.id},true); }
     });
   }catch(e){ console.warn('coPeopleLink failed',e); }
 }
@@ -4081,42 +4081,29 @@ function renderMembers(){
     <button class="btn btn-k btn-sm" onclick="addMemberModal('boardroom')">+ Boardroom Member</button>
     <button class="btn btn-ghost btn-sm" onclick="addMemberModal('existing_client')">+ Private 121 client</button>`;
 }
-// Private 121s: one roster over two kinds of 121 relationship.
-// Standalone paid = a founder paying their own monthly fee (an existing_client member row).
-// Part of client deal = coached under a company's engagement (known via the coaching workspace).
-let p121Filter='all';
+// Private 121s: ONLY founders paying their own monthly fee (existing_client member rows).
+// People coached as part of a company deal (Phil, Kate etc) live in the separate Coaching section.
 function renderPrivate121s(existing){
   let coach={};
   try{ coach=(JSON.parse(localStorage.getItem('tuf_coaching_summary')||'{}').people)||{}; }catch(e){}
-  const rows=[]; const seen=new Set();
-  existing.forEach(m=>{
-    const k=profileKey(m.name); seen.add(k);
-    rows.push({name:m.name,co:m.co||'',kind:'paid',fee:m.clientFee||0,memberId:m.id,coach:coach[k]||null});
-  });
-  const byKey={}; peopleAll().forEach(p=>{ byKey[profileKey(p.name)]=p; });
-  Object.keys(coach).forEach(k=>{
-    if(seen.has(k)) return;
-    const per=byKey[k];
-    rows.push({name:per?per.name:k.replace(/\b\w/g,c=>c.toUpperCase()),co:per?(per.co||''):'',kind:'deal',fee:0,memberId:null,coach:coach[k]});
-  });
-  const shown=rows.filter(r=>p121Filter==='all'||(p121Filter==='paid'?r.kind==='paid':r.kind==='deal')).sort((a,b)=>a.name.localeCompare(b.name));
-  const chip=(id,label)=>`<button class="btn ${p121Filter===id?'btn-k':'btn-ghost'} btn-sm" onclick="p121Filter='${id}';renderMembers()">${label}</button>`;
+  const rows=existing.map(m=>({name:m.name,co:m.co||'',fee:m.clientFee||0,memberId:m.id,coach:coach[profileKey(m.name)]||null}))
+    .sort((a,b)=>a.name.localeCompare(b.name));
   return `
-    <div style="display:flex;gap:6px;align-items:center;margin-bottom:12px;flex-wrap:wrap">
-      ${chip('all','All '+rows.length)}${chip('paid','Standalone paid '+rows.filter(r=>r.kind==='paid').length)}${chip('deal','Part of client deal '+rows.filter(r=>r.kind==='deal').length)}
-      <button class="btn btn-ghost btn-sm" style="margin-left:auto" onclick="goPage('coaching')">Open Coaching Workspace →</button>
+    <div style="display:flex;gap:10px;align-items:center;margin-bottom:12px;flex-wrap:wrap">
+      <span style="font-size:12px;color:var(--mut)">Founders paying for their own 121 work. People coached under a company deal live in Coaching.</span>
+      <button class="btn btn-ghost btn-sm" style="margin-left:auto" onclick="goPage('coaching')">Open Coaching →</button>
     </div>
-    ${shown.length?shown.map(r=>`<div class="card" style="margin-bottom:8px">
+    ${rows.length?rows.map(r=>`<div class="card" style="margin-bottom:8px">
       <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
         <div style="flex:1;min-width:160px;cursor:pointer" onclick="openProfile('${escAttr(r.name)}','${escAttr(r.co)}')">
           <div style="font-weight:700;font-size:14px">${escHtml(r.name)}${r.co?` <span style="font-weight:400;color:var(--mut)">· ${escHtml(r.co)}</span>`:''}</div>
-          ${r.coach?`<div style="font-size:11px;color:var(--mut);margin-top:3px">${r.coach.sessions||0} session${(r.coach.sessions||0)!==1?'s':''} · ${r.coach.open||0} open action${(r.coach.open||0)!==1?'s':''}${r.coach.last?' · last '+fmtShort(r.coach.last):''}</div>`:'<div style="font-size:11px;color:var(--mut);margin-top:3px">No coaching sessions filed yet</div>'}
+          ${r.coach?`<div style="font-size:11px;color:var(--mut);margin-top:3px">${r.coach.sessions||0} session${(r.coach.sessions||0)!==1?'s':''} · ${r.coach.open||0} open action${(r.coach.open||0)!==1?'s':''}${r.coach.last?' · last '+fmtShort(r.coach.last):''}</div>`:''}
         </div>
-        <span class="tag ${r.kind==='paid'?'tag-g':'tag-b'}" style="font-size:9px">${r.kind==='paid'?'Standalone paid · £'+(r.fee||0).toLocaleString()+'/mo':'Part of client deal'}</span>
-        ${r.memberId?`<button class="btn btn-ghost btn-sm" onclick="showMemberDetail('${r.memberId}')">Details</button>`:''}
-        <button class="btn btn-ghost btn-sm" onclick="goPage('coaching')">Sessions →</button>
+        <span class="tag tag-g" style="font-size:9px">£${(r.fee||0).toLocaleString()}/mo</span>
+        <button class="btn btn-ghost btn-sm" onclick="showMemberDetail('${r.memberId}')">Details</button>
+        ${r.coach?`<button class="btn btn-ghost btn-sm" onclick="goPage('coaching')">Sessions →</button>`:''}
       </div>
-    </div>`).join(''):'<div class="empty"><div class="ico">🎯</div>Nobody here yet. Standalone clients are added with the button above; coached people appear automatically from the Coaching Workspace.</div>'}`;
+    </div>`).join(''):'<div class="empty"><div class="ico">🎯</div>No paying 121 founders yet. Add one with the button above.</div>'}`;
 }
 function showMemberDetail(id){
   const m = ls.get('tuf_members',[]).find(x=>x.id===id);
@@ -4928,10 +4915,6 @@ function crmSegmentMigrate(){
     const mark=(p,seg)=>{ if(p&&!p.segment){ p.segment=seg; p.segmentAt=new Date().toISOString(); } };
     members.filter(m=>m.status==='active'&&m.type==='existing_client').forEach(m=>mark(findPerson(m),'private121'));
     members.filter(m=>m.status==='active'&&(!m.type||m.type==='boardroom')).forEach(m=>mark(findPerson(m),'boardroom'));
-    try{
-      const cs=JSON.parse(localStorage.getItem('tuf_coaching_summary')||'{}');
-      Object.keys(cs.people||{}).forEach(k=>mark(byName[k],'private121'));
-    }catch(e){}
     pros.filter(r=>prospectActive(r)&&r.auto!==true).forEach(r=>mark(findPerson(r),'pipeline'));
     // everyone else stays unset, which reads as Network by default
     const counts={network:0,introducers:0,pipeline:0,boardroom:0,private121:0};
@@ -4947,6 +4930,29 @@ function crmSegmentMigrate(){
     ls.set('tuf_segment_migrated','1');
     addNotif('CRM segments assigned: '+counts.boardroom+' Boardroom, '+counts.private121+' Private 121s, '+counts.pipeline+' Pipeline, rest Network. '+archivedN+' auto pipeline records archived.');
   }catch(e){ console.warn('crmSegmentMigrate failed',e); }
+}
+// v54 correction: Private 121s means PAYING founders only. Anyone put in that segment purely
+// because they are coached under a company deal moves back to Network; Coaching keeps them.
+function crmSegmentFixV2(){
+  try{
+    if(!sbLoadOK) return;
+    if(ls.get('tuf_segment_fix_v2',null)==='1') return;
+    const ppl=peopleAll(); if(!ppl.length) return;
+    const members=ls.get('tuf_members',[])||[];
+    const payingIds=new Set(), payingNames=new Set();
+    members.filter(m=>m.status==='active'&&m.type==='existing_client').forEach(m=>{
+      if(m.personId) payingIds.add(m.personId); payingNames.add(profileKey(m.name));
+    });
+    let moved=0;
+    ppl.forEach(p=>{
+      if(p.segment==='private121'&&!payingIds.has(p.id)&&!payingNames.has(profileKey(p.name))){
+        p.segment='network'; p.segmentAt=new Date().toISOString(); moved++;
+      }
+    });
+    if(moved) ls.set('tuf_people',ppl);
+    ls.set('tuf_segment_fix_v2','1');
+    if(moved) addNotif(moved+' coached people moved from Private 121s back to Network. Private 121s now means paying founders only.');
+  }catch(e){ console.warn('crmSegmentFixV2 failed',e); }
 }
 function renderPipeline(){
   const tabBar = document.getElementById('pipeline-tabs');
