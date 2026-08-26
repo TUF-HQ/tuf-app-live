@@ -481,6 +481,7 @@ details>summary::-webkit-details-marker{display:none}
       </div>
     </div>
 
+    <!-- ARCHIVED v55 (hidden, data kept): budget, content (calendar), daily (progress), watemplates. Restore any of them by re-adding its sb-item row. -->
     <div class="sb-section">Overview</div>
     <div class="sb-item" data-page="myday" onclick="nav('myday',this)"><span class="ico">☀️</span>My Day</div>
     <div class="sb-item active" data-page="home" onclick="nav('home',this)"><span class="ico">🌅</span>Morning Brief</div>
@@ -508,25 +509,21 @@ details>summary::-webkit-details-marker{display:none}
 
     <div class="sb-section">Marketing</div>
     <div class="sb-item" data-page="social" onclick="nav('social',this)"><span class="ico">📊</span>Social Media</div>
-    <div class="sb-item" data-page="content" onclick="nav('content',this)"><span class="ico">🗓️</span>Content Calendar</div>
     <div class="sb-item" data-page="podcast" onclick="nav('podcast',this)"><span class="ico">🎙</span>Podcast</div>
     <div class="sb-item" data-page="growthplan" onclick="nav('growthplan',this)"><span class="ico">📈</span>Growth Plan</div>
     <div class="sb-item" data-page="files" onclick="nav('files',this)"><span class="ico">📁</span>Documents</div>
     <div class="sb-item" data-page="testimonials" onclick="nav('testimonials',this)"><span class="ico">⭐</span>Testimonials</div>
     <div class="sb-item" data-page="emaillist" onclick="nav('emaillist',this)"><span class="ico">📧</span>Email List</div>
-    <div class="sb-item" data-page="watemplates" onclick="nav('watemplates',this)"><span class="ico">💬</span>WhatsApp Templates</div>
 
     <div class="sb-section">Intelligence</div>
     <div class="sb-item" data-page="capmap" onclick="nav('capmap',this)"><span class="ico">📊</span>Capability Map <span class="sb-badge" id="sb-red" style="display:none">—</span></div>
     <div class="sb-item" data-page="goals" onclick="nav('goals',this)"><span class="ico">🎯</span>Goals & OKRs</div>
     <div class="sb-item" data-page="fourbox" onclick="nav('fourbox',this)"><span class="ico">🧭</span>4 Box Model <span class="sb-badge" id="sb-fb" style="background:var(--red);display:none">0</span></div>
-    <div class="sb-item" data-page="budget" onclick="nav('budget',this)"><span class="ico">💷</span>Budget</div>
 
     <div class="sb-section">Team</div>
     <div class="sb-item" data-page="dannycal" onclick="nav('dannycal',this)"><span class="ico">📆</span>Danny's Calendar</div>
     <div class="sb-item" data-page="roles" onclick="nav('roles',this)"><span class="ico">👥</span>Roles & Responsibilities</div>
     <div class="sb-item" data-page="reviews" onclick="nav('reviews',this)"><span class="ico">📝</span>Weekly Review</div>
-    <div class="sb-item" data-page="daily" onclick="nav('daily',this)"><span class="ico">☀️</span>Daily Progress</div>
     <div class="sb-item" data-page="holidays" onclick="nav('holidays',this)"><span class="ico">🏖</span>Holidays</div>
     <div class="sb-item" data-page="kpis" onclick="nav('kpis',this)"><span class="ico">📈</span>KPIs</div>
     <div class="sb-item" data-page="aidump" onclick="nav('aidump',this)"><span class="ico">🤖</span>AI Tool (Dump)</div>
@@ -566,8 +563,6 @@ details>summary::-webkit-details-marker{display:none}
       <div class="sec-hdr">Tasks <span style="font-size:11px;font-weight:400;color:var(--mut)" id="brief-task-user"></span></div>
       <div id="brief-tasks" style="margin-bottom:16px"></div>
 
-      <div class="sec-hdr">Posting Today <span style="font-size:11px;font-weight:400;color:var(--mut)" id="brief-posting-week"></span></div>
-      <div id="brief-posting" style="margin-bottom:16px"></div>
 
       <div class="grid-2">
         <div>
@@ -577,8 +572,6 @@ details>summary::-webkit-details-marker{display:none}
           <div id="s2-chk"></div>
         </div>
         <div>
-          <div class="sec-hdr">Daily Updates</div>
-          <div id="home-eod"></div>
           <div class="sec-hdr" style="margin-top:16px">Daily Note</div>
           <textarea class="form-textarea" id="daily-note" placeholder="Wins, blockers, focus for today…" oninput="saveNote()" style="margin-bottom:6px"></textarea>
         </div>
@@ -634,12 +627,6 @@ details>summary::-webkit-details-marker{display:none}
     </div>
 
     <!-- ═══ POST REVIEW ═══ -->
-    <!-- ═══ CONTENT IDEAS ═══ -->
-    <div class="page" id="page-ideas">
-      <div class="grid-4" id="ideas-stats" style="margin-bottom:14px"></div>
-      <div class="stage-strip" id="ideas-filter"></div>
-      <div id="ideas-list"></div>
-    </div>
 
     <!-- ═══ KPIS ═══ -->
     <div class="page" id="page-kpis">
@@ -728,11 +715,6 @@ details>summary::-webkit-details-marker{display:none}
       <div id="inbound-content"></div>
     </div>
 
-    <!-- ═══ WARM PROSPECTS ═══ -->
-    <div class="page" id="page-prospects">
-      <div class="grid-3" id="wp-grid"></div>
-    </div>
-
     <!-- ═══ TESTIMONIALS ═══ -->
     <div class="page" id="page-testimonials">
       <div id="testimonials-list"></div>
@@ -761,14 +743,6 @@ details>summary::-webkit-details-marker{display:none}
       <div id="padel-pipeline" style="margin-bottom:20px"></div>
       <div class="sec-hdr">Paid on Stripe</div>
       <div class="card" id="padel-paid" style="max-width:580px"></div>
-    </div>
-
-    <!-- ═══ CONTENT CALENDAR ═══ -->
-    <div class="page" id="page-calendar">
-      <div id="cal-strategy" style="margin-bottom:14px"></div>
-      <div class="grid-4" id="cal-stats" style="margin-bottom:14px"></div>
-      <div id="cal-main"></div>
-      <div id="cal-backlog" style="margin-top:18px"></div>
     </div>
 
     <!-- ═══ COACHING SESSIONS ═══ -->
@@ -828,9 +802,6 @@ details>summary::-webkit-details-marker{display:none}
     </div>
 
     <!-- ═══ KNOWLEDGE BASE ═══ -->
-    <div class="page" id="page-kb">
-      <div id="kb-render"></div>
-    </div>
 
     <!-- ═══ NOTIFICATIONS ═══ -->
     <div class="page" id="page-buildreq">
@@ -1311,13 +1282,6 @@ const STRATEGY_IDEAS = [
   {title:"The operating rhythm every scaling founder needs",platform:"LinkedIn",desc:"Danny · Structure & Systems · KPIs, cadence, accountability. Confirm framework details."},
   {title:"What collective momentum looked like at UF this month",platform:"Instagram",desc:"UF · Ultimate Founder Movement · Collective momentum recap."},
 ];
-function loadStrategyIdeas(){
-  const cur=ls.get('tuf_ideas',[])||[];
-  if(cur.length && !confirm('Replace your current content ideas with a fresh set built from the content strategy? This clears the existing ideas.')) return;
-  ls.set('tuf_ideas', STRATEGY_IDEAS.map(i=>({id:uid(),title:i.title,platform:i.platform,status:'Idea',desc:i.desc,addedBy:'Croo Strategy',createdAt:new Date().toISOString()})));
-  addNotif('Loaded content ideas from the strategy');
-  renderIdeas();
-}
 
 const USER_COLOURS = {Danny:"#8E44AD",Joe:"#2471A3",Jasper:"#16A085",James:"#E67E22",Chloe:"#C2185B"};
 const TEAM_EMAIL_DEFAULTS = {Danny:'danny@businesschangegroup.com',Joe:'joe@businesschangegroup.com',Jasper:'jasper@businesschangegroup.com',James:'james@businesschangegroup.com',Chloe:'chloe@businesschangegroup.com'};
@@ -1523,14 +1487,6 @@ function seedDefaultData(){
       {id:'m3',name:'Ed Senior',co:'Fortem',stage:3,sessions:['S1'],score:8,status:'active',type:'existing_client',clientFee:8333,onboardingComplete:true,email:'edward.senior@fortemcapital.com',phone:'07971 958585',notes:"Danny's existing 1-2-1 advisory client. ~£100k/year. Strong testimonial. Used as live case study in S1.",touchpoint:'2026-06-01',retention:8},
     ]);
   }
-  // Seed warm prospects if empty
-  if(!ls.get('tuf_warm')){
-    ls.set('tuf_warm',[
-      {id:'wp1',name:'Ben Coomer',co:'Warm Prospect',status:'Not Contacted',lastContact:'',notes:''},
-      {id:'wp2',name:'Michael Miller',co:'Warm Prospect',status:'Not Contacted',lastContact:'',notes:''},
-      {id:'wp3',name:'Ping',co:'Warm Prospect',status:'Not Contacted',lastContact:'',notes:''},
-    ]);
-  }
   // Seed prospects if empty
   if(!ls.get('tuf_prospects')){
     ls.set('tuf_prospects',[
@@ -1547,53 +1503,7 @@ function seedDefaultData(){
     ls.set('tuf_content', []);
     ls.set('tuf_calendar_reset_v2', true);
   }
-  if(false){
-    const cal = [];
-    // Helper
-    const post = (title,platform,date,owner,status,notes) => ({id:uid(),title,platform,date,owner,status,notes,createdAt:new Date().toISOString()});
-
-    // ── WEEK 1: 9-13 June ──────────────────────────────────────────────
-    cal.push(post('Most founders are running their business like they\'re still the employee — not the owner.','LinkedIn','2026-06-09','Danny','Draft','INSIGHT. Five Stages hook — most founders are at Stage 2 behaving like Stage 1. Open with the pattern, explain the shift, close with what Stage 3 looks like. No service signal. 75% rule.'));
-    cal.push(post('Best conversation I had at the Boardroom last session','LinkedIn','2026-06-09','Jasper','Draft','JJ post. Networking/community angle. Short and personal — what struck Jasper about the energy in the room. Tag location if possible.'));
-    cal.push(post('A client told me they hadn\'t taken a proper holiday in 4 years. Here\'s what we found when we looked at why.','LinkedIn','2026-06-10','Danny','Draft','EXPERIENCE. Anonymised client story. The insight: the business had no one else capable of deciding. KSMRA angle. Don\'t name the client. End with a question for the reader.'));
-    cal.push(post('What the most engaged founders in our Boardroom have in common','LinkedIn','2026-06-10','Joe','Draft','JW post. Observation from running the Boardroom. Not a service signal — a genuine insight about what makes the difference. 3 specific things.'));
-    cal.push(post('The moment a founder realises they\'re the bottleneck [video]','LinkedIn','2026-06-11','Danny','Draft','VIDEO. Talking head — 60-90 seconds. Danny speaking directly to camera about the bottleneck moment. No script, conversational. Record during prep week. Caption: the story of a client realisation.'));
-    cal.push(post('How we run a 4-person business with AI doing the work of 10','LinkedIn','2026-06-11','James','Draft','JC post. James talks about AI tools + workflows. Authentic, specific — one tool, one process, one outcome. Positions TUF as a forward-thinking operation.'));
-    cal.push(post('You\'re not scaling your business. You\'re scaling your stress.','LinkedIn','2026-06-12','Danny','Draft','PAIN POINT. Direct challenge. Most founders think growth = more hours. This post challenges that. Use the Stage 3 → Stage 4 transition (owner vs operator). Hard stop, no solution offered — let the pain land.'));
-    cal.push(post('18 founders walked in last month. Here\'s what they decided to do.','LinkedIn','2026-06-13','Danny','Draft','SERVICE SIGNAL (25%). S1 outcome post. Not a hard sell — context-setting. What happened in the room, what people committed to. Naturally leads to "if you\'re curious about S2…" as the final line only.'));
-    cal.push(post('Instagram clip of the week (best performer — last 7 days)','LinkedIn','2026-06-13','Joe','Draft','WEEKLY CLIP. Joe pulls best-performing Instagram Reel from previous 7 days. Native upload to LinkedIn. No heavy caption needed — let the content speak.'));
-
-    // ── WEEK 2: 16-20 June ─────────────────────────────────────────────
-    cal.push(post('Stage 2 → Stage 3 is the hardest transition in business. Most founders don\'t even know they\'re stuck in it.','LinkedIn','2026-06-16','Danny','Draft','INSIGHT. Deep Five Stages content. What Stage 2 (Operator/Establisher) looks like from the inside. Why it feels like progress but is actually a trap. What unlocks the move to Stage 3.'));
-    cal.push(post('25 June — Padel. Here\'s who\'s coming and why you should be there.','LinkedIn','2026-06-16','Jasper','Draft','JJ post — Padel event preview. Build anticipation. Who attends, the vibe, what past attendees have said. Include a simple call to action: DM Jasper to join.'));
-    cal.push(post('The question I ask every founder in our first session together. Most haven\'t thought about it.','LinkedIn','2026-06-17','Danny','Draft','EXPERIENCE. Danny\'s signature question (something like "if you were hit by a bus tomorrow, would your business survive the week?"). Personal, authoritative, slightly provocative. No pitch.'));
-    cal.push(post('3 things we changed about Session 2 based on founder feedback','LinkedIn','2026-06-17','Joe','Draft','JW post. Behind-the-scenes: smaller pods, Danny\'s close protected, pod brief cards. Positions TUF as responsive and serious about quality. Social proof through iteration.'));
-    cal.push(post('The Five Stages of a founder-led business — which one are you? [video]','LinkedIn','2026-06-18','Danny','Draft','VIDEO. Danny walks through all five stages in 90 seconds. Biggest single content asset. Use graphics if possible. This is the cornerstone piece — repurpose heavily.'));
-    cal.push(post('One AI workflow that saves our team 3 hours every week','LinkedIn','2026-06-18','James','Draft','JC post. Specific workflow — e.g. meeting notes → tasks using Claude. Screenshot or short screen record. Genuine and useful, not a sales pitch. Positions TUF as efficient and innovative.'));
-    cal.push(post('The founder who can\'t switch off isn\'t being dedicated. They\'re being defensive.','LinkedIn','2026-06-19','Danny','Draft','PAIN POINT. Challenge the "always on" identity. Most founders confuse activity with progress. The real issue: they don\'t trust what happens without them. This is a Stage 2 pattern. Hard-hitting, no solution offered in this post.'));
-    cal.push(post('Session 2 is forming. Here\'s what our founding members said after Session 1.','LinkedIn','2026-06-20','Danny','Draft','SERVICE SIGNAL. Pull from real written feedback (Chloe Ellis, Darren Massey, Andrew Rhodes quotes with permission). Frame it as social proof, not a sales pitch. "If this sounds like your next step…" close.'));
-    cal.push(post('Instagram clip of the week','LinkedIn','2026-06-20','Joe','Draft','WEEKLY CLIP. Best-performing Reel from previous 7 days. Native to LinkedIn.'));
-
-    // ── WEEK 3: 23-27 June (PADEL WEEK) ────────────────────────────────
-    cal.push(post('Community isn\'t a nice-to-have. For founders at Stage 3 and above, it\'s the strategy.','LinkedIn','2026-06-23','Danny','Draft','INSIGHT. Why peer community accelerates growth faster than any coach alone. The research, the anecdote, the practical point. Sets up the Boardroom value proposition without naming it directly.'));
-    cal.push(post('Padel tomorrow. The best founder conversations I\'ve ever had have been off a court.','LinkedIn','2026-06-24','Jasper','Draft','JJ post — day-before Padel hype. Personal and warm. Why Jasper loves this format. Who\'s coming. Photo of past event if available. "See you tomorrow" close.'));
-    cal.push(post('The most common thing founders say 6 months into working together with me','LinkedIn','2026-06-24','Danny','Draft','EXPERIENCE. Recurring observation from Danny\'s advisory work. "I wish I\'d done this 3 years ago" type insight. Anonymised but specific. Validates the investment without selling.'));
-    cal.push(post('Why the Boardroom format works when traditional masterminds don\'t','LinkedIn','2026-06-24','Joe','Draft','JW post. Specific contrast — what makes TUF Boardroom different (curated, Danny-led, implementation sessions, WhatsApp support). Written from Joe\'s POV, not as a sales pitch but as an observation from running it.'));
-    cal.push(post('Padel event — the conversations, the energy, the founders [event content]','LinkedIn','2026-06-25','Jasper','Draft','PADEL DAY POST. Event day content. Photos, short clip, 2-3 founder quotes from the day. Jasper posts in real time or within 24 hours. Tag attendees where possible.'));
-    cal.push(post('Your business has a ceiling. It\'s you. Here\'s what to do about it.','LinkedIn','2026-06-26','Danny','Draft','PAIN POINT + slight service signal. The "you are the bottleneck" message but with a small pivot to what the solution looks like. The one post where the pain and the path appear together.'));
-    cal.push(post('Session 2 — 2 July. One or two spots still available.','LinkedIn','2026-06-27','Danny','Draft','SERVICE SIGNAL. Urgency-based. Short and direct. "If you\'re on the fence, DM me." No long sell. Danny\'s personal voice. 2-3 lines max.'));
-    cal.push(post('Instagram clip of the week','LinkedIn','2026-06-27','Joe','Draft','WEEKLY CLIP. Use Padel event content this week if strong enough. Native LinkedIn upload.'));
-
-    // ── WEEK 4: 30 June - 3 July (S2 WEEK) ─────────────────────────────
-    cal.push(post('What separates a £1m business from a £5m business has nothing to do with the market.','LinkedIn','2026-06-30','Danny','Draft','INSIGHT. Stage 3→4 transition. The move from operator to owner. Danny\'s most direct insight content. Should feel like something a founder would save and send to someone.'));
-    cal.push(post('The energy at our last event. This is why we do what we do.','LinkedIn','2026-06-30','Jasper','Draft','JJ post. Padel recap — photos, atmosphere, standout moments. Warm, human, community-focused.'));
-    cal.push(post('Tomorrow is our Boardroom Day. Here\'s what 18 founders did last time.','LinkedIn','2026-07-01','Danny','Draft','EXPERIENCE + anticipation. The day-before S2 post. What happened at S1. What S2 is building on. Quiet confidence, not hype.'));
-    cal.push(post('What makes the Boardroom format actually work','LinkedIn','2026-07-01','Joe','Draft','JW post. Day-before S2. Specific mechanics — pods, implementation sessions, Danny\'s advisory, the WhatsApp group. Genuine observation from Joe running the operations.'));
-    cal.push(post('What happened in the room today [S2 post]','LinkedIn','2026-07-02','Danny','Draft','S2 DAY POST. Danny posts from/after Session 2. Real, raw, in-the-moment. No selling. Just the energy and one powerful thing that happened. Photo if possible. "This is why we built this." close.'));
-    cal.push(post('If your business needs you to work, it\'s not a business. It\'s a job with extra steps.','LinkedIn','2026-07-03','Danny','Draft','PAIN POINT. Post-S2 energy carried into a classic pain point post. Danny will have fresh material from the session. Write from what came up in the room.'));
-
-    ls.set('tuf_content', cal);
-  }
+  // (v55) removed: dead if(false) block of 40+ hardcoded June 2026 posts
 
   // Seed events if empty
   if(!ls.get('tuf_events')){
@@ -1768,12 +1678,12 @@ const PAGE_TITLES = {
   myday:'My Day',
   home:'Morning Brief',teamoverview:'Team Overview',tasks:'Tasks',transcript:'Meeting Notes → Tasks',
   people:'Network',members:'Boardroom Members',pipeline:'Pipeline',inbound:'Inbound Leads',dannycal:"Danny's Calendar",
-  boardroom:'Boardroom',content:'Content Calendar',social:'Social Media',ideas:'Content Ideas',kpis:'KPIs',aidump:'AI Tool (Dump)',buildreq:'Build Requests',clientanalysis:'Client Analysis',emaillist:'Email List',watemplates:'WhatsApp Templates',
-  prospects:'Warm Prospects',testimonials:'Testimonials',
+  boardroom:'Boardroom',content:'Content Calendar',social:'Social Media',kpis:'KPIs',aidump:'AI Tool (Dump)',buildreq:'Build Requests',clientanalysis:'Client Analysis',emaillist:'Email List',watemplates:'WhatsApp Templates',
+  testimonials:'Testimonials',
   onboarding:'Onboarding',sessions:'Session Planner',padel:'Padel Event',
-  calendar:'Content Calendar',podcast:'Podcast Pipeline',coaching:'Coaching',growthplan:'Growth Plan',ip:'IP Register',files:'Documents',
+  podcast:'Podcast Pipeline',coaching:'Coaching',growthplan:'Growth Plan',ip:'IP Register',files:'Documents',
   capmap:'Capability Map',goals:'Goals & OKRs',fourbox:'The 4 Box Model',budget:'Budget',
-  teamtasks:'Team Tasks',roles:'Roles',reviews:'Weekly Review',kb:'Knowledge Base',notifs:'Notifications',
+  teamtasks:'Team Tasks',roles:'Roles',reviews:'Weekly Review',notifs:'Notifications',
   csuite:'C-Suite',holidays:'Holidays',daily:'Daily Progress',
 };
 function toggleSidebar(force){
@@ -1804,12 +1714,12 @@ function renderPage(page){
   const fns = {
     home:renderHome, tasks:renderTasks, transcript:renderTranscript,
     people:renderPeople, members:renderMembers, pipeline:renderPipeline, inbound:renderInbound, dannycal:renderDannyCal,
-    boardroom:renderBoardroom, content:renderContent, social:renderSocial, ideas:renderIdeas, kpis:renderKPIs, aidump:renderAIDump, buildreq:renderBuildRequests, clientanalysis:renderClientAnalysis, emaillist:renderEmailList, watemplates:renderWATemplates,
-    prospects:renderProspects, testimonials:renderTestimonials,
+    boardroom:renderBoardroom, content:renderContent, social:renderSocial, kpis:renderKPIs, aidump:renderAIDump, buildreq:renderBuildRequests, clientanalysis:renderClientAnalysis, emaillist:renderEmailList, watemplates:renderWATemplates,
+    testimonials:renderTestimonials,
     onboarding:renderOnboarding, sessions:renderSessions, padel:renderPadel,
-    calendar:renderCalendar, podcast:renderPodcast, coaching:renderCoaching, growthplan:renderGrowthPlan, ip:renderIP, files:renderFiles,
+    podcast:renderPodcast, coaching:renderCoaching, growthplan:renderGrowthPlan, ip:renderIP, files:renderFiles,
     capmap:renderCapMap, goals:renderGoals, fourbox:renderFourBox, budget:renderBudget,
-    teamtasks:renderTeamTasks, roles:renderRoles, reviews:renderReviews, kb:renderKB, notifs:renderNotifs,
+    teamtasks:renderTeamTasks, roles:renderRoles, reviews:renderReviews, notifs:renderNotifs,
     csuite:renderCSuite, holidays:renderHolidays, daily:renderDaily, teamoverview:renderTeamOverview, myday:renderMyDay,
   };
   if(fns[page]) fns[page]();
@@ -1898,7 +1808,7 @@ function renderMyDay(){
     <div class="card" style="margin-top:14px">
       <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
         <div class="card-title" style="margin:0">Today and upcoming events</div>
-        <button class="btn btn-ghost btn-sm" onclick="nav('events',document.querySelector('[data-page=events]'))">Manage events</button>
+        
       </div>
       <div style="font-size:11px;color:var(--mut);margin:4px 0 10px">Shared team events for today and the next 7 days.</div>
       ${ev.length?ev.map(e=>`<div class="chk-row" style="cursor:default">
@@ -2563,7 +2473,7 @@ function renderTasks(){
 
   if(taskViewMode==='section') renderTasksBySection(tasks,today);
   else renderTasksByPerson(tasks,today);
-  document.getElementById('topbar-actions').innerHTML=`<button class="btn btn-ghost btn-sm" onclick="loadDefaultTasks(false)">↺ Reload Defaults</button><button class="btn btn-k btn-sm" onclick="addTaskModal()">+ Add Task</button>`;
+  document.getElementById('topbar-actions').innerHTML=`<button class="btn btn-k btn-sm" onclick="addTaskModal()">+ Add Task</button>`;
   updateTaskBadge();
 }
 
@@ -2592,7 +2502,7 @@ function renderTasksBySection(tasks,today){
     </div>`;
   });
   // Any remaining unmatched tasks get inferred section — no "Other" bucket needed
-  document.getElementById('action-list').innerHTML=html||`<div class="empty"><div class="ico">✅</div>No tasks found.<br><br><button class="btn btn-k btn-sm" onclick="loadDefaultTasks(true)">Load Default Tasks</button></div>`;
+  document.getElementById('action-list').innerHTML=html||`<div class="empty"><div class="ico">✅</div>No tasks found.</div>`;
 }
 
 function renderTasksByPerson(tasks,today){
@@ -3878,8 +3788,6 @@ function renderHome(){
   const pis = [];
   if(padel!=null&&padel<=7&&padel>0) pis.push({type:'urgent',tag:'PADEL',text:`Padel event in ${padel} days. Logistics and invitations must be ready.`,owner:'Jasper'});
   if(nextSess&&s2!=null&&s2<=7&&s2>0) pis.push({type:'urgent',tag:'SESSION',text:`${nextSess.name} in ${s2} days. Prep forms out and confirmations chased.`,owner:'Danny'});
-  const notContacted = ls.get('tuf_warm',[]).filter(w=>w.status==='Not Contacted');
-  if(notContacted.length) pis.push({type:'urgent',tag:'FOLLOW-UP',text:`Warm prospects not yet contacted: ${notContacted.map(w=>w.name).join(', ')}`,owner:'Danny'});
   // Stale lead alert
   const _today=new Date().toISOString().slice(0,10);
   const dueLeads=ls.get('tuf_prospects',[]).filter(p=>prospectDue(p,_today));
@@ -3888,7 +3796,6 @@ function renderHome(){
   const redCaps=CAPS.filter(c=>(ls.str('tuf_rag_'+c.id)||c.d)==='red');
   if(redCaps.length) pis.push({type:'info',tag:'RED',text:`${redCaps.length} RED capabilities: ${redCaps.map(c=>c.n).join(' · ')}`,owner:'Review'});
   // Boardroom WhatsApp group cadence (waDue is false unless the group is live)
-  { const wd=waDue(); if(wd.due) pis.push({type:wd.urgent?'urgent':'soon',tag:'WHATSAPP',owner:waStatus().owner,text:`Boardroom WhatsApp group needs a message: ${wd.count} of ${wd.target} sent this week${wd.daysSince===null?', nothing logged yet':', last sent '+(wd.daysSince===0?'today':wd.daysSince+'d ago')}.`}); }
   // Podcast plan: 2 episodes a month, recorded back to back on one day
   { const pdd=podDue();
     if(pdd.due) pis.push({type:pdd.urgent?'urgent':'soon',tag:'PODCAST',owner:'James',text:`No podcast recording day booked: ${pdd.monthCount} of ${pdd.target} episodes this month. Book the next batch.`});
@@ -3923,8 +3830,6 @@ function renderHome(){
     const done=ls.str('tuf_s2_'+c.id)==='1';
     return `<div class="chk-row${done?' done':''}" onclick="toggleS2('${c.id}')"><div class="chk-box">${done?'✓':''}</div><span class="chk-text" style="flex:1;font-size:12px">${c.t}</span><span class="tag-${c.o}" style="font-size:9px;font-weight:700;border-radius:3px;padding:1px 5px;background:#f0f0f0;color:#666">${c.o.charAt(0).toUpperCase()+c.o.slice(1)}</span></div>`;
   }).join('');
-  // Daily updates widget (replaces the old weekly focus boxes)
-  renderHomeEOD();
   const dn=document.getElementById('daily-note');
   if(dn) dn.value=ls.str('tuf_note_'+new Date().toISOString().slice(0,10),'');
   document.getElementById('topbar-actions').innerHTML=`
@@ -3932,7 +3837,6 @@ function renderHome(){
     <button class="btn btn-ghost btn-sm" onclick="editMetric('members')">Update Metrics</button>`;
   renderDailyControl();
   renderBriefTasks();
-  renderBriefPosting();
   updateTaskBadge();
   coBriefNudges();
 }
@@ -3956,7 +3860,7 @@ function renderDailyControl(){
   const highUnconf=padelLeadsAll.filter(l=>(parseInt(l.score)>=8)&&!(l.attendance==='Confirmed'||l.attendance==='Attended')).length;
   const risks=highUnconf+renewSoon+guestsEnding;
   const cell=(n,label,color,go)=>`<div class="ns-box" style="cursor:pointer" onclick="${go}"><div class="ns-l">${label}</div><div class="ns-n" style="color:${color}">${n}</div></div>`;
-  el.innerHTML=`<div class="sec-hdr">Daily Control <span style="font-size:11px;font-weight:400;color:var(--mut)">Padel · 25 June</span></div>
+  el.innerHTML=`<div class="sec-hdr">Daily Control</div>
     <div class="ns-row">
       ${cell(newInbound,'New signups',newInbound?'var(--amb)':'var(--grn)',"nav('inbound',document.querySelector('[data-page=inbound]'))")}
       ${cell(paidCount,'Tickets paid','var(--grn)',"nav('padel',document.querySelector('[data-page=padel]'))")}
@@ -5646,27 +5550,6 @@ function updateProspect(id){
 function deleteProspect(id){if(!confirm('Delete?'))return;ls.set('tuf_prospects',ls.get('tuf_prospects',[]).filter(x=>x.id!==id));closeModal();renderPipeline();}
 
 // ═══ WARM PROSPECTS ══════════════════════════════════════════════════════════
-const WP_STATUSES=['Not Contacted','Contacted','Conversation','Meeting Booked','Committed','Not Interested'];
-function renderProspects(){
-  const list=ls.get('tuf_warm',[]);
-  const wpCls=s=>s==='Committed'?'var(--grn)':s==='Meeting Booked'||s==='Conversation'?'var(--amb)':s==='Not Interested'?'var(--red)':'var(--bdr)';
-  document.getElementById('wp-grid').innerHTML=list.map(w=>`
-    <div class="card" style="border-left:4px solid ${wpCls(w.status)}">
-      <div style="font-family:'Montserrat',sans-serif;font-size:14px;font-weight:700;margin-bottom:2px">${escHtml(w.name)}</div>
-      <div style="font-size:11px;color:var(--mut);margin-bottom:10px">${escHtml(w.co)}</div>
-      <div class="form-row"><label class="form-label">Status</label>
-        <select class="form-select" onchange="updateWP('${w.id}','status',this.value)">${WP_STATUSES.map(s=>`<option${s===w.status?' selected':''}>${s}</option>`).join('')}</select>
-      </div>
-      <div class="form-row"><label class="form-label">Email</label><input class="form-input" type="email" value="${w.email||''}" placeholder="name@company.com" onchange="updateWP('${w.id}','email',this.value)"></div>
-      <div class="form-row"><label class="form-label">Phone</label><input class="form-input" type="tel" value="${w.phone||''}" placeholder="+44 7700 000000" onchange="updateWP('${w.id}','phone',this.value)"></div>
-      <div class="form-row"><label class="form-label">Last Contact</label><input class="form-input" type="date" value="${w.lastContact||''}" onchange="updateWP('${w.id}','lastContact',this.value)"></div>
-      <div class="form-row"><label class="form-label">Notes</label><textarea class="form-textarea" style="min-height:50px" onchange="updateWP('${w.id}','notes',this.value)">${escHtml(w.notes||'')}</textarea></div>
-    </div>`).join('');
-  document.getElementById('topbar-actions').innerHTML=`<button class="btn btn-k btn-sm" onclick="addWPModal()">+ Add Prospect</button>`;
-}
-function updateWP(id,field,val){const list=ls.get('tuf_warm',[]);const i=list.findIndex(x=>x.id===id);if(i<0)return;list[i][field]=val;ls.set('tuf_warm',list);if(field==='status') addNotif(`${list[i].name} status updated to ${val}`);}
-function addWPModal(){showModal('Add Warm Prospect',`<div class="form-row"><label class="form-label">Name</label><input class="form-input" id="nwp-name"></div><div class="form-row"><label class="form-label">Company / Context</label><input class="form-input" id="nwp-co"></div>`,`<button class="btn btn-ghost" onclick="closeModal()">Cancel</button><button class="btn btn-k" onclick="saveWP()">Save</button>`);}
-function saveWP(){const name=document.getElementById('nwp-name').value.trim();if(!name)return;const list=ls.get('tuf_warm',[]);list.push({id:uid(),name,co:document.getElementById('nwp-co').value.trim(),status:'Not Contacted',lastContact:'',notes:''});ls.set('tuf_warm',list);closeModal();renderProspects();}
 
 // ═══ TESTIMONIALS ════════════════════════════════════════════════════════════
 function renderTestimonials(){
@@ -6210,42 +6093,10 @@ function updateEvent(id){const list=ls.get('tuf_events',[]);const i=list.findInd
 function deleteEvent(id){if(!confirm('Delete this event date?'))return;ls.set('tuf_events',ls.get('tuf_events',[]).filter(x=>x.id!==id));closeModal();renderEventCRM();}
 
 // ═══ CONTENT CALENDAR ════════════════════════════════════════════════════════
-function renderContentStrategy(){
-  const el=document.getElementById('content-strategy'); if(!el)return;
-  const chip=t=>`<span class="tag" style="background:var(--bg);color:var(--txt);border:1px solid var(--bdr);font-size:10px;margin:2px 2px 0 0">${escHtml(t)}</span>`;
-  el.innerHTML=`<div class="card" style="border-left:4px solid var(--y)">
-    <details>
-      <summary style="cursor:pointer;font-family:var(--font-display);font-size:16px;font-weight:700;outline:none">Content Strategy · Croo x Ultimate Founder</summary>
-      <div style="margin-top:10px">
-        <div style="font-style:italic;font-size:13px;margin-bottom:4px">"${escHtml(CONTENT_NARRATIVE)}"</div>
-        <div style="font-size:11px;color:var(--mut);margin-bottom:12px">Cadence: LinkedIn (Danny) Mon, Wed, Fri · Instagram Reels Tue, Thu · Funnel: ${CONTENT_FUNNEL.join(' → ')}</div>
-        <div class="grid-2">
-          ${CONTENT_CHANNELS.map(c=>`<div class="card" style="margin-bottom:0">
-            <div style="font-weight:700;font-size:12px">${escHtml(c.name)}</div>
-            <div style="font-size:10px;color:var(--amb);font-weight:700;margin:2px 0 6px">${escHtml(c.arc)}</div>
-            <div>${c.themes.map(chip).join('')}</div>
-          </div>`).join('')}
-        </div>
-        <div class="sec-hdr" style="margin-top:14px;font-size:12px">Content Pillars</div>
-        <div>${CONTENT_PILLARS.map(chip).join('')}</div>
-        <div class="grid-2" style="margin-top:14px">
-          <div><div class="sec-hdr" style="font-size:12px">Danny formats</div>${CONTENT_FORMATS["Danny Wicks"].map(f=>`<div style="font-size:11.5px;padding:2px 0">• ${escHtml(f)}</div>`).join('')}</div>
-          <div><div class="sec-hdr" style="font-size:12px">UF formats</div>${CONTENT_FORMATS["The Ultimate Founder"].map(f=>`<div style="font-size:11.5px;padding:2px 0">• ${escHtml(f)}</div>`).join('')}</div>
-        </div>
-        <div class="sec-hdr" style="margin-top:14px;font-size:12px">Rollout Phases</div>
-        <div class="grid-3" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">
-          ${CONTENT_PHASES.map(ph=>`<div class="card" style="margin-bottom:0"><div style="font-weight:700;font-size:11px;color:var(--amb)">${escHtml(ph.m)}</div>${ph.items.map(i=>`<div style="font-size:11px;padding:2px 0">• ${escHtml(i)}</div>`).join('')}</div>`).join('')}
-        </div>
-      </div>
-    </details>
-  </div>`;
-}
 function ideaTextById(id){ const i=(ls.get('tuf_ideas',[])||[]).find(x=>x.id===id); if(!i) return ''; return (i.title||'')+(i.desc?'\n'+i.desc:''); }
 function cmDrag(e,id){ try{ e.dataTransfer.setData('text/plain', ideaTextById(id)); }catch(err){} }
 function cmDrop(e){ e.preventDefault(); const t=e.dataTransfer.getData('text/plain'); if(t){ const ta=document.getElementById('cm-idea'); if(ta){ ta.value=t; CM_LAST.idea=t; } } }
 function cmUseIdea(id){ const t=ideaTextById(id); const ta=document.getElementById('cm-idea'); if(ta){ ta.value=t; CM_LAST.idea=t; ta.focus(); ta.scrollIntoView({behavior:'smooth',block:'center'}); } }
-let calMonth=new Date().getMonth(), calYear=new Date().getFullYear();
-function calNavMonth(d){ calMonth+=d; if(calMonth<0){calMonth=11;calYear--;} if(calMonth>11){calMonth=0;calYear++;} renderCalendarGrid(); }
 function isSaturday(d){ if(!d) return false; const dt=new Date(d+'T00:00:00'); return !isNaN(dt) && dt.getDay()===6; }
 // TUF content rules — the schedule engine reads this. getDay(): Sun0 Mon1 Tue2 Wed3 Thu4 Fri5 Sat6.
 const CONTENT_RULES = {
@@ -6563,149 +6414,7 @@ function dcRenderFromCache(cache){
     <div style="overflow-x:auto"><div style="display:grid;grid-template-columns:repeat(7,minmax(92px,1fr));gap:8px;min-width:660px">${days.map(col).join('')}</div></div>`;
 }
 function dcNav(n){ if(n===0) dcWeekOffset=0; else dcWeekOffset+=n; const c=ls.get(DC_CACHE_KEY,null); if(c&&c.ics) dcRenderFromCache(c); }
-let weekStart=mondayOf(new Date());
-function weekNav(n){ const x=new Date(weekStart); x.setDate(x.getDate()+n*7); weekStart=x; renderCalendar(); }
-function weekThis(){ weekStart=mondayOf(new Date()); renderCalendar(); }
-function setCalView(v){ calView=v; renderCalendar(); }
-function postCardHtml(p){
-  const st=p.status||'Idea'; const meta=CONTENT_STATUS_META[st]||{cls:'tag-b'};
-  return `<div class="k-card" onclick="editPostModal('${p.id}')">
-    <div style="display:flex;align-items:center;gap:5px;margin-bottom:5px">
-      <span class="cal-dot ${PLATFORM_CLS(p.platform)}" style="width:9px;height:9px"></span>
-      <span style="font-size:9px;font-weight:700;color:var(--mut)">${escHtml(p.platform||'')}</span>
-      <span class="tag tag-${(p.owner||'').toLowerCase()}" style="font-size:9px;margin-left:auto">${escHtml(p.owner||'')}</span>
-    </div>
-    <div style="font-size:11.5px;font-weight:600;line-height:1.35;margin-bottom:6px">${escHtml(p.title)}</div>
-    <button class="tag ${meta.cls}" style="font-size:9px;border:none;cursor:pointer" onclick="event.stopPropagation();cyclePostStatus('${p.id}')" title="Click to advance stage">${st} ▸</button>
-  </div>`;
-}
-function cyclePostStatus(id){
-  const list=ls.get('tuf_content',[]); const i=list.findIndex(x=>x.id===id); if(i<0) return;
-  const idx=CONTENT_STATUSES.indexOf(list[i].status||'Idea');
-  list[i].status=CONTENT_STATUSES[(idx+1)%CONTENT_STATUSES.length];
-  ls.set('tuf_content',list); renderCalendar();
-}
-function renderStrategyNote(){
-  const el=document.getElementById('cal-strategy'); if(!el) return;
-  // Strategy not defined yet — keep this a clean placeholder until the team builds it.
-  el.innerHTML=`<div class="card" style="margin-bottom:0;border-style:dashed;background:var(--bg-2)">
-    <div style="font-size:12px;color:var(--mut);line-height:1.6">📋 <strong style="color:var(--txt)">Content strategy — not set yet.</strong> Your pillars, channels and weekly cadence will live here once you've defined them. For now, add posts straight to the planner below.</div>
-  </div>`;
-}
-function renderBacklog(){
-  const el=document.getElementById('cal-backlog'); if(!el) return;
-  const backlog=(ls.get('tuf_content',[])||[]).filter(p=>!p.date);
-  if(!backlog.length){ el.innerHTML=''; return; }
-  el.innerHTML=`<div class="sec-hdr">Backlog · ${backlog.length} unscheduled</div>
-    <div style="font-size:11px;color:var(--mut);margin:-6px 0 12px">Ideas with no date yet. Open one and set a date to schedule it.</div>
-    <div class="grid-3">${backlog.map(p=>postCardHtml(p)).join('')}</div>`;
-}
-function renderWeekPlanner(){
-  const el=document.getElementById('cal-main'); if(!el) return;
-  const posts=ls.get('tuf_content',[])||[];
-  const todayStr=new Date().toISOString().slice(0,10);
-  const days=[]; for(let i=0;i<7;i++){ const d=new Date(weekStart); d.setDate(weekStart.getDate()+i); days.push(d); }
-  const dayNames=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
-  const cols=days.map((d,idx)=>{
-    const ds=ymdLocal(d); const isToday=ds===todayStr;
-    const dayPosts=posts.filter(p=>p.date===ds);
-    const slot=POSTING_SCHEDULE[d.getDay()];
-    const body=dayPosts.length?dayPosts.map(postCardHtml).join(''):`<div style="font-size:10px;color:var(--mut);text-align:center;padding:10px 0;opacity:.5">—</div>`;
-    return `<div class="k-col"${isToday?' style="outline:2px solid var(--y);outline-offset:-1px"':''}>
-      <div class="k-col-hdr" style="align-items:center">
-        <span>${dayNames[idx]} ${d.getDate()}</span>
-        ${slot?`<span class="cal-dot ${PLATFORM_CLS(slot.platform)}" title="Cadence: ${escHtml(slot.label)}" style="width:8px;height:8px"></span>`:''}
-        <button onclick="addPostModal('${ds}')" title="Add post on this day" style="margin-left:auto;background:none;border:none;cursor:pointer;font-size:16px;line-height:1;color:var(--mut);padding:0 2px">+</button>
-      </div>
-      ${body}
-    </div>`;
-  }).join('');
-  el.innerHTML=`<div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap">
-      <button class="btn btn-ghost btn-sm" onclick="weekNav(-1)">‹</button>
-      <div style="font-family:'Montserrat',sans-serif;font-weight:700;font-size:14px;min-width:160px;text-align:center">${fmtShort(ymdLocal(days[0]))} – ${fmtShort(ymdLocal(days[6]))}</div>
-      <button class="btn btn-ghost btn-sm" onclick="weekNav(1)">›</button>
-      <button class="btn btn-ghost btn-sm" onclick="weekThis()">This week</button>
-    </div>
-    <div class="kanban" style="grid-template-columns:repeat(7,minmax(150px,1fr))">${cols}</div>`;
-}
-function renderCalendarGrid(){
-  const el=document.getElementById('cal-main'); if(!el)return;
-  const posts=ls.get('tuf_content',[])||[];
-  const monthNames=['January','February','March','April','May','June','July','August','September','October','November','December'];
-  const first=new Date(calYear,calMonth,1);
-  const startDow=(first.getDay()+6)%7;
-  const daysInMonth=new Date(calYear,calMonth+1,0).getDate();
-  const todayStr=new Date().toISOString().slice(0,10);
-  let cells='';
-  for(let i=0;i<startDow;i++) cells+=`<div></div>`;
-  for(let d=1;d<=daysInMonth;d++){
-    const ds=`${calYear}-${String(calMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
-    const dayPosts=posts.filter(p=>p.date===ds);
-    const chips=dayPosts.slice(0,3).map(p=>`<div class="cal-post ${PLATFORM_CLS(p.platform)}" title="${escHtml(p.platform||'')}: ${escHtml(p.title)}" onclick="event.stopPropagation();editPostModal('${p.id}')">${escHtml(p.title)}</div>`).join('');
-    cells+=`<div class="cal-day${ds===todayStr?' today':''}${dayPosts.length?' has-post':''}" onclick="addPostModal('${ds}')" title="Add a post on this day">
-      <div class="cal-daynum">${d}</div>
-      ${chips}${dayPosts.length>3?`<div class="cal-more">+${dayPosts.length-3} more</div>`:''}
-    </div>`;
-  }
-  const wd=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'].map(w=>`<div style="font-size:10px;font-weight:700;color:var(--mut);text-align:center;padding:2px 0">${w}</div>`).join('');
-  const legend=[['li','LinkedIn'],['ig','Instagram'],['yt','YouTube Shorts'],['pod','Podcast']].map(([c,l])=>`<span style="display:inline-flex;align-items:center;gap:5px"><span class="cal-dot ${c}"></span>${l}</span>`).join('');
-  el.innerHTML=`<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px;flex-wrap:wrap">
-      <div style="display:flex;align-items:center;gap:10px">
-        <button class="btn btn-ghost btn-sm" onclick="calNavMonth(-1)">‹</button>
-        <div style="font-family:'Montserrat',sans-serif;font-weight:700;font-size:15px;min-width:140px;text-align:center">${monthNames[calMonth]} ${calYear}</div>
-        <button class="btn btn-ghost btn-sm" onclick="calNavMonth(1)">›</button>
-      </div>
-      <div style="display:flex;gap:14px;flex-wrap:wrap;font-size:10px;color:var(--mut)">${legend}</div>
-    </div>
-    <div class="cal-grid">${wd}${cells}</div>`;
-}
-function renderCalendar(){
-  renderStrategyNote();
-  const posts=ls.get('tuf_content',[])||[];
-  const count=s=>posts.filter(p=>(p.status||'Idea')===s).length;
-  document.getElementById('cal-stats').innerHTML=CONTENT_STATUSES.map(s=>{
-    const meta=CONTENT_STATUS_META[s]||{};
-    return `<div class="stat"><div class="n" style="color:${meta.dot||'var(--txt)'}">${count(s)}</div><div class="l">${s}</div></div>`;
-  }).join('');
-  if(calView==='month') renderCalendarGrid(); else renderWeekPlanner();
-  renderBacklog();
-  document.getElementById('topbar-actions').innerHTML=`
-    <div style="display:flex;gap:4px;background:var(--bg-2);border-radius:9px;padding:3px">
-      <button class="btn btn-sm" style="${calView==='week'?'background:var(--k);color:var(--w)':'background:transparent;color:var(--mut);box-shadow:none'}" onclick="setCalView('week')">Week</button>
-      <button class="btn btn-sm" style="${calView==='month'?'background:var(--k);color:var(--w)':'background:transparent;color:var(--mut);box-shadow:none'}" onclick="setCalView('month')">Month</button>
-    </div>
-    <button class="btn btn-k btn-sm" onclick="addPostModal()">+ Add Post</button>`;
-}
 function postOwnerOptions(sel){ return TASK_PEOPLE.map(o=>`<option${o===sel?' selected':''}>${o}</option>`).join(''); }
-function addPostModal(prefillDate){
-  const dval=(typeof prefillDate==='string')?prefillDate:'';
-  showModal('Add Content Post',`
-  <div class="form-row"><label class="form-label">Title / Hook</label><input class="form-input" id="np2-title" placeholder="The hook or headline"></div>
-  <div class="grid-2">
-    <div class="form-row"><label class="form-label">Platform</label><select class="form-select" id="np2-platform">${CONTENT_PLATFORMS.map(p=>`<option>${p}</option>`).join('')}</select></div>
-    <div class="form-row"><label class="form-label">Owner</label><select class="form-select" id="np2-owner">${postOwnerOptions(CURRENT_USER||'Danny')}</select></div>
-  </div>
-  <div class="grid-2">
-    <div class="form-row"><label class="form-label">Date <span style="font-weight:400;text-transform:none;color:var(--mut)">(blank = backlog)</span></label><input class="form-input" type="date" id="np2-date" value="${dval}"></div>
-    <div class="form-row"><label class="form-label">Status</label><select class="form-select" id="np2-status">${CONTENT_STATUSES.map(s=>`<option>${s}</option>`).join('')}</select></div>
-  </div>
-  <div class="form-row"><label class="form-label">Notes / draft copy</label><textarea class="form-textarea" id="np2-notes" style="min-height:110px" placeholder="The post copy, brief, or notes"></textarea></div>
-`,`<button class="btn btn-ghost" onclick="closeModal()">Cancel</button><button class="btn btn-k" onclick="savePost()">Save</button>`);}
-function savePost(){const title=document.getElementById('np2-title').value.trim();if(!title)return;const list=ls.get('tuf_content',[]);list.push({id:uid(),title,platform:document.getElementById('np2-platform').value,date:document.getElementById('np2-date').value||'',owner:document.getElementById('np2-owner').value,status:document.getElementById('np2-status').value,notes:document.getElementById('np2-notes').value.trim(),createdAt:new Date().toISOString()});ls.set('tuf_content',list);closeModal();renderCalendar();}
-function editPostModal(id){const p=ls.get('tuf_content',[]).find(x=>x.id===id);if(!p)return;showModal('Edit Post',`
-  <div class="form-row"><label class="form-label">Title / Hook</label><input class="form-input" id="ep2-title" value="${escHtml(p.title)}"></div>
-  <div class="grid-2">
-    <div class="form-row"><label class="form-label">Platform</label><select class="form-select" id="ep2-platform">${CONTENT_PLATFORMS.map(s=>`<option${s===p.platform?' selected':''}>${s}</option>`).join('')}</select></div>
-    <div class="form-row"><label class="form-label">Owner</label><select class="form-select" id="ep2-owner">${postOwnerOptions(p.owner)}</select></div>
-  </div>
-  <div class="grid-2">
-    <div class="form-row"><label class="form-label">Date <span style="font-weight:400;text-transform:none;color:var(--mut)">(blank = backlog)</span></label><input class="form-input" type="date" id="ep2-date" value="${p.date||''}"></div>
-    <div class="form-row"><label class="form-label">Status</label><select class="form-select" id="ep2-status">${CONTENT_STATUSES.map(s=>`<option${s===(p.status||'Idea')?' selected':''}>${s}</option>`).join('')}</select></div>
-  </div>
-  <div class="form-row"><label class="form-label">Notes / draft copy</label><textarea class="form-textarea" id="ep2-notes" style="min-height:130px">${escHtml(p.notes||'')}</textarea></div>
-`,`<button class="btn btn-red btn-sm" onclick="deletePost('${id}')">Delete</button><button class="btn btn-ghost" onclick="closeModal()">Cancel</button><button class="btn btn-k" onclick="updatePost('${id}')">Save</button>`);}
-function updatePost(id){const list=ls.get('tuf_content',[]);const i=list.findIndex(x=>x.id===id);if(i<0)return;list[i]={...list[i],title:document.getElementById('ep2-title').value.trim(),platform:document.getElementById('ep2-platform').value,date:document.getElementById('ep2-date').value||'',owner:document.getElementById('ep2-owner').value,status:document.getElementById('ep2-status').value,notes:document.getElementById('ep2-notes').value.trim()};ls.set('tuf_content',list);closeModal();renderCalendar();}
-function deletePost(id){if(!confirm('Delete this post?'))return;ls.set('tuf_content',ls.get('tuf_content',[]).filter(x=>x.id!==id));closeModal();renderCalendar();}
 
 // ═══ CONTENT HUB — removed (rebuilding from a new prompt) ═══════════════════
 
@@ -7656,41 +7365,6 @@ function saveReview(){
 
 // ═══ KNOWLEDGE BASE ═══════════════════════════════════════════════════════════
 const KB_CATS=['Sales','Boardroom','Events','Content','Systems','Team','Finance'];
-function renderKB(){
-  const list=ls.get('tuf_kb',[]);
-  const filter=ls.str('tuf_kb_filter','All');
-  const filtered=filter==='All'?list:list.filter(k=>k.cat===filter);
-  document.getElementById('kb-render').innerHTML=`
-    <div style="display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap">
-      ${['All',...KB_CATS].map(c=>`<button class="btn ${filter===c?'btn-k':'btn-ghost'} btn-sm" onclick="setKBFilter('${c}')">${c}</button>`).join('')}
-    </div>
-    ${filtered.length?filtered.map(k=>`<div class="card" style="margin-bottom:10px">
-      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px">
-        <div style="flex:1">
-          <div style="font-family:'Montserrat',sans-serif;font-size:14px;font-weight:700;margin-bottom:4px">${escHtml(k.title)}</div>
-          <div style="font-size:12px;color:var(--txt);margin-bottom:8px;line-height:1.5">${escHtml(k.content)}</div>
-          <div style="display:flex;gap:6px"><span class="tag tag-b">${k.cat}</span><span style="font-size:10px;color:var(--mut)">Updated: ${k.updated?fmtDate(k.updated):''}</span></div>
-        </div>
-        <button class="btn btn-ghost btn-sm" onclick="editKBModal('${k.id}')">Edit</button>
-      </div>
-    </div>`).join(''):'<div class="empty">No articles in this category yet</div>'}
-  `;
-  document.getElementById('topbar-actions').innerHTML=`<button class="btn btn-k btn-sm" onclick="addKBModal()">+ Add Article</button>`;
-}
-function setKBFilter(cat){ls.setStr('tuf_kb_filter',cat);renderKB();}
-function addKBModal(){showModal('Add Knowledge Base Article',`
-  <div class="form-row"><label class="form-label">Title</label><input class="form-input" id="nk-title"></div>
-  <div class="form-row"><label class="form-label">Category</label><select class="form-select" id="nk-cat">${KB_CATS.map(c=>`<option>${c}</option>`).join('')}</select></div>
-  <div class="form-row"><label class="form-label">Content</label><textarea class="form-textarea" style="min-height:120px" id="nk-content" placeholder="SOP, process, guide, notes…"></textarea></div>
-`,`<button class="btn btn-ghost" onclick="closeModal()">Cancel</button><button class="btn btn-k" onclick="saveKB()">Save</button>`);}
-function saveKB(){const title=document.getElementById('nk-title').value.trim();if(!title)return;const list=ls.get('tuf_kb',[]);list.push({id:uid(),title,cat:document.getElementById('nk-cat').value,content:document.getElementById('nk-content').value.trim(),updated:new Date().toISOString().slice(0,10)});ls.set('tuf_kb',list);closeModal();renderKB();}
-function editKBModal(id){const k=ls.get('tuf_kb',[]).find(x=>x.id===id);if(!k)return;showModal(k.title,`
-  <div class="form-row"><label class="form-label">Title</label><input class="form-input" id="ek-title" value="${escHtml(k.title)}"></div>
-  <div class="form-row"><label class="form-label">Category</label><select class="form-select" id="ek-cat">${KB_CATS.map(c=>`<option${c===k.cat?' selected':''}>${c}</option>`).join('')}</select></div>
-  <div class="form-row"><label class="form-label">Content</label><textarea class="form-textarea" style="min-height:120px" id="ek-content">${escHtml(k.content||'')}</textarea></div>
-`,`<button class="btn btn-red btn-sm" onclick="deleteKB('${id}')">Delete</button><button class="btn btn-ghost" onclick="closeModal()">Cancel</button><button class="btn btn-k" onclick="updateKB('${id}')">Save</button>`);}
-function updateKB(id){const list=ls.get('tuf_kb',[]);const i=list.findIndex(x=>x.id===id);if(i<0)return;list[i]={...list[i],title:document.getElementById('ek-title').value.trim(),cat:document.getElementById('ek-cat').value,content:document.getElementById('ek-content').value.trim(),updated:new Date().toISOString().slice(0,10)};ls.set('tuf_kb',list);closeModal();renderKB();}
-function deleteKB(id){if(!confirm('Delete?'))return;ls.set('tuf_kb',ls.get('tuf_kb',[]).filter(x=>x.id!==id));closeModal();renderKB();}
 
 // ═══ NOTIFICATIONS ════════════════════════════════════════════════════════════
 function renderNotifs(){
@@ -8083,107 +7757,8 @@ Be direct, warm and commercially grounded.`;
 }
 
 
-function loadLinkedInStrategy(force){
-  if(!force && ls.get('tuf_content') && ls.get('tuf_content').length > 0){
-    if(!confirm('The content calendar already has posts. Replace them with the LinkedIn strategy template?')) return;
-  }
-const cal = [];
-// Helper
-const post = (title,platform,date,owner,status,notes) => ({id:uid(),title,platform,date,owner,status,notes,createdAt:new Date().toISOString()});
-
-// ── WEEK 1: 9-13 June ──────────────────────────────────────────────
-cal.push(post('Most founders are running their business like they\'re still the employee — not the owner.','LinkedIn','2026-06-09','Danny','Draft','INSIGHT. Five Stages hook — most founders are at Stage 2 behaving like Stage 1. Open with the pattern, explain the shift, close with what Stage 3 looks like. No service signal. 75% rule.'));
-cal.push(post('Best conversation I had at the Boardroom last session','LinkedIn','2026-06-09','Jasper','Draft','JJ post. Networking/community angle. Short and personal — what struck Jasper about the energy in the room. Tag location if possible.'));
-cal.push(post('A client told me they hadn\'t taken a proper holiday in 4 years. Here\'s what we found when we looked at why.','LinkedIn','2026-06-10','Danny','Draft','EXPERIENCE. Anonymised client story. The insight: the business had no one else capable of deciding. KSMRA angle. Don\'t name the client. End with a question for the reader.'));
-cal.push(post('What the most engaged founders in our Boardroom have in common','LinkedIn','2026-06-10','Joe','Draft','JW post. Observation from running the Boardroom. Not a service signal — a genuine insight about what makes the difference. 3 specific things.'));
-cal.push(post('The moment a founder realises they\'re the bottleneck [video]','LinkedIn','2026-06-11','Danny','Draft','VIDEO. Talking head — 60-90 seconds. Danny speaking directly to camera about the bottleneck moment. No script, conversational. Record during prep week. Caption: the story of a client realisation.'));
-cal.push(post('How we run a 4-person business with AI doing the work of 10','LinkedIn','2026-06-11','James','Draft','JC post. James talks about AI tools + workflows. Authentic, specific — one tool, one process, one outcome. Positions TUF as a forward-thinking operation.'));
-cal.push(post('You\'re not scaling your business. You\'re scaling your stress.','LinkedIn','2026-06-12','Danny','Draft','PAIN POINT. Direct challenge. Most founders think growth = more hours. This post challenges that. Use the Stage 3 → Stage 4 transition (owner vs operator). Hard stop, no solution offered — let the pain land.'));
-cal.push(post('18 founders walked in last month. Here\'s what they decided to do.','LinkedIn','2026-06-13','Danny','Draft','SERVICE SIGNAL (25%). S1 outcome post. Not a hard sell — context-setting. What happened in the room, what people committed to. Naturally leads to "if you\'re curious about S2…" as the final line only.'));
-cal.push(post('Instagram clip of the week (best performer — last 7 days)','LinkedIn','2026-06-13','Joe','Draft','WEEKLY CLIP. Joe pulls best-performing Instagram Reel from previous 7 days. Native upload to LinkedIn. No heavy caption needed — let the content speak.'));
-
-// ── WEEK 2: 16-20 June ─────────────────────────────────────────────
-cal.push(post('Stage 2 → Stage 3 is the hardest transition in business. Most founders don\'t even know they\'re stuck in it.','LinkedIn','2026-06-16','Danny','Draft','INSIGHT. Deep Five Stages content. What Stage 2 (Operator/Establisher) looks like from the inside. Why it feels like progress but is actually a trap. What unlocks the move to Stage 3.'));
-cal.push(post('25 June — Padel. Here\'s who\'s coming and why you should be there.','LinkedIn','2026-06-16','Jasper','Draft','JJ post — Padel event preview. Build anticipation. Who attends, the vibe, what past attendees have said. Include a simple call to action: DM Jasper to join.'));
-cal.push(post('The question I ask every founder in our first session together. Most haven\'t thought about it.','LinkedIn','2026-06-17','Danny','Draft','EXPERIENCE. Danny\'s signature question (something like "if you were hit by a bus tomorrow, would your business survive the week?"). Personal, authoritative, slightly provocative. No pitch.'));
-cal.push(post('3 things we changed about Session 2 based on founder feedback','LinkedIn','2026-06-17','Joe','Draft','JW post. Behind-the-scenes: smaller pods, Danny\'s close protected, pod brief cards. Positions TUF as responsive and serious about quality. Social proof through iteration.'));
-cal.push(post('The Five Stages of a founder-led business — which one are you? [video]','LinkedIn','2026-06-18','Danny','Draft','VIDEO. Danny walks through all five stages in 90 seconds. Biggest single content asset. Use graphics if possible. This is the cornerstone piece — repurpose heavily.'));
-cal.push(post('One AI workflow that saves our team 3 hours every week','LinkedIn','2026-06-18','James','Draft','JC post. Specific workflow — e.g. meeting notes → tasks using Claude. Screenshot or short screen record. Genuine and useful, not a sales pitch. Positions TUF as efficient and innovative.'));
-cal.push(post('The founder who can\'t switch off isn\'t being dedicated. They\'re being defensive.','LinkedIn','2026-06-19','Danny','Draft','PAIN POINT. Challenge the "always on" identity. Most founders confuse activity with progress. The real issue: they don\'t trust what happens without them. This is a Stage 2 pattern. Hard-hitting, no solution offered in this post.'));
-cal.push(post('Session 2 is forming. Here\'s what our founding members said after Session 1.','LinkedIn','2026-06-20','Danny','Draft','SERVICE SIGNAL. Pull from real written feedback (Chloe Ellis, Darren Massey, Andrew Rhodes quotes with permission). Frame it as social proof, not a sales pitch. "If this sounds like your next step…" close.'));
-cal.push(post('Instagram clip of the week','LinkedIn','2026-06-20','Joe','Draft','WEEKLY CLIP. Best-performing Reel from previous 7 days. Native to LinkedIn.'));
-
-// ── WEEK 3: 23-27 June (PADEL WEEK) ────────────────────────────────
-cal.push(post('Community isn\'t a nice-to-have. For founders at Stage 3 and above, it\'s the strategy.','LinkedIn','2026-06-23','Danny','Draft','INSIGHT. Why peer community accelerates growth faster than any coach alone. The research, the anecdote, the practical point. Sets up the Boardroom value proposition without naming it directly.'));
-cal.push(post('Padel tomorrow. The best founder conversations I\'ve ever had have been off a court.','LinkedIn','2026-06-24','Jasper','Draft','JJ post — day-before Padel hype. Personal and warm. Why Jasper loves this format. Who\'s coming. Photo of past event if available. "See you tomorrow" close.'));
-cal.push(post('The most common thing founders say 6 months into working together with me','LinkedIn','2026-06-24','Danny','Draft','EXPERIENCE. Recurring observation from Danny\'s advisory work. "I wish I\'d done this 3 years ago" type insight. Anonymised but specific. Validates the investment without selling.'));
-cal.push(post('Why the Boardroom format works when traditional masterminds don\'t','LinkedIn','2026-06-24','Joe','Draft','JW post. Specific contrast — what makes TUF Boardroom different (curated, Danny-led, implementation sessions, WhatsApp support). Written from Joe\'s POV, not as a sales pitch but as an observation from running it.'));
-cal.push(post('Padel event — the conversations, the energy, the founders [event content]','LinkedIn','2026-06-25','Jasper','Draft','PADEL DAY POST. Event day content. Photos, short clip, 2-3 founder quotes from the day. Jasper posts in real time or within 24 hours. Tag attendees where possible.'));
-cal.push(post('Your business has a ceiling. It\'s you. Here\'s what to do about it.','LinkedIn','2026-06-26','Danny','Draft','PAIN POINT + slight service signal. The "you are the bottleneck" message but with a small pivot to what the solution looks like. The one post where the pain and the path appear together.'));
-cal.push(post('Session 2 — 2 July. One or two spots still available.','LinkedIn','2026-06-27','Danny','Draft','SERVICE SIGNAL. Urgency-based. Short and direct. "If you\'re on the fence, DM me." No long sell. Danny\'s personal voice. 2-3 lines max.'));
-cal.push(post('Instagram clip of the week','LinkedIn','2026-06-27','Joe','Draft','WEEKLY CLIP. Use Padel event content this week if strong enough. Native LinkedIn upload.'));
-
-// ── WEEK 4: 30 June - 3 July (S2 WEEK) ─────────────────────────────
-cal.push(post('What separates a £1m business from a £5m business has nothing to do with the market.','LinkedIn','2026-06-30','Danny','Draft','INSIGHT. Stage 3→4 transition. The move from operator to owner. Danny\'s most direct insight content. Should feel like something a founder would save and send to someone.'));
-cal.push(post('The energy at our last event. This is why we do what we do.','LinkedIn','2026-06-30','Jasper','Draft','JJ post. Padel recap — photos, atmosphere, standout moments. Warm, human, community-focused.'));
-cal.push(post('Tomorrow is our Boardroom Day. Here\'s what 18 founders did last time.','LinkedIn','2026-07-01','Danny','Draft','EXPERIENCE + anticipation. The day-before S2 post. What happened at S1. What S2 is building on. Quiet confidence, not hype.'));
-cal.push(post('What makes the Boardroom format actually work','LinkedIn','2026-07-01','Joe','Draft','JW post. Day-before S2. Specific mechanics — pods, implementation sessions, Danny\'s advisory, the WhatsApp group. Genuine observation from Joe running the operations.'));
-cal.push(post('What happened in the room today [S2 post]','LinkedIn','2026-07-02','Danny','Draft','S2 DAY POST. Danny posts from/after Session 2. Real, raw, in-the-moment. No selling. Just the energy and one powerful thing that happened. Photo if possible. "This is why we built this." close.'));
-cal.push(post('If your business needs you to work, it\'s not a business. It\'s a job with extra steps.','LinkedIn','2026-07-03','Danny','Draft','PAIN POINT. Post-S2 energy carried into a classic pain point post. Danny will have fresh material from the session. Write from what came up in the room.'));
-
-ls.set('tuf_content', cal);
-  renderCalendar();
-  alert('LinkedIn strategy loaded — 32 posts added to the Content Calendar.');
-}
 
 
-function loadDefaultTasks(force){
-  if(!force && ls.get('tuf_tasks') && ls.get('tuf_tasks').length > 0){
-    if(!confirm('Tasks already exist. Replace with the default task list?')) return;
-  }
-  const tasksArr=[
-      // ── DANNY ──
-      {id:uid(),title:'Define and document the sales process framework (1-page, close sequence)',owner:'Danny',priority:'High',dueDate:'2026-06-13',status:'To Do',notes:'Key failure point: gave client 24hrs to deliberate. Payment link must go before they leave the meeting.',createdBy:'James',createdAt:new Date().toISOString(),completedAt:null},
-      {id:uid(),title:'Follow up with Ben Coomer — he reached out yesterday, use that as the hook',owner:'Danny',priority:'High',dueDate:'2026-06-03',status:'To Do',notes:'Warm lead. Personal message, not generic.',createdBy:'James',createdAt:new Date().toISOString(),completedAt:null},
-      {id:uid(),title:'Follow up with Mark O\'Meala (MM Contractors)',owner:'Danny',priority:'High',dueDate:'2026-06-06',status:'To Do',notes:'S1 prospect. Didn\'t attend. Still warm.',createdBy:'James',createdAt:new Date().toISOString(),completedAt:null},
-      {id:uid(),title:'Follow up with Ping',section:'sales',owner:'Danny',priority:'High',dueDate:'2026-06-06',status:'To Do',notes:'Past client. Worth a personal check-in and S2 invite.',createdBy:'James',createdAt:new Date().toISOString(),completedAt:null},
-      {id:uid(),title:'Personal follow-up calls with all unconverted S1 attendees',owner:'Danny',priority:'High',dueDate:'2026-06-20',status:'To Do',notes:'17 attendees still to convert before S2. Hot: Andrew Rhodes, Darren Massey. Warm: Steve Buss, Simon Newell.',createdBy:'James',createdAt:new Date().toISOString(),completedAt:null},
-      {id:uid(),title:'Brief team on sales framework once built',section:'sales',owner:'Danny',priority:'Medium',dueDate:'2026-06-15',status:'To Do',notes:'Joe may eventually run sales meetings too.',createdBy:'James',createdAt:new Date().toISOString(),completedAt:null},
-      {id:uid(),title:'Review and approve first 4 LinkedIn posts drafted by Joe',owner:'Danny',priority:'Medium',dueDate:'2026-06-20',status:'To Do',notes:'75% insight, 25% promotional. Joe drafts, Danny approves in under 24hrs.',createdBy:'James',createdAt:new Date().toISOString(),completedAt:null},
-      {id:uid(),title:'Retention check-in: personal WhatsApp to each of the 3 confirmed founding members',section:'boardroom',owner:'Danny',priority:'Medium',dueDate:'2026-06-10',status:'To Do',notes:'Kieran Turner, Chloe Ellis, Ed Senior.',createdBy:'James',createdAt:new Date().toISOString(),completedAt:null},
-
-      // ── JOE ──
-      {id:uid(),title:'Define WhatsApp community structure, rules and launch criteria',owner:'Joe',priority:'High',dueDate:'2026-06-13',status:'To Do',notes:'3 tiers: UF Community (announcements) → Boardroom Group (30-40, two-way) → Events Group. Rules: Chatham House, no GIFs, business only. Launch trigger: 12 paying members.',createdBy:'James',createdAt:new Date().toISOString(),completedAt:null},
-      {id:uid(),title:'Build customer onboarding playbook with all email/WhatsApp templates and Chloe checklist',owner:'Joe',priority:'High',dueDate:'2026-06-20',status:'To Do',notes:'Step-by-step from "new member confirmed" to "in the room on Day 1". Chloe must be able to run it without asking questions.',createdBy:'James',createdAt:new Date().toISOString(),completedAt:null},
-      {id:uid(),title:'Create sales deck (5-7 slides) and one-page leave-behind for Danny',owner:'Joe',priority:'High',dueDate:'2026-06-20',status:'To Do',notes:'Needs S1 testimonials first. Chloe Ellis, Darren Massey and Andrew Rhodes are the strongest sources.',createdBy:'James',createdAt:new Date().toISOString(),completedAt:null},
-      {id:uid(),title:'Build 8-week content calendar — LinkedIn (Danny/Joe) and Instagram/YouTube',owner:'Joe',priority:'High',dueDate:'2026-06-20',status:'To Do',notes:'LinkedIn: 75% insight anchored to Five Stages, 25% promo. Instagram/YouTube: behind-the-scenes, events, team.',createdBy:'James',createdAt:new Date().toISOString(),completedAt:null},
-      {id:uid(),title:'Develop and refine Boardroom service model + 12-month member journey map',owner:'Joe',priority:'High',dueDate:'2026-06-25',status:'To Do',notes:'Danny: "we don\'t have a curriculum — month 1, 2, 3." Must be clear enough to show a prospect what their year looks like.',createdBy:'James',createdAt:new Date().toISOString(),completedAt:null},
-      {id:uid(),title:'Draft first 4 LinkedIn posts in Danny\'s voice and send for approval',owner:'Joe',priority:'High',dueDate:'2026-06-17',status:'To Do',notes:'Insight-led, rooted in Five Stages framework. Sell a feeling and lifestyle, not just coaching.',createdBy:'James',createdAt:new Date().toISOString(),completedAt:null},
-      {id:uid(),title:'Collect formalised testimonials from Chloe Ellis, Darren Massey and Andrew Rhodes',owner:'Joe',priority:'High',dueDate:'2026-06-15',status:'To Do',notes:'These are needed for the sales deck and website. Get written permission to use.',createdBy:'James',createdAt:new Date().toISOString(),completedAt:null},
-      {id:uid(),title:'Build budget forecasting model (revenue vs costs at 5/10/15/20 member scenarios)',owner:'Joe',priority:'Medium',dueDate:'2026-06-30',status:'To Do',notes:'Use the Budget module in the app or ask Claude to build an Excel file.',createdBy:'James',createdAt:new Date().toISOString(),completedAt:null},
-      {id:uid(),title:'Create event marketing templates (invitation, social post, LinkedIn announcement)',owner:'Joe',priority:'Medium',dueDate:'2026-06-30',status:'To Do',notes:'Reusable across Padel, Golf, Dinners. Jasper adapts per event.',createdBy:'James',createdAt:new Date().toISOString(),completedAt:null},
-
-      // ── JASPER ──
-      {id:uid(),title:'Research WhatsApp community best practices and produce management plan',owner:'Jasper',priority:'High',dueDate:'2026-06-13',status:'To Do',notes:'Ask the Padel community contact how they run theirs. Deliver a 1-page plan with recommended structure for TUF.',createdBy:'James',createdAt:new Date().toISOString(),completedAt:null},
-      {id:uid(),title:'Confirm Padel event logistics — venue, time, format, guest numbers, Will You partnership',owner:'Jasper',priority:'High',dueDate:'2026-06-10',status:'To Do',notes:'Event: 25 June 2026. Must run like a wedding. Brief Chloe once confirmed.',createdBy:'James',createdAt:new Date().toISOString(),completedAt:null},
-      {id:uid(),title:'Send Padel event invitations to all S1 attendees and warm prospects',owner:'Jasper',priority:'High',dueDate:'2026-06-13',status:'To Do',notes:'Personal invitations, not a mass blast. Position as a pipeline event for serious founders.',createdBy:'James',createdAt:new Date().toISOString(),completedAt:null},
-      {id:uid(),title:'Build post-event content capture process before Padel (25 June)',owner:'Jasper',priority:'High',dueDate:'2026-06-22',status:'To Do',notes:'Within 24 hours of every event: 3 photos, 2 testimonial quotes, LinkedIn wrap-up post. Set up storage folder.',createdBy:'James',createdAt:new Date().toISOString(),completedAt:null},
-      {id:uid(),title:'Create day-of run sheet for Padel event',owner:'Jasper',priority:'High',dueDate:'2026-06-22',status:'To Do',notes:'Minute-by-minute from setup to close. Include greeter roles, how to capture content, post-event follow-up.',createdBy:'James',createdAt:new Date().toISOString(),completedAt:null},
-      {id:uid(),title:'Take ownership of Boardroom WhatsApp group and UF Network community management',owner:'Jasper',priority:'High',dueDate:'2026-07-01',status:'To Do',notes:'Ongoing. Weekly post prompt, curate conversations, keep it business-focused.',createdBy:'James',createdAt:new Date().toISOString(),completedAt:null},
-      {id:uid(),title:'Follow up with all Padel attendees within 48 hours',owner:'Jasper',priority:'High',dueDate:'2026-06-27',status:'To Do',notes:'Personal message to each. Note who is a potential Boardroom candidate and flag to Danny.',createdBy:'James',createdAt:new Date().toISOString(),completedAt:null},
-      {id:uid(),title:'Build ambassador and ROI tracking framework for events',owner:'Jasper',priority:'Low',dueDate:'2026-07-30',status:'To Do',notes:'After Padel, log: total cost, attendees, Boardroom conversations, conversions. Build the habit from event 1.',createdBy:'James',createdAt:new Date().toISOString(),completedAt:null},
-
-      // ── JAMES ──
-      {id:uid(),title:'Order laptop for Jasper',section:'ops',owner:'James',priority:'High',dueDate:'2026-06-03',status:'To Do',notes:'He cannot work effectively without it. Mid-range Mac or Windows. Confirm budget and who approves.',createdBy:'James',createdAt:new Date().toISOString(),completedAt:null},
-      {id:uid(),title:'Capability map live in Notion — import the CSV and set up the database',section:'ops',owner:'James',priority:'High',dueDate:'2026-06-13',status:'To Do',notes:'CSV is in the Ultimate Prompt folder. Import to Notion as a database. RAG scores updated monthly.',createdBy:'James',createdAt:new Date().toISOString(),completedAt:null},
-      {id:uid(),title:'Build podcast guest longlist (20+ guests) with outreach templates',owner:'James',priority:'High',dueDate:'2026-06-30',status:'To Do',notes:'Start with Savas and Oli Marchant. Ask Claude to research relevant founder/operator guests.',createdBy:'James',createdAt:new Date().toISOString(),completedAt:null},
-      {id:uid(),title:'Website redesign — sitemap and homepage copy leading with Five Stages',section:'content',owner:'James',priority:'High',dueDate:'2026-06-30',status:'To Do',notes:'Platform first (Webflow, Squarespace, or custom). Homepage: problem → Five Stages → self-identify → Boardroom. Joe handles design.',createdBy:'James',createdAt:new Date().toISOString(),completedAt:null},
-      {id:uid(),title:'Brief Jasper on Claude and AI tools once laptop arrives',section:'ops',owner:'James',priority:'High',dueDate:'2026-06-13',status:'To Do',notes:'Give him one practical daily workflow to start. Community management prompts, event planning, outreach messages.',createdBy:'James',createdAt:new Date().toISOString(),completedAt:null},
-      {id:uid(),title:'Extend Monday.com board to cover full sales pipeline (not just S1 attendees)',owner:'James',priority:'High',dueDate:'2026-06-20',status:'To Do',notes:'Add warm prospects (Ben Coomer, Mark O\'Meala, Ping) and a pipeline stage view.',createdBy:'James',createdAt:new Date().toISOString(),completedAt:null},
-      {id:uid(),title:'Build podcast pre-production SOP and guest briefing template',owner:'James',priority:'Medium',dueDate:'2026-07-15',status:'To Do',notes:'Covers: guest confirmation email, briefing doc, day-of content capture checklist, post-recording clip brief.',createdBy:'James',createdAt:new Date().toISOString(),completedAt:null},
-      {id:uid(),title:'Embed AI tooling across all team workflows — run first team training session',owner:'James',priority:'Medium',dueDate:'2026-07-30',status:'To Do',notes:'Danny\'s vision: small team, highly profitable, AI-enabled. This is James\'s core responsibility.',createdBy:'James',createdAt:new Date().toISOString(),completedAt:null},
-    ];
-  }
 
 async function loadDefaultTasks(force){
   const existing=ls.get('tuf_tasks',[]);
@@ -10140,51 +9715,6 @@ function toggleWALaunch(){const s=ls.get('tuf_wa_status',{launched:false,members
 function editBoardroomModel(){const m=ls.get('tuf_boardroom_model',{items:[]});showModal('Edit Service Model',`<div class="form-row"><label class="form-label">Service Items (one per line)</label><textarea class="form-textarea" id="bm-items" style="min-height:150px">${m.items.join('\n')}</textarea></div>`,`<button class="btn btn-ghost" onclick="closeModal()">Cancel</button><button class="btn btn-k" onclick="saveBoardroomModel()">Save</button>`);}
 function saveBoardroomModel(){const items=document.getElementById('bm-items').value.split('\n').map(s=>s.trim()).filter(Boolean);ls.set('tuf_boardroom_model',{items});closeModal();renderBoardroom();}
 
-// ═══ CONTENT IDEAS ════════════════════════════════════════════════════════════
-const IDEA_STATUSES=['Idea','Shortlisted','In Production','Published','Archived'];
-let ideaFilter='All';
-function renderIdeas(){
-  const all=ls.get('tuf_ideas',[]);
-  const filtered=ideaFilter==='All'?all:all.filter(i=>i.status===ideaFilter);
-  const counts={};IDEA_STATUSES.forEach(s=>counts[s]=all.filter(i=>i.status===s).length);
-  document.getElementById('ideas-stats').innerHTML=`
-    <div class="stat"><div class="n">${all.length}</div><div class="l">Total Ideas</div></div>
-    <div class="stat a"><div class="n">${counts['Shortlisted']||0}</div><div class="l">Shortlisted</div></div>
-    <div class="stat r"><div class="n">${counts['In Production']||0}</div><div class="l">In Production</div></div>
-    <div class="stat g"><div class="n">${counts['Published']||0}</div><div class="l">Published</div></div>`;
-  document.getElementById('ideas-filter').innerHTML=['All',...IDEA_STATUSES].map(s=>`<button class="btn ${ideaFilter===s?'btn-k':'btn-ghost'} btn-sm" onclick="setIdeaFilter('${s}')">${s}</button>`).join('');
-  document.getElementById('ideas-list').innerHTML=filtered.length?filtered.map(idea=>`
-    <div class="card" style="margin-bottom:8px">
-      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px">
-        <div style="flex:1">
-          <div style="font-weight:700;font-size:13px;margin-bottom:3px">${escHtml(idea.title)}</div>
-          ${idea.desc?`<div style="font-size:12px;color:var(--mut);margin-bottom:6px">${escHtml(idea.desc)}</div>`:''}
-          <div style="display:flex;gap:6px;flex-wrap:wrap">
-            <span class="cal-post ${idea.platform==='LinkedIn'?'li':idea.platform==='Instagram'?'ig':idea.platform==='YouTube'?'yt':'pod'}" style="font-size:10px;padding:2px 7px;border-radius:4px">${idea.platform||'?'}</span>
-            <span class="tag ${idea.status==='Published'?'tag-g':idea.status==='In Production'?'tag-b':idea.status==='Shortlisted'?'tag-a':'tag-r'}">${idea.status}</span>
-            <span style="font-size:10px;color:var(--mut)">Added by ${escHtml(idea.addedBy||'')}</span>
-          </div>
-        </div>
-        <div style="display:flex;gap:6px">
-          <select class="form-select" style="padding:4px 6px;font-size:11px" onchange="updateIdeaStatus('${idea.id}',this.value)">${IDEA_STATUSES.map(s=>`<option${s===idea.status?' selected':''}>${s}</option>`).join('')}</select>
-          <button class="btn btn-ghost btn-sm" onclick="deleteIdea('${idea.id}')">✕</button>
-        </div>
-      </div>
-    </div>`).join(''):'<div class="empty"><div class="ico">✨</div>No content ideas yet. Add your first one — any platform, any format, any stage.</div>';
-  document.getElementById('topbar-actions').innerHTML=`<button class="btn btn-ghost btn-sm" onclick="loadStrategyIdeas()">Load strategy ideas</button><button class="btn btn-k btn-sm" onclick="addIdeaModal()">+ Add Idea</button>`;
-}
-function setIdeaFilter(f){ideaFilter=f;renderIdeas();}
-function updateIdeaStatus(id,val){const l=ls.get('tuf_ideas',[]);const i=l.findIndex(x=>x.id===id);if(i>=0){l[i].status=val;ls.set('tuf_ideas',l);}renderIdeas();}
-function deleteIdea(id){if(!confirm('Delete?'))return;ls.set('tuf_ideas',ls.get('tuf_ideas',[]).filter(x=>x.id!==id));renderIdeas();}
-function addIdeaModal(){showModal('Add Content Idea',`
-  <div class="form-row"><label class="form-label">Title / Hook</label><input class="form-input" id="ni2-title" placeholder="What's the idea?"></div>
-  <div class="grid-2">
-    <div class="form-row"><label class="form-label">Platform</label><select class="form-select" id="ni2-platform"><option>LinkedIn</option><option>Instagram</option><option>YouTube</option><option>Podcast</option><option>All</option></select></div>
-    <div class="form-row"><label class="form-label">Status</label><select class="form-select" id="ni2-status">${IDEA_STATUSES.map(s=>`<option>${s}</option>`).join('')}</select></div>
-  </div>
-  <div class="form-row"><label class="form-label">Description / Notes</label><textarea class="form-textarea" id="ni2-desc" style="min-height:60px"></textarea></div>
-`,`<button class="btn btn-ghost" onclick="closeModal()">Cancel</button><button class="btn btn-k" onclick="saveIdea()">Save</button>`);}
-function saveIdea(){const t=document.getElementById('ni2-title').value.trim();if(!t)return;const l=ls.get('tuf_ideas',[]);l.push({id:uid(),title:t,platform:document.getElementById('ni2-platform').value,status:document.getElementById('ni2-status').value,desc:document.getElementById('ni2-desc').value.trim(),addedBy:CURRENT_USER,createdAt:new Date().toISOString()});ls.set('tuf_ideas',l);closeModal();renderIdeas();}
 
 // ═══ KPIS ═════════════════════════════════════════════════════════════════════
 function renderKPIs(){
@@ -10557,9 +10087,6 @@ function hqActionCard(pid,a){
   } else if(a.type==='add_event_lead'){
     label='Add this Padel contact?';
     rows=f('Name',a.name)+f('Company',a.company||a.co)+f('Source',a.source||CURRENT_USER)+f('Status',a.status||'New Lead')+f('Attendance',a.attendance||'Invited');
-  } else if(a.type==='add_idea'){
-    label='Add this content idea?';
-    rows=f('Title',a.title)+f('Platform',a.platform||'LinkedIn')+f('Detail',a.desc);
   } else if(a.type==='add_member'){
     label='Add this Boardroom member?';
     rows=f('Name',a.name)+f('Company',a.company||a.co)+f('Fee',a.fee?'£'+a.fee+'/mo':'£1,000/mo');
@@ -10597,10 +10124,7 @@ function hqConfirm(pid){
     l.push(lead); ls.set('tuf_event_leads',l); addNotif(`Padel contact added via HQ: ${lead.name}`);
     try{ if(document.getElementById('padel-pipeline')) renderPadel(); }catch(e){}
     msg=`${escHtml(lead.name)} added to the Padel pipeline.`;
-  } else if(a.type==='add_idea'){
-    const l=ls.get('tuf_ideas',[]); l.push({id:uid(),title:a.title||'Idea',platform:(['LinkedIn','Instagram','YouTube','Podcast'].includes(a.platform)?a.platform:'LinkedIn'),status:'Idea',desc:a.desc||'',addedBy:CURRENT_USER,createdAt:new Date().toISOString()}); ls.set('tuf_ideas',l); addNotif('Content idea added via HQ');
-    try{ if(document.getElementById('ideas-list')) renderIdeas(); }catch(e){}
-    msg=`Content idea added: "${escHtml(a.title||'Idea')}".`;
+
   } else if(a.type==='add_member'){
     const members=ls.get('tuf_members',[]); const m={id:uid(),name:a.name||'New member',co:(a.company||a.co||''),email:'',phone:'',stage:3,notes:a.notes||'',status:'active',type:'boardroom',clientFee:0,boardroomFee:parseInt(a.fee)||1000,boardroomAccess:false,sessions:[],touchpoint:new Date().toISOString().slice(0,10),retention:null}; members.push(m); ls.set('tuf_members',members); addNotif(`Boardroom member added via HQ: ${m.name}`);
     try{renderMembers();}catch(e){} try{ if(document.getElementById('boardroom-roster')) renderBoardroom(); }catch(e){}
@@ -10639,7 +10163,7 @@ function hqToggle(open){
 
 function hqWelcome(){
   document.getElementById('hq-msgs').innerHTML =
-    `<div class="hq-msg hq-bot">Hi ${escHtml(CURRENT_USER||'there')}. I can see your live HQ data: tasks, clients, pipeline, Boardroom, events, social media, goals, KPIs, budget, testimonials, content calendar, podcast pipeline, the capability map and the 4 Box Model. Ask me anything or use a starter below. I can read, draft, and make changes you confirm first, like adding a task, a Padel contact, a content idea or a member. If you want the app itself changed, ask me and I will log it to Build Requests for the team to build.</div>`;
+    `<div class="hq-msg hq-bot">Hi ${escHtml(CURRENT_USER||'there')}. I can see your live HQ data: tasks, clients, pipeline, Boardroom, events, social media, goals, KPIs, budget, testimonials, content calendar, podcast pipeline, the capability map and the 4 Box Model. Ask me anything or use a starter below. I can read, draft, and make changes you confirm first, like adding a task, a Padel contact or a member. If you want the app itself changed, ask me and I will log it to Build Requests for the team to build.</div>`;
 }
 
 function hqClear(){ HQ_HISTORY=[]; hqWelcome(); }
@@ -10661,7 +10185,6 @@ function buildHQContext(){
   const overdue=open.filter(t=>t.dueDate&&t.dueDate<today);
   const members=(ls.get('tuf_members',[])||[]);
   const prospects=(ls.get('tuf_prospects',[])||[]).filter(prospectActive);
-  const warm=(ls.get('tuf_warm',[])||[]);
   const events=(ls.get('tuf_events',[])||[]);
   const sessions=(ls.get('tuf_sessions',[])||[]);
   const metrics=(ls.get('tuf_metrics',{})||{});
@@ -10673,7 +10196,6 @@ function buildHQContext(){
   s+=`OPEN TASKS (${open.length}, ${overdue.length} overdue):\n`+open.slice(0,45).map(tline).join('\n')+'\n\n';
   s+=`CLIENTS/MEMBERS (${members.length}):\n`+members.slice(0,40).map(m=>`- ${m.name||'?'}${m.company?' ('+m.company+')':''} | ${m.type||'member'} | status ${m.status||'-'}${m.fee?' | £'+m.fee:''}`).join('\n')+'\n\n';
   s+=`SALES PIPELINE PROSPECTS (${prospects.length}):\n`+prospects.slice(0,40).map(p=>`- ${p.name||'?'}${p.company?' ('+p.company+')':''} | stage ${p.stage||'-'} | ${p.temp||'-'}${p.score?' | score '+p.score:''}`).join('\n')+'\n\n';
-  if(warm.length) s+=`WARM LEADS (${warm.length}):\n`+warm.slice(0,25).map(w=>`- ${w.name||'?'}${w.company?' ('+w.company+')':''} | ${w.status||'-'}`).join('\n')+'\n\n';
   s+=`BOARDROOM METRICS: members ${metrics.members??'-'}, MRR £${metrics.mrr??'-'}, private MRR £${metrics.private??'-'}.\n\n`;
   if(sessions.length) s+=`SESSIONS:\n`+sessions.slice(0,12).map(x=>`- ${x.title||x.name||'session'} | ${x.date||'-'} | ${x.status||'-'}`).join('\n')+'\n\n';
   if(events.length) s+=`EVENTS:\n`+events.slice(0,12).map(x=>`- ${x.title||x.name||'event'} | ${x.date||'-'} | ${x.status||'-'}`).join('\n')+'\n\n';
@@ -10707,16 +10229,12 @@ function buildHQContext(){
   if(iqE.length) s+=` Individual quarterly goals: `+iqE.map(([p,v])=>`${p}: ${v}`).join(' | ');
   const kp=ls.get('tuf_kpis',{})||{};
   s+=`\n\nKPIs: NPS ${kp.nps??'-'}, Session 1 score ${kp.s1Score??'-'}/10, event attendance ${kp.eventAttendance??'-'}, podcast episodes ${kp.podcastEps??'-'}, website launched ${kp.websiteLaunched?'yes':'no'}.`;
-  const bud=ls.get('tuf_budget',{costs:[]})||{costs:[]};
-  const totalCosts=(bud.costs||[]).reduce((a,c)=>a+(c.v||0),0);
   const brList=members.filter(m=>(!m.type||m.type==='boardroom')&&m.status==='active'); const brCount=brList.length;
   const privMRR=members.filter(m=>m.type==='existing_client'&&m.status==='active').reduce((a,c)=>a+(c.clientFee||0),0);
   const brMRR=boardroomMRRof(brList); const totalMRR=brMRR+privMRR;
-  s+=`\n\nBUDGET: Boardroom MRR £${brMRR} (${brCount} members), private MRR £${privMRR}, total MRR £${totalMRR}. Monthly costs £${totalCosts}. Net profit about £${totalMRR-totalCosts} per month.`;
+  s+=`\n\nREVENUE: Boardroom MRR £${brMRR} (${brCount} members), private MRR £${privMRR}, total MRR £${totalMRR}.`;
   const tst=ls.get('tuf_testimonials',[])||[];
   if(tst.length) s+=`\n\nTESTIMONIALS (${tst.length}):\n`+tst.slice(0,12).map(t=>`- ${t.name||'?'}${t.co?' ('+t.co+')':''}: "${(t.quote||'').slice(0,160)}"`).join('\n');
-  const content=ls.get('tuf_content',[])||[];
-  if(content.length){const up=content.filter(p=>!p.date||p.date>=today).sort((a,b)=>(a.date||'').localeCompare(b.date||'')).slice(0,15);s+=`\n\nCONTENT CALENDAR (${content.length} posts, next up):\n`+up.map(p=>`- ${p.date||'no date'} | ${p.platform||'?'} | ${p.title} | ${p.status||'-'} | ${p.owner||'-'}`).join('\n');}
   const pod=ls.get('tuf_podcast',[])||[];
   if(pod.length) s+=`\n\nPODCAST PIPELINE (${pod.length}):\n`+pod.slice(0,20).map(g=>`- ${g.name||'?'}${g.co&&g.co!=='TBC'?' ('+g.co+')':''} | ${g.status||'-'}${g.topic?' | '+g.topic:''}`).join('\n');
   const hol=ls.get('tuf_holidays',null);
@@ -10762,7 +10280,6 @@ Available action types and their fields:
 - create_task: title, owner (Danny, Joe, Jasper, James, Chloe), priority, dueDate, notes
 - add_prospect: name, company, stage (Prospect, Contacted, Meeting Booked, Dialogue, Proposal Sent, Committed), temp (Hot|Warm|Cold), score, nextAction, notes. Only add a prospect when the user clearly wants them worked as a sales prospect; the pipeline is manual and deliberate.
 - add_event_lead: name, company, source (Danny|Jasper|Joe|James), status (New Lead, Contacted, Conversation, Meeting Booked, Converted, Not Interested), attendance (Invited|Confirmed|Attended|Declined), notes. This adds a contact to the Padel event pipeline.
-- add_idea: title, platform (LinkedIn|Instagram|YouTube|Podcast), desc. A content idea.
 - add_member: name, company, fee. A Boardroom member, fee is pounds per month.
 - set_lead_status: name, status, attendance. Updates an existing Padel contact found by name.
 - request_feature: title, detail. Use this whenever the user asks to CHANGE THE APP ITSELF, a new feature, field, page, button or layout change. You cannot edit the app's code. Instead, turn their request into a clear, sharp specification in the detail field (what they want, where it should live, and why) and log it for the team to build.
@@ -11021,16 +10538,13 @@ function renderTeamOverview(){
   const el=document.getElementById('teamoverview-render'); if(!el) return;
   const today=new Date().toISOString().slice(0,10);
   const tasks=ls.get('tuf_tasks',[])||[];
-  const eodToday=(ls.get('tuf_eod',{})||{})[today]||{};
   const sortActive=(a,b)=>{ if(!a.dueDate&&!b.dueDate) return 0; if(!a.dueDate) return 1; if(!b.dueDate) return -1; return a.dueDate.localeCompare(b.dueDate); };
   let totalOpen=0, totalOverdue=0, totalDoneToday=0;
-  const updatesIn=HOL_TEAM.filter(p=>eodToday[p]&&eodToday[p].text).length;
   const cards=HOL_TEAM.map(p=>{
     const active=tasks.filter(t=>t.owner===p && t.status!=='Done').sort(sortActive);
     const inProg=active.filter(t=>t.status==='In Progress').length;
     const overdue=active.filter(t=>t.dueDate && t.dueDate<today).length;
     const doneToday=tasks.filter(t=>t.owner===p && t.status==='Done' && t.completedAt && t.completedAt.slice(0,10)===today).length;
-    const noUpdate=!(eodToday[p]&&eodToday[p].text);
     totalOpen+=active.length; totalOverdue+=overdue; totalDoneToday+=doneToday;
     const colour=USER_COLOURS[p]||'#888';
     const chips=[
@@ -11038,7 +10552,7 @@ function renderTeamOverview(){
       inProg?`<span class="tag tag-a" style="font-size:10px">${inProg} in progress</span>`:'',
       overdue?`<span class="tag tag-r" style="font-size:10px">${overdue} overdue</span>`:'',
       doneToday?`<span class="tag tag-g" style="font-size:10px">${doneToday} done today</span>`:'',
-      noUpdate?`<span class="tag tag-a" style="font-size:10px;opacity:.85">⚠ no update today</span>`:''
+''
     ].filter(Boolean).join(' ');
     const body=active.length
       ? `<div style="border-radius:8px;overflow:hidden;border:1px solid var(--bdr);border-top:none">${renderTaskRows(active,today)}</div>`
@@ -11059,7 +10573,6 @@ function renderTeamOverview(){
       <div class="stat"><div class="n">${totalOpen}</div><div class="l">Open tasks</div></div>
       <div class="stat ${totalOverdue?'r':''}"><div class="n">${totalOverdue}</div><div class="l">Overdue</div></div>
       <div class="stat g"><div class="n">${totalDoneToday}</div><div class="l">Done today</div></div>
-      <div class="stat ${updatesIn>=HOL_TEAM.length?'g':'a'}"><div class="n">${updatesIn}/${HOL_TEAM.length}</div><div class="l">Updates in</div></div>
     </div>
     <div class="sec-hdr" style="margin-bottom:14px">What everyone has on</div>
     ${cards}`;
