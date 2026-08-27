@@ -6982,7 +6982,8 @@ function docIcon(t){ return t==='pdf'?'':t==='deck'?'':t==='doc'?'':t==='sheet'?
 function fmtSize(b){ if(b==null||isNaN(b))return''; if(b<1024)return b+' B'; if(b<1048576)return (b/1024).toFixed(0)+' KB'; return (b/1048576).toFixed(1)+' MB'; }
 function renderFiles(){
   const list=ls.get('tuf_files',[]);
-  const cats=[...new Set(list.map(f=>f.cat))];
+  const found=[...new Set(list.map(f=>f.cat))];
+  const cats=[...FILE_CATS.filter(c=>found.includes(c)),...found.filter(c=>!FILE_CATS.includes(c))];
   document.getElementById('files-list').innerHTML=cats.length
     ? cats.map(cat=>`
         <div class="sec-hdr" style="margin-top:14px">${escHtml(cat)}</div>
