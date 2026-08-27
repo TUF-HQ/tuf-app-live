@@ -521,6 +521,7 @@ details>summary::-webkit-details-marker{display:none}
     <div class="sb-section">Intelligence</div>
     <div class="sb-item" data-page="capmap" onclick="nav('capmap',this)">Capability Map <span class="sb-badge" id="sb-red" style="display:none">—</span></div>
     <div class="sb-item" data-page="goals" onclick="nav('goals',this)">Goals & OKRs</div>
+    <div class="sb-item" data-page="market" onclick="nav('market',this)">Market Intel</div>
 
     <div class="sb-section">Team</div>
     <div class="sb-item" data-page="dannycal" onclick="nav('dannycal',this)">Danny's Calendar</div>
@@ -801,6 +802,11 @@ details>summary::-webkit-details-marker{display:none}
     </div>
 
     <!-- ═══ KNOWLEDGE BASE ═══ -->
+
+    <!-- ═══ MARKET INTEL ═══ -->
+    <div class="page" id="page-market">
+      <div id="market-render"></div>
+    </div>
 
     <!-- ═══ NOTIFICATIONS ═══ -->
     <div class="page" id="page-buildreq">
@@ -1713,7 +1719,7 @@ const PAGE_TITLES = {
   testimonials:'Testimonials',
   onboarding:'Onboarding',sessions:'Session Planner',padel:'Padel Event',
   podcast:'Podcast Pipeline',coaching:'Coaching',growthplan:'Growth Plan',ip:'IP Register',files:'Documents',
-  capmap:'Capability Map',goals:'Goals & OKRs',fourbox:'The 4 Box Model',budget:'Budget',
+  capmap:'Capability Map',goals:'Goals & OKRs',market:'Market Intel',fourbox:'The 4 Box Model',budget:'Budget',
   teamtasks:'Team Tasks',roles:'Roles',reviews:'Weekly Review',notifs:'Notifications',
   csuite:'C-Suite',holidays:'Holidays',daily:'Daily Progress',
 };
@@ -1749,7 +1755,7 @@ function renderPage(page){
     testimonials:renderTestimonials,
     onboarding:renderOnboarding, sessions:renderSessions, padel:renderPadel,
     podcast:renderPodcast, coaching:renderCoaching, growthplan:renderGrowthPlan, ip:renderIP, files:renderFiles,
-    capmap:renderCapMap, goals:renderGoals, fourbox:renderFourBox, budget:renderBudget,
+    capmap:renderCapMap, goals:renderGoals, market:renderMarket, fourbox:renderFourBox, budget:renderBudget,
     teamtasks:renderTeamTasks, roles:renderRoles, reviews:renderReviews, notifs:renderNotifs,
     csuite:renderCSuite, holidays:renderHolidays, daily:renderDaily, teamoverview:renderTeamOverview, myday:renderMyDay,
   };
@@ -10618,6 +10624,183 @@ function hqFormat(t){
   h=h.replace(/^\s*[\-•]\s+(.*)$/gm,'• $1');
   h=h.replace(/\n/g,'<br>');
   return h;
+}
+
+// ═══ MARKET INTEL (v68) ══════════════════════════════════════════════════════
+// The Market and Competitor Analysis (Aug 2026, v1.0) as a living dashboard.
+// Static figures come from the report; the validation tracker is interactive and
+// persisted (tuf_market_validation) so answers replace estimates over time.
+// Update MARKET_* consts when the report revs to v1.1.
+const MARKET_VERSION='Aug 2026 · v1.0';
+const MARKET_STATS=[
+  {n:'285,000',l:'UK businesses, 10 to 249 staff',s:'DBT 2025. Fact.',key:true},
+  {n:'20k to 30k',l:'Match the ICP right now',s:'Estimate to validate',key:true},
+  {n:'1 in 1,000',l:'Of the pool fills the room',s:'20 member businesses'},
+  {n:'14.6%',l:'Sustained growth 2021 to 2024',s:'ERC. The rest stalled'},
+  {n:'55%',l:'Name talent and leadership as a top barrier',s:'ScaleUp Institute, n=1,009'},
+  {n:'34.2%',l:'Growth in the £10m to £50m band',s:'Where members are heading'},
+  {n:'20% to 40%',l:'Valuation lost to owner dependence',s:'Exit Factor 2026'},
+  {n:'£540k / yr',l:'The room at capacity',s:'vs a £540m+ pool. Market is not the constraint',key:true},
+];
+const MARKET_FUNNEL=[
+  {n:285000,label:'285,000 · UK businesses with 10 to 249 staff',tag:'Fact (DBT 2025)'},
+  {n:200000,label:'c. 200,000 · founder or owner led',tag:'Estimate, validate'},
+  {n:150000,label:'c. 150,000 · serviceable: £1m to £25m, England and Wales',tag:'Estimate'},
+  {n:25000,label:'20,000 to 30,000 · match the ICP markers now',tag:'Estimate, validate'},
+  {n:20,label:'20 · member businesses to fill the room',tag:'One in a thousand'},
+];
+const MARKET_COMP=[
+  {o:'TUF Boardroom',who:'Founder operators £1m to £25m, team but no senior leadership',fmt:'6 Boardroom Days, 6 Implementation Sessions, Strategy Session, Quarterly CEO Reviews',grp:'20',price:'£27,000 + VAT, 12 month term',exp:'Expert morning, Danny in the room',imp:'Fortnightly rhythm, tracker, commitments',meas:'Scorecard at joining, 90 days, quarterly',tuf:true},
+  {o:'Vistage UK',who:'MDs and CEOs, typically £5m+',fmt:'Monthly full day + monthly 121 with chair',grp:'12 to 16',price:'Est. £12,000 to £18,000 + joining fee',exp:'Speaker each month',imp:'Chair 121 only',meas:'No'},
+  {o:'Helm',who:'Founders £3m+, 20 staff',fmt:'3 hour forum, 10 a year, + events',grp:'6 to 8',price:'Est. £5,000 to £8,000',exp:'Workshops and events',imp:'No',meas:'No'},
+  {o:'EO UK',who:'Founders $1m+',fmt:'Monthly forum, events',grp:'8 to 10',price:'Est. £4,000 to £6,000',exp:'None in forum',imp:'No',meas:'No'},
+  {o:'TAB UK',who:'SME owners, smaller',fmt:'Monthly half day + monthly 121',grp:'6 to 8',price:'Est. £6,000 to £12,000',exp:'Facilitator only',imp:'121 with facilitator',meas:'No'},
+  {o:'Mastermind Groups UK',who:'£1m to £10m',fmt:'Monthly meeting',grp:'n/p',price:'£9,540 to £15,540 + VAT',exp:'Facilitator',imp:'Optional 121',meas:'No'},
+  {o:'Monkhouse CEO2',who:'Tech founders £1m to £10m',fmt:'Quarterly day + fortnightly office hours',grp:'14',price:'On application',exp:'Practitioner led',imp:'Yes, fortnightly',meas:'No'},
+  {o:'Goldman Sachs 10KSB',who:'£250k+, 5 to 50 staff',fmt:'13 to 15 weeks, Oxford',grp:'Cohort',price:'Free',exp:'Academic faculty',imp:'Ends after 15 weeks',meas:'Programme survey only'},
+  {o:'Help to Grow',who:'5 to 249 staff',fmt:'12 weeks, 50 hours, business school',grp:'Cohort',price:'£750',exp:'Academic',imp:'Ends after 12 weeks',meas:'No'},
+  {o:'Cranfield BGP',who:'£0.5m to £100m owner managers',fmt:'8 months, four residentials',grp:'Cohort',price:'£14,250 + VAT',exp:'Academic and peer',imp:'Ends after 8 months',meas:'Growth plan'},
+  {o:'EOS Implementer',who:'£2m to £50m with a leadership team',fmt:'c. 8 leadership team days in year one',grp:'Team',price:'Est. £30,000 to £45,000',exp:'Implementer',imp:'Quarterly with team',meas:'Business scorecard, not the founder'},
+  {o:'Scaling Up coach',who:'£2m to £50m',fmt:'Quarterly and annual planning + monthly',grp:'Team',price:'Est. £30,000 to £80,000',exp:'Coach',imp:'Quarterly',meas:'No'},
+  {o:'ActionCOACH 121',who:'Owner managers, often sub £5m',fmt:'Fortnightly or monthly 121',grp:'1',price:'£18,000 to £36,000+',exp:'Franchise coach',imp:'Coach led',meas:'No'},
+  {o:'NED',who:'£2m to £50m',fmt:'1 to 2 days a month',grp:'1',price:'Avg £15,000, chairs £28,000',exp:'One experienced voice',imp:'Board meetings',meas:'No'},
+  {o:'Dent / KPI',who:'£200k to £2m service businesses',fmt:'12 month accelerator, sprints',grp:'Cohort',price:'Est. £5,000 to £10,000',exp:'Programme team',imp:'Sprints',meas:'No'},
+  {o:'James Sinclair Accelerator',who:'Sub £1m to £5m',fmt:'Hybrid, Essex, monthly',grp:'Large',price:'£10,788 + VAT',exp:'Founder led',imp:'Monthly calls',meas:'No'},
+];
+// Positioning map: x = a moment (0) to an ongoing rhythm (100); y = left to it (0) to held to a standard (100)
+const MARKET_MAP=[
+  {t:'Help to Grow, 10KSB',x:12,y:22},{t:'Cranfield BGP',x:22,y:34},{t:'Online masterminds',x:30,y:12},
+  {t:'EO forums',x:52,y:18},{t:'Helm',x:48,y:30},{t:'TAB, MD2MD',x:58,y:42},{t:'Vistage',x:66,y:52},
+  {t:'NED, 121 coach',x:56,y:62},{t:'EOS, Scaling Up (team, not founder)',x:44,y:80},{t:'Monkhouse CEO2',x:74,y:66},
+  {t:'The TUF Boardroom',x:90,y:90,tuf:true},
+];
+const MARKET_DIFF=[
+  {t:'We sell the outcome, not the room',d:'Everyone else sells a room, a curriculum, a coach or a system. We sell one transformation: the transition to Founder CEO. The category is ours because nobody else has named it.'},
+  {t:'The room is the method',d:'Capabilities are picked up, not taught. Expert morning, peer afternoon on pre submitted challenges, commitments circulated, Implementation Session in between. One mechanism, not a menu.'},
+  {t:'Standards held by the room',d:'Tracker 48 hours before. Commitments made in front of peers. No UK competitor publishes a standard members hold for each other.'},
+  {t:'Curated, and it says so',d:'A room of twenty. Apply to join. Two gates: the problems are real and the person is right. Who else is in the room is part of what you buy.'},
+  {t:'Person first, then the business, then the life',d:'Every engagement starts with the founder as a person. Loneliness and identity are central, not a wellbeing bolt on.'},
+  {t:'Measured, quarterly',d:'The Transition Scorecard at joining, 90 days, then quarterly. Nobody else measures the founder. EOS measures the business. The rest measure attendance.'},
+];
+const MARKET_OBJ=[
+  {they:'Goldman Sachs and Help to Grow are free.',we:'They are, and they are good. They also end after twelve to fifteen weeks. The problem is not a lack of knowledge; it is that nobody holds you to what you already know. Their alumni are ideal members.'},
+  {they:'Vistage is cheaper and meets every month.',we:'Vistage is a room for MDs and CEOs of any kind. The Boardroom is a room for founders making one specific transition, measured every quarter. You are not buying hours, you are buying the outcome.'},
+  {they:'Helm has 400 members and a huge network.',we:'If you want a network, join it. Helm now starts at £3m and gives you three hours a month. If everything still comes back to you, that will not change it.'},
+  {they:'I could hire a NED or a coach for the same money.',we:'You could, and you might still. They give you one view. The Boardroom gives you Danny, an expert every Boardroom Day, and nineteen founders who have seen your problem and will not let you avoid it.'},
+  {they:'We are doing EOS.',we:'Good. EOS is a system for your team. The Boardroom is for you. The system only runs as well as the founder who leads it, and EOS does not change the founder.'},
+  {they:'Twenty people is a lot for a peer group.',we:'Bigger than a forum on purpose. Expert led morning, roundtable afternoon on pre submitted challenges. Twenty curated founders beats eight, and the standard is held by the room.'},
+];
+const MARKET_GTM=[
+  'Price against a coach, a NED or a system, never against a club. Anchor on the £15,000 to £80,000 a founder already spends on one view.',
+  'Own the £1m to £3m founder Helm left behind. That founder has no curated, expert led home. It is ours to take.',
+  'Make the free programmes a feeder, not a rival. Partner with the business schools and alumni networks.',
+  'Lead with the North West after London: 14 of the Sunday Times 100 and the largest scale up cluster outside the capital.',
+  'Publish the standard. The Guest Charter, the tracker and the Biggest Challenge form are proof of method. Show them.',
+  'Validate the estimates before they go external: mystery shop the peer boards, run the Companies House pull.',
+];
+const MARKET_VALIDATION=[
+  {id:'v1',q:'Who are our best clients, in numbers?',how:'Client table for the best 10 to 15 clients, filled in one session, then kept current from every Fact Find',owner:'Danny, Joe'},
+  {id:'v2',q:'Why do we win and why do we lose?',how:'Five short conversations with recent no decisions and the lost member, recorded verbatim',owner:'Danny'},
+  {id:'v3',q:'Will founders pay £2,250 plus VAT a month?',how:'Three or four price conversations with ICP founders not yet approached, plus ask existing members',owner:'Danny'},
+  {id:'v4',q:'How many founders match the ICP, as a count not an estimate?',how:'Companies House or Beauhurst pull: 10 to 100 staff, incorporated 6 to 20 years, founding shareholder director. Doubles as a prospect list',owner:'James'},
+  {id:'v5',q:'How many are actively looking?',how:'Search volumes for peer advisory and founder mastermind terms; LinkedIn audience size; Scorecard completions once live',owner:'James, Jasper'},
+  {id:'v6',q:'What do the competitors actually charge?',how:'Mystery shop Vistage UK, Helm, TAB and MD2MD. Record fee, joining fee, term, group size',owner:'Joe'},
+  {id:'v7',q:'Who are the referrers, and how many are there?',how:'Map of fifty named firms in the target regions, five approached first',owner:'Jasper, Danny'},
+  {id:'v8',q:'Where should Boardroom Days run?',how:'Plot members and pipeline on a map against the regional data. Decide the two 2027 locations',owner:'Danny, Joe'},
+  {id:'v9',q:'What is missing from the ICP?',how:'Add five questions to the Fact Find. Update the profile once ten answers are in',owner:'Danny, Claude'},
+  {id:'v10',q:'What would hurt us?',how:'One page threat register, reviewed at the quarterly TUF review',owner:'Danny, Guy'},
+  {id:'v11',q:'Is 2026 to 2027 a good time to sell a £27k membership?',how:'Decide the framing; track conversion monthly against ERC and ScaleUp sentiment',owner:'Danny'},
+  {id:'v12',q:'What proof can we publish?',how:'Confirm Viki permissions, write Ollie story. Multiples only, role change first',owner:'Danny'},
+  {id:'v13',q:'Does AI change what the founder needs from a room?',how:'Expert morning theme in the 2027 calendar. Ask the room',owner:'Danny'},
+  {id:'v14',q:'Which two or three sectors lead the content?',how:'Decide from the client table and regional sector data; build the content calendar around them',owner:'Danny, Jasper'},
+];
+const MV_STATUSES=['Open','In progress','Answered'];
+function mvGet(){ return ls.get('tuf_market_validation',{})||{}; }
+function mvSet(id,patch){ const s=mvGet(); s[id]=Object.assign({},s[id]||{},patch,{updatedBy:CURRENT_USER,updatedAt:new Date().toISOString().slice(0,10)}); ls.set('tuf_market_validation',s); renderMarket(); }
+function mvStatus(id,val){ mvSet(id,{status:val}); }
+function mvNoteModal(id){
+  const item=MARKET_VALIDATION.find(x=>x.id===id); if(!item) return;
+  const cur=(mvGet()[id]||{}).note||'';
+  showModal('Answer · '+escHtml(item.q.slice(0,60)),
+   `<div class="form-row"><label class="form-label">What we found</label><textarea class="form-textarea" id="mv-note" style="min-height:120px" placeholder="The answer, the number, the source…">${escHtml(cur)}</textarea></div>`,
+   `<button class="btn btn-ghost" onclick="closeModal()">Cancel</button><button class="btn btn-k" onclick="mvSet('${id}',{note:document.getElementById('mv-note').value.trim()});closeModal()">Save</button>`);
+}
+function renderMarket(){
+  const host=document.getElementById('market-render'); if(!host) return;
+  document.getElementById('topbar-actions').innerHTML=`<button class="btn btn-ghost btn-sm" onclick="goPage('files')">Full report in Documents</button>`;
+  const mv=mvGet();
+  const answered=MARKET_VALIDATION.filter(x=>(mv[x.id]||{}).status==='Answered').length;
+  const inprog=MARKET_VALIDATION.filter(x=>(mv[x.id]||{}).status==='In progress').length;
+  const stat=(x)=>`<div class="stat${x.key?' y':''}"><div class="n" style="font-size:${x.n.length>7?'22px':'28px'}">${x.n}</div><div class="l">${x.l}</div><div style="font-size:9px;color:${x.key?'#9DA0A6':'var(--mut)'};margin-top:4px">${x.s}</div></div>`;
+  const maxN=MARKET_FUNNEL[0].n;
+  const funnel=MARKET_FUNNEL.map(f=>{
+    const w=Math.max(2,Math.round(Math.sqrt(f.n/maxN)*100));
+    return `<div style="display:flex;align-items:center;gap:12px;margin-bottom:6px">
+      <div style="width:${w}%;min-width:120px;background:var(--k);color:var(--w);border-radius:6px;padding:8px 12px;font-size:12px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${f.label}</div>
+      <span style="font-size:10px;color:var(--mut);flex-shrink:0">${f.tag}</span></div>`;
+  }).join('');
+  const compRow=(c)=>`<tr style="${c.tuf?'background:var(--k);color:var(--w)':''}">
+    <td style="font-weight:800;white-space:nowrap;${c.tuf?'color:var(--y)':''}">${escHtml(c.o)}</td>
+    <td>${escHtml(c.who)}</td><td>${escHtml(c.fmt)}</td><td style="text-align:center">${escHtml(c.grp)}</td>
+    <td style="white-space:nowrap">${escHtml(c.price)}</td><td>${escHtml(c.exp)}</td><td>${escHtml(c.imp)}</td>
+    <td style="${(c.meas||'').indexOf('No')===0?'color:var(--mut)':'font-weight:700'}">${escHtml(c.meas)}</td></tr>`;
+  const mapDots=MARKET_MAP.map(m=>`<div title="${escHtml(m.t)}" style="position:absolute;left:${m.x}%;bottom:${m.y}%;transform:translate(-50%,50%);${m.tuf?'background:var(--k);color:var(--y);font-weight:800;padding:6px 12px;border-radius:6px;font-size:11px;z-index:2':'background:var(--card);border:1px solid var(--bdr);padding:3px 8px;border-radius:12px;font-size:9.5px;color:var(--txt)'};white-space:nowrap">${escHtml(m.t)}</div>`).join('');
+  const mvRow=(x)=>{
+    const st=(mv[x.id]||{}).status||'Open';
+    const note=(mv[x.id]||{}).note||'';
+    const col=st==='Answered'?'var(--grn)':st==='In progress'?'var(--amb)':'var(--bdr)';
+    return `<div class="card" style="margin-bottom:8px;border-left:4px solid ${col};padding:12px 16px">
+      <div style="display:flex;gap:10px;align-items:flex-start;flex-wrap:wrap">
+        <div style="flex:1;min-width:220px">
+          <div style="font-weight:700;font-size:13px">${escHtml(x.q)}</div>
+          <div style="font-size:11px;color:var(--mut);margin-top:3px">${escHtml(x.how)}</div>
+          ${note?`<div style="font-size:12px;background:var(--bg-2);border-radius:6px;padding:7px 10px;margin-top:6px;white-space:pre-wrap">${escHtml(note)}</div>`:''}
+          ${(mv[x.id]||{}).updatedAt?`<div style="font-size:9.5px;color:var(--mut);margin-top:4px">Updated ${fmtShort(mv[x.id].updatedAt)} by ${escHtml(mv[x.id].updatedBy||'')}</div>`:''}
+        </div>
+        <div style="display:flex;gap:6px;align-items:center;flex-shrink:0;flex-wrap:wrap">
+          <span style="font-size:9px;font-weight:700;background:var(--k);color:var(--w);border-radius:12px;padding:3px 9px">${escHtml(x.owner)}</span>
+          <select class="form-select" style="width:auto;font-size:11px;padding:4px 8px" onchange="mvStatus('${x.id}',this.value)">${MV_STATUSES.map(s2=>`<option${s2===st?' selected':''}>${s2}</option>`).join('')}</select>
+          <button class="btn btn-ghost btn-sm" onclick="mvNoteModal('${x.id}')">${note?'Edit answer':'Log answer'}</button>
+        </div>
+      </div></div>`;
+  };
+  host.innerHTML=`
+    <div style="font-size:12px;color:var(--mut);margin-bottom:14px">From the Market and Competitor Analysis (${MARKET_VERSION}). Estimates get replaced with counts as the validation tracker below is worked. Full report lives in Documents under Founder to CEO.</div>
+    <div class="sec-hdr">The Market In Numbers</div>
+    <div class="grid-4" style="margin-bottom:20px">${MARKET_STATS.map(stat).join('')}</div>
+    <div class="sec-hdr">From Market To Room</div>
+    <div class="card" style="margin-bottom:20px">${funnel}<div style="font-size:11px;color:var(--mut);margin-top:8px">Twenty members at £2,250 plus VAT is £540,000 a year, 0.1% of a target pool worth £540m to £810m at Boardroom prices. The constraint is our ability to market, not the size of the market.</div></div>
+    <div class="sec-hdr">The Competitive Set</div>
+    <div class="card" style="padding:0;overflow-x:auto;margin-bottom:20px"><table class="tbl" style="min-width:1100px;font-size:11.5px">
+      <tr><th>Offer</th><th>For whom</th><th>Format</th><th>Group</th><th>Price per year</th><th>Expert input</th><th>Implementation</th><th>Measured outcome</th></tr>
+      ${MARKET_COMP.map(compRow).join('')}
+    </table><div style="font-size:10px;color:var(--mut);padding:8px 14px">Est. marks a figure inferred from third party sources. Vistage, Helm, TAB and MD2MD fees to be confirmed by mystery shop before external use. Checked Aug 2026.</div></div>
+    <div class="sec-hdr">Where We Sit</div>
+    <div class="grid-2" style="margin-bottom:20px;align-items:stretch">
+      <div class="card" style="position:relative;min-height:340px;background:var(--bg-2)">
+        <div style="position:absolute;left:12px;top:10px;font-size:9px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--mut)">Held to a standard</div>
+        <div style="position:absolute;left:12px;bottom:10px;font-size:9px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--mut)">Left to it</div>
+        <div style="position:absolute;right:12px;bottom:10px;font-size:9px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--mut)">Ongoing rhythm</div>
+        <div style="position:absolute;left:12px;bottom:26px;right:12px;top:26px">${mapDots}</div>
+      </div>
+      <div class="card"><div class="card-title">What the map says</div>
+        <div style="font-size:12.5px;line-height:1.6">Nobody else combines an expert led day, a curated founder room, an implementation rhythm and a measured founder outcome. Vistage is closest on format, Monkhouse on intent; neither names or measures the Founder CEO transition.</div>
+        <div style="font-size:12.5px;line-height:1.6;margin-top:10px;color:var(--mut)">Honestly: we are the most expensive peer room in the UK and the biggest (twenty vs six to sixteen). The premium is argued on outcome, standard and who is in the room, never on hours.</div>
+      </div>
+    </div>
+    <div class="sec-hdr">Six Things Nobody Else Says Or Does</div>
+    <div class="grid-3" style="margin-bottom:20px">${MARKET_DIFF.map((d,i)=>`<div class="card" style="margin-bottom:0"><div style="font-size:20px;font-weight:800;color:var(--y);background:var(--k);border-radius:8px;width:34px;height:34px;display:flex;align-items:center;justify-content:center;margin-bottom:10px">${i+1}</div><div style="font-weight:700;font-size:13px;margin-bottom:6px">${escHtml(d.t)}</div><div style="font-size:11.5px;color:var(--mut);line-height:1.55">${escHtml(d.d)}</div></div>`).join('')}</div>
+    <div class="sec-hdr">They Will Say · We Say</div>
+    <div class="card" style="padding:0;overflow-x:auto;margin-bottom:20px"><table class="tbl" style="font-size:12px">
+      <tr><th style="width:28%">They will say</th><th>We say</th></tr>
+      ${MARKET_OBJ.map(o2=>`<tr><td style="font-weight:700">"${escHtml(o2.they)}"</td><td>${escHtml(o2.we)}</td></tr>`).join('')}
+    </table></div>
+    <div class="sec-hdr">Go To Market Implications</div>
+    <div class="card" style="margin-bottom:20px"><ul style="margin-left:18px;line-height:1.9;font-size:12.5px">${MARKET_GTM.map(g=>`<li>${escHtml(g)}</li>`).join('')}</ul></div>
+    <div class="sec-hdr">Validation Tracker <span style="font-weight:400;font-size:11px;color:var(--mut);text-transform:none;letter-spacing:0">${answered} answered · ${inprog} in progress · ${MARKET_VALIDATION.length-answered-inprog} open. Questions 1 to 3 first: they cost nothing and change the most.</span></div>
+    ${MARKET_VALIDATION.map(mvRow).join('')}
+    <div style="font-size:10px;color:var(--mut);margin-top:14px">Sources: DBT Business Population Estimates 2025, ERC State of Small Business Britain 2025, ScaleUp Institute Annual Review 2025, Bank of England 2025, Exit Factor 2026, NatWest and Beauhurst Startup Index 2026. Full references in the report.</div>
+  `;
 }
 
 // ═══ FOUNDER TO CEO POSITIONING (Playbook v3.1, 25 Aug 2026) ═════════════════
