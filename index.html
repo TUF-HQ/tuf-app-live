@@ -5564,33 +5564,180 @@ function deleteProspect(id){if(!confirm('Delete?'))return;ls.set('tuf_prospects'
 // ═══ WARM PROSPECTS ══════════════════════════════════════════════════════════
 
 // ═══ TESTIMONIALS ════════════════════════════════════════════════════════════
+// ═══ TESTIMONIALS — proof pipeline (v59) ═════════════════════════════════════
+// Suggests WHO to ask (feedback scores 8+, coaching momentum), drafts the ask in
+// Danny's voice, tracks asked/received, and keeps a fast path for logging quotes
+// the team already collected. Suggestions skip anyone already in flight.
+function proofGet(){ return ls.get('tuf_proof',[])||[]; }
+function proofSave(a){ ls.set('tuf_proof',a); }
+function proofTakenKeys(){
+  const t=new Set();
+  (ls.get('tuf_testimonials',[])||[]).forEach(x=>t.add(profileKey(x.name)));
+  proofGet().forEach(x=>t.add(profileKey(x.name)));
+  return t;
+}
+function proofFormCandidates(){
+  const taken=proofTakenKeys(); const best={};
+  (ls.get('tuf_files',[])||[]).forEach(f=>{
+    if(f.formType!=='feedback'||!f.memberName) return;
+    const m=(f.content||'').match(/Overall rating:\s*(\d+)\s*\/\s*10/i); if(!m) return;
+    const r=parseInt(m[1]); if(r<8) return;
+    const k=profileKey(f.memberName); if(taken.has(k)) return;
+    if(!best[k]||r>best[k].r) best[k]={name:f.memberName,r};
+  });
+  return Object.values(best).map(x=>({name:x.name,co:'',reason:'Rated a Boardroom session '+x.r+'/10 in their feedback form'}));
+}
+function proofEnsure(name,co,reason,status){
+  const list=proofGet();
+  let rec=list.find(x=>profileKey(x.name)===profileKey(name));
+  if(!rec){ rec={id:uid(),name,co:co||'',reason:reason||'',status:status||'suggested',addedBy:CURRENT_USER,addedAt:new Date().toISOString().slice(0,10)}; list.push(rec); }
+  else if(status) rec.status=status;
+  proofSave(list); return rec;
+}
+window.__proofCands={};
+function proofCandAct(cid,act){
+  const c=window.__proofCands[cid]; if(!c) return;
+  const rec=proofEnsure(c.name,c.co,c.reason);
+  proofAskAct(rec.id,act);
+}
+function proofAskAct(id,act){
+  const l=proofGet(); const r=l.find(x=>x.id===id); if(!r) return;
+  if(act==='draft'){ proofSave(l); proofDraftAsk(id); return; }
+  if(act==='log'){ proofSave(l); addTestModal(r.name,r.co,r.id); return; }
+  if(act==='asked'){ r.status='asked'; r.askedAt=new Date().toISOString().slice(0,10); r.askedBy=CURRENT_USER; }
+  if(act==='skip') r.status='skipped';
+  proofSave(l); renderTestimonials();
+}
+async function proofDraftAsk(id){
+  const r=proofGet().find(x=>x.id===id); if(!r) return;
+  showModal('Ask draft · '+escHtml(r.name),
+   `<div id="pf-draft" style="min-height:120px"><div style="font-size:12px;color:var(--mut)">Writing a draft in Danny's voice…</div></div>`,
+   `<button class="btn btn-ghost" onclick="closeModal()">Close</button><button class="btn btn-ghost" onclick="proofCopyDraft()">Copy message</button><button class="btn btn-k" onclick="proofAskAct('${id}','asked');closeModal();renderTestimonials()">Mark as asked</button>`);
+  const first=(r.name||'').split(' ')[0];
+  let text=`Hi ${first}, Danny here. I have loved the work we are doing together and the progress you are making. Quick favour: would you send me two or three sentences on what The Ultimate Founder has done for you and your business, in your own words? It genuinely helps other founders decide if this is for them. No rush, whenever suits.`;
+  try{
+    const data=await claudeCall({model:'claude-haiku-4-5-20251001',max_tokens:300,messages:[{role:'user',content:`Write a short WhatsApp message from Danny, founder of The Ultimate Founder (a boardroom and coaching community for ambitious founders), to ${r.name}${r.co?' of '+r.co:''}, asking for a short written testimonial. Context on why now: ${r.reason||'a valued member doing great work'}. Danny's voice: direct, warm, ambitious, energetic, jargon free. Rules: 60 to 90 words, greet by first name (${first}), one clear ask (two or three sentences in their own words on what TUF has done for them and their business), mention it helps other founders, never use hyphens or double dashes, no emojis, no sign off. Return only the message text.`}]});
+    const t=data&&data.content&&data.content[0]&&data.content[0].text; if(t) text=t.trim();
+  }catch(e){}
+  window.__proofDraft=text;
+  const el=document.getElementById('pf-draft');
+  if(el) el.innerHTML=`<textarea class="form-textarea" id="pf-draft-text" style="min-height:130px;font-size:12.5px">${escHtml(text)}</textarea><div style="font-size:10.5px;color:var(--mut);margin-top:4px">Edit as needed, then copy and send it yourself on WhatsApp. Nothing is sent from the app.</div>`;
+}
+function proofCopyDraft(){
+  const el=document.getElementById('pf-draft-text');
+  const t=el?el.value:(window.__proofDraft||'');
+  if(t&&navigator.clipboard) navigator.clipboard.writeText(t);
+  addNotif('Ask message copied');
+}
+function proofAddModal(){
+  showModal('Add someone to ask',`
+    <div class="form-row"><label class="form-label">Name</label><input class="form-input" id="pf-name"></div>
+    <div class="form-row"><label class="form-label">Company</label><input class="form-input" id="pf-co"></div>
+    <div class="form-row"><label class="form-label">Why them, why now</label><input class="form-input" id="pf-reason" placeholder="e.g. Just landed the result we worked on together"></div>
+  `,`<button class="btn btn-ghost" onclick="closeModal()">Cancel</button><button class="btn btn-k" onclick="proofAddSave()">Add</button>`);
+}
+function proofAddSave(){
+  const n=document.getElementById('pf-name').value.trim(); if(!n) return;
+  proofEnsure(n,document.getElementById('pf-co').value.trim(),document.getElementById('pf-reason').value.trim(),'suggested');
+  closeModal(); renderTestimonials();
+}
+function proofRow(inner,buttons){
+  return `<div class="card" style="margin-bottom:8px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:12px 16px">
+    <div style="flex:1;min-width:180px">${inner}</div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap">${buttons}</div></div>`;
+}
 function renderTestimonials(){
   const list=ls.get('tuf_testimonials',[]);
-  document.getElementById('testimonials-list').innerHTML=list.length?list.map(t=>`
+  const proofs=proofGet();
+  const asked=proofs.filter(p=>p.status==='asked');
+  const stored=proofs.filter(p=>p.status==='suggested');
+  const cands=proofFormCandidates();
+  window.__proofCands={};
+  cands.forEach((c,i)=>{ window.__proofCands['c'+i]=c; });
+  const who=(name,co,reason)=>`<div style="font-weight:700;font-size:13px">${escHtml(name)}${co?` <span style="font-weight:400;color:var(--mut)">· ${escHtml(co)}</span>`:''}</div><div style="font-size:11px;color:var(--mut)">${escHtml(reason||'')}</div>`;
+  const sugRows=[
+    ...stored.map(r=>proofRow(who(r.name,r.co,r.reason),
+      `<button class="btn btn-k btn-sm" onclick="proofAskAct('${r.id}','draft')">Draft ask</button><button class="btn btn-ghost btn-sm" onclick="proofAskAct('${r.id}','asked')">Mark asked</button><button class="btn btn-ghost btn-sm" onclick="proofAskAct('${r.id}','skip')">Skip</button>`)),
+    ...cands.map((c,i)=>proofRow(who(c.name,c.co,c.reason),
+      `<button class="btn btn-k btn-sm" onclick="proofCandAct('c${i}','draft')">Draft ask</button><button class="btn btn-ghost btn-sm" onclick="proofCandAct('c${i}','asked')">Mark asked</button><button class="btn btn-ghost btn-sm" onclick="proofCandAct('c${i}','skip')">Skip</button>`))
+  ];
+  document.getElementById('testimonials-list').innerHTML=`
+    <div class="grid-4" style="margin-bottom:18px">
+      <div class="stat y"><div class="n">${list.length}</div><div class="l">Quotes Captured</div></div>
+      <div class="stat"><div class="n">${asked.length}</div><div class="l">Asked · Waiting</div></div>
+      <div class="stat"><div class="n">${sugRows.length}</div><div class="l">Suggested Asks</div></div>
+      <div class="stat"><div class="n">${list.filter(t=>t.used).length}</div><div class="l">Used In Sales / Social</div></div>
+    </div>
+    <div class="sec-hdr">Who To Ask Next</div>
+    <div id="proof-sug">${sugRows.length?sugRows.join(''):'<div class="empty" style="padding:16px">No suggestions right now. High feedback scores and coaching momentum surface people here automatically, or add someone yourself.</div>'}</div>
+    <div id="proof-co-cands"></div>
+    <div class="sec-hdr" style="margin-top:18px">Asked · Waiting To Hear Back</div>
+    ${asked.length?asked.map(r=>proofRow(who(r.name,r.co,'Asked by '+(r.askedBy||'')+(r.askedAt?' on '+fmtShort(r.askedAt):'')),
+      `<button class="btn btn-k btn-sm" onclick="proofAskAct('${r.id}','log')">They sent one — log it</button><button class="btn btn-ghost btn-sm" onclick="proofAskAct('${r.id}','skip')">Didn't happen</button>`)).join(''):'<div class="empty" style="padding:16px">Nobody waiting. Ask someone from the list above.</div>'}
+    <div class="sec-hdr" style="margin-top:18px">Captured Quotes</div>
+    ${list.length?list.map(t=>`
     <div class="card" style="margin-bottom:10px">
-      <div style="font-size:14px;font-style:italic;margin-bottom:8px;color:#333">"${escHtml(t.quote)}"</div>
+      <div style="font-size:14px;font-style:italic;margin-bottom:8px">"${escHtml(t.quote)}"</div>
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
         <span style="font-weight:700;font-size:12px">${escHtml(t.name)}</span>
         <span style="font-size:11px;color:var(--mut)">${escHtml(t.co)}</span>
         ${(t.tags||[]).map(tag=>`<span class="tag tag-b">${tag}</span>`).join('')}
-        ${t.used?`<span class="tag tag-g">Used: ${escHtml(t.used)}</span>`:``}
+        ${t.used?`<span class="tag tag-g">Used: ${escHtml(t.used)}</span>`:`<span class="tag tag-a">Not used yet</span>`}
         <div style="margin-left:auto;display:flex;gap:6px">
           <button class="btn btn-ghost btn-sm" onclick="editTestModal('${t.id}')">Edit</button>
           <button class="btn btn-red btn-sm" onclick="deleteTest('${t.id}')">Delete</button>
         </div>
       </div>
     </div>`).join('')
-    :'<div class="empty">No testimonials yet. Add quotes from S1 attendees.</div>';
-  document.getElementById('topbar-actions').innerHTML=`<button class="btn btn-k btn-sm" onclick="addTestModal()">+ Add Testimonial</button>`;
+    :'<div class="empty">No quotes yet. Log the ones the team has already collected — that is the fastest win here.</div>'}`;
+  document.getElementById('topbar-actions').innerHTML=`
+    <button class="btn btn-ghost btn-sm" onclick="proofAddModal()">+ Add someone to ask</button>
+    <button class="btn btn-k btn-sm" onclick="addTestModal()">+ Log a testimonial</button>`;
+  proofCoachingCands();
 }
-function addTestModal(){showModal('Add Testimonial',`
+async function proofCoachingCands(){
+  const el=document.getElementById('proof-co-cands'); if(!el) return;
+  try{
+    const r=await coLoad(); if(!r||!r.ok) return;
+    const taken=proofTakenKeys();
+    const out=[];
+    (coData.people||[]).forEach(p=>{
+      if(taken.has(profileKey(p.name))) return;
+      const sess=coData.sessions.filter(s=>s.person_id===p.id);
+      if(sess.length<2) return;
+      const done=coData.actions.filter(a=>a.person_id===p.id&&a.status==='done').length;
+      out.push({name:p.name,co:p.company||'',reason:sess.length+' coaching sessions with Danny'+(done?' · '+done+' actions completed':'')});
+    });
+    if(!out.length) return;
+    const base=Object.keys(window.__proofCands).length;
+    el.innerHTML=out.map((c,i)=>{
+      const cid='k'+(base+i); window.__proofCands[cid]=c;
+      return proofRow(`<div style="font-weight:700;font-size:13px">${escHtml(c.name)}${c.co?` <span style="font-weight:400;color:var(--mut)">· ${escHtml(c.co)}</span>`:''}</div><div style="font-size:11px;color:var(--mut)">${escHtml(c.reason)}</div>`,
+        `<button class="btn btn-k btn-sm" onclick="proofCandAct('${cid}','draft')">Draft ask</button><button class="btn btn-ghost btn-sm" onclick="proofCandAct('${cid}','asked')">Mark asked</button><button class="btn btn-ghost btn-sm" onclick="proofCandAct('${cid}','skip')">Skip</button>`);
+    }).join('');
+  }catch(e){}
+}
+function addTestModal(prefName,prefCo,askId){
+  window.__proofAskId=askId||null;
+  showModal('Log Testimonial',`
   <div class="form-row"><label class="form-label">Quote</label><textarea class="form-textarea" id="nt-quote" placeholder="Their exact words…"></textarea></div>
-  <div class="form-row"><label class="form-label">Name</label><input class="form-input" id="nt-name"></div>
-  <div class="form-row"><label class="form-label">Company</label><input class="form-input" id="nt-co"></div>
+  <div class="form-row"><label class="form-label">Name</label><input class="form-input" id="nt-name" value="${escHtml(prefName||'')}"></div>
+  <div class="form-row"><label class="form-label">Company</label><input class="form-input" id="nt-co" value="${escHtml(prefCo||'')}"></div>
   <div class="form-row"><label class="form-label">Tags (comma separated)</label><input class="form-input" id="nt-tags" placeholder="e.g. community, value, energy"></div>
   <div class="form-row"><label class="form-label">Used in</label><input class="form-input" id="nt-used" placeholder="e.g. LinkedIn, Sales deck"></div>
 `,`<button class="btn btn-ghost" onclick="closeModal()">Cancel</button><button class="btn btn-k" onclick="saveTest()">Save</button>`);}
-function saveTest(){const q=document.getElementById('nt-quote').value.trim();if(!q)return;const list=ls.get('tuf_testimonials',[]);list.push({id:uid(),quote:q,name:document.getElementById('nt-name').value.trim(),co:document.getElementById('nt-co').value.trim(),tags:document.getElementById('nt-tags').value.split(',').map(t=>t.trim()).filter(Boolean),used:document.getElementById('nt-used').value.trim()});ls.set('tuf_testimonials',list);closeModal();renderTestimonials();}
+function saveTest(){
+  const q=document.getElementById('nt-quote').value.trim();if(!q)return;
+  const list=ls.get('tuf_testimonials',[]);
+  const rec={id:uid(),quote:q,name:document.getElementById('nt-name').value.trim(),co:document.getElementById('nt-co').value.trim(),tags:document.getElementById('nt-tags').value.split(',').map(t=>t.trim()).filter(Boolean),used:document.getElementById('nt-used').value.trim()};
+  list.push(rec);ls.set('tuf_testimonials',list);
+  if(window.__proofAskId){
+    const pl=proofGet(); const pr=pl.find(x=>x.id===window.__proofAskId);
+    if(pr){ pr.status='received'; pr.testimonialId=rec.id; pr.receivedAt=new Date().toISOString().slice(0,10); proofSave(pl); }
+    window.__proofAskId=null;
+  }
+  closeModal();renderTestimonials();
+}
 function editTestModal(id){const t=ls.get('tuf_testimonials',[]).find(x=>x.id===id);if(!t)return;showModal('Edit Testimonial',`
   <div class="form-row"><label class="form-label">Quote</label><textarea class="form-textarea" id="et-quote">${escHtml(t.quote)}</textarea></div>
   <div class="form-row"><label class="form-label">Name</label><input class="form-input" id="et-name" value="${escHtml(t.name)}"></div>
@@ -7366,19 +7513,59 @@ function renderRoles(){
 }
 
 // ═══ WEEKLY REVIEW ═══════════════════════════════════════════════════════════
+// ═══ WEEKLY REVIEW — Friday auto-pack (v59): the pack builds itself from the
+// week's real data; the team only writes wins, blockers and next week's focus.
+function wrWeekRange(){ const wk=weekKey(); const e=new Date(wk+'T00:00:00'); e.setDate(e.getDate()+6); const p=n=>String(n).padStart(2,'0'); return [wk,e.getFullYear()+'-'+p(e.getMonth()+1)+'-'+p(e.getDate())]; }
+function wrIn(d,wk,we){ d=String(d||'').slice(0,10); return !!d&&d>=wk&&d<=we; }
+function wrTitle(k){ return String(k||'').replace(/\b\w/g,c=>c.toUpperCase()); }
+function wrPackGroups(){
+  const [wk,we]=wrWeekRange();
+  const groups=[];
+  const pl=[];
+  const pros=ls.get('tuf_prospects',[])||[];
+  const won=pros.filter(p=>p.stage==='Won'&&wrIn(p.closedAt,wk,we));
+  const lost=pros.filter(p=>p.stage==='Lost'&&wrIn(p.closedAt,wk,we));
+  if(won.length) pl.push('Won: '+won.map(p=>p.name).join(', '));
+  if(lost.length) pl.push('Lost: '+lost.map(p=>p.name+(p.lostReason?' ('+p.lostReason+')':'')).join(', '));
+  const profs=ls.get('tuf_profiles',{})||{};
+  Object.entries(profs).forEach(([k,pr])=>{ (pr.journey||[]).forEach(j=>{ if(wrIn(j.date,wk,we)&&/^(Pipeline stage:|Sales Pipeline|Pipeline → Lost)/.test(j.entry||'')) pl.push(wrTitle(k)+' — '+j.entry); }); });
+  const dueNow=pros.filter(p=>prospectActive(p)&&prospectDue(p,new Date().toISOString().slice(0,10))).length;
+  pl.push(dueNow?dueNow+' follow-up'+(dueNow!==1?'s':'')+' due going into next week':'No follow-ups outstanding going into next week');
+  groups.push({h:'Pipeline',items:pl});
+  const inb=(ls.get('tuf_inbound_leads',[])||[]).filter(l=>wrIn(l.submittedAt,wk,we));
+  if(inb.length) groups.push({h:'Inbound',items:[inb.length+' new signup'+(inb.length!==1?'s':'')+': '+inb.map(l=>l.name||l.email||'').filter(Boolean).join(', ')]});
+  const sess=(ls.get('tuf_sessions',[])||[]).filter(x=>wrIn(x.date,wk,we));
+  const evs=(ls.get('tuf_events',[])||[]).filter(x=>wrIn(x.date,wk,we));
+  const del=[...sess.map(s=>(s.name||'Session')+' ('+fmtShort(s.date)+')'),...evs.map(e=>(e.name||e.title||'Event')+' ('+fmtShort(e.date)+')')];
+  if(del.length) groups.push({h:'Sessions and events this week',items:del});
+  return groups;
+}
+function wrGroupsHtml(groups){
+  return groups.map(g=>`<div style="margin-bottom:10px"><div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.8px;color:var(--mut);margin-bottom:4px">${escHtml(g.h)}</div>${g.items.map(i=>`<div style="font-size:12px;padding:3px 0;border-bottom:1px solid var(--bdr-2)">${escHtml(i)}</div>`).join('')}</div>`).join('');
+}
+function wrPackText(groups){ return groups.map(g=>g.h.toUpperCase()+'\n'+g.items.map(i=>'- '+i).join('\n')).join('\n\n'); }
+let wrPackCache='';
 function renderReviews(){
   const reviews=ls.get('tuf_reviews',[]);
-  const today=new Date().toISOString().slice(0,10);
   const thisWeek=reviews.find(r=>r.week===weekKey());
+  const groups=wrPackGroups();
+  wrPackCache=wrPackText(groups);
   document.getElementById('reviews-render').innerHTML=`
     <div class="grid-2">
       <div>
-        <div class="sec-hdr">This Week's Review</div>
+        <div class="sec-hdr">This Week's Pack</div>
+        <div class="card">
+          <div style="font-size:11px;color:var(--mut);margin-bottom:10px">Auto-built from the week's real data (week of ${fmtDate(weekKey())}). Nothing to fill in here.</div>
+          ${wrGroupsHtml(groups)}
+          <div id="wr-co"><div style="font-size:11px;color:var(--mut)">Loading coaching data…</div></div>
+          <button class="btn btn-ghost btn-sm" style="margin-top:8px" onclick="wrCopyPack()">Copy pack</button>
+        </div>
+        <div class="sec-hdr" style="margin-top:16px">Wins, Blockers, Focus</div>
         <div class="card">
           <div class="form-row"><label class="form-label">Wins</label><textarea class="form-textarea" id="wr-wins" placeholder="What went well this week?">${escHtml(thisWeek?.wins||'')}</textarea></div>
           <div class="form-row"><label class="form-label">Blockers</label><textarea class="form-textarea" id="wr-blockers" placeholder="What got in the way?">${escHtml(thisWeek?.blockers||'')}</textarea></div>
           <div class="form-row"><label class="form-label">Focus Next Week</label><textarea class="form-textarea" id="wr-focus" placeholder="Top 3 priorities for next week…">${escHtml(thisWeek?.focus||'')}</textarea></div>
-          <button class="btn btn-k" onclick="saveReview()">Save Weekly Review</button>
+          <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap"><button class="btn btn-k" onclick="saveReview()">Save Weekly Review</button><span style="font-size:11px;color:var(--mut)">Saving stores this week's pack alongside it.</span></div>
         </div>
       </div>
       <div>
@@ -7388,17 +7575,45 @@ function renderReviews(){
           ${r.wins?`<div style="font-size:11px;margin-bottom:4px"><strong>Wins:</strong> ${escHtml(r.wins)}</div>`:''}
           ${r.blockers?`<div style="font-size:11px;margin-bottom:4px"><strong>Blockers:</strong> ${escHtml(r.blockers)}</div>`:''}
           ${r.focus?`<div style="font-size:11px"><strong>Focus:</strong> ${escHtml(r.focus)}</div>`:''}
+          ${r.pack?`<details style="margin-top:6px"><summary style="cursor:pointer;font-size:11px;font-weight:700;color:var(--mut)">That week's pack</summary><pre style="font-family:inherit;font-size:11px;white-space:pre-wrap;color:var(--mut);margin-top:6px">${escHtml(r.pack)}</pre></details>`:''}
         </div>`).join(''):'<div class="empty">No reviews yet</div>'}
       </div>
     </div>
   `;
+  wrCoachingPatch();
+}
+async function wrCoachingPatch(){
+  const el=document.getElementById('wr-co'); if(!el) return;
+  try{
+    const r=await coLoad(); if(!r||!r.ok){ el.innerHTML=''; return; }
+    const [wk,we]=wrWeekRange();
+    const held=coData.sessions.filter(s=>wrIn(s.date,wk,we));
+    const sent=coData.sessions.filter(s=>wrIn(s.sent_at,wk,we));
+    const drafts=coData.sessions.filter(s=>s.status==='draft');
+    const setActs=coData.actions.filter(a=>held.some(s=>s.id===a.session_id)).length;
+    const stuck=coStuckActions();
+    const items=[];
+    items.push(held.length?held.length+' coaching session'+(held.length!==1?'s':'')+' held: '+held.map(s=>(coPerson(s.person_id)||{}).name||'').filter(Boolean).join(', '):'No coaching sessions this week');
+    if(setActs) items.push(setActs+' action'+(setActs!==1?'s':'')+' set in this week\'s sessions');
+    if(sent.length) items.push(sent.length+' recap'+(sent.length!==1?'s':'')+' sent to clients');
+    if(drafts.length) items.push(drafts.length+' recap'+(drafts.length!==1?'s':'')+' still awaiting approval');
+    if(stuck.length) items.push('Stuck actions (carried 2+ times): '+stuck.slice(0,4).map(a=>((coPerson(a.person_id)||{}).name||'')+': '+String(a.text||'').slice(0,32)).join(' · ')+(stuck.length>4?'…':''));
+    const g=[{h:'Coaching',items}];
+    el.innerHTML=wrGroupsHtml(g);
+    wrPackCache+='\n\n'+wrPackText(g);
+  }catch(e){ el.innerHTML=''; }
+}
+function wrCopyPack(){
+  const t='TUF WEEKLY PACK — week of '+fmtDate(weekKey())+'\n\n'+wrPackCache;
+  if(navigator.clipboard) navigator.clipboard.writeText(t);
+  addNotif('Weekly pack copied');
 }
 function saveReview(){
   const reviews=ls.get('tuf_reviews',[]);const wk=weekKey();
   const i=reviews.findIndex(r=>r.week===wk);
-  const entry={week:wk,wins:document.getElementById('wr-wins').value.trim(),blockers:document.getElementById('wr-blockers').value.trim(),focus:document.getElementById('wr-focus').value.trim(),saved:new Date().toISOString()};
+  const entry={week:wk,wins:document.getElementById('wr-wins').value.trim(),blockers:document.getElementById('wr-blockers').value.trim(),focus:document.getElementById('wr-focus').value.trim(),pack:wrPackCache,saved:new Date().toISOString()};
   if(i>=0)reviews[i]=entry;else reviews.push(entry);
-  ls.set('tuf_reviews',reviews);alert('Review saved.');
+  ls.set('tuf_reviews',reviews);alert('Review saved.');renderReviews();
 }
 
 // ═══ KNOWLEDGE BASE ═══════════════════════════════════════════════════════════
@@ -8231,6 +8446,7 @@ let emailTab = 'list';
 let emailFilter = 'All';
 
 function renderEmailList(){
+  try{ syncNetworkToEmailList(true); }catch(e){}  // Network feeds the list automatically
   const subs = ls.get('tuf_emaillist',[]);
   const active = subs.filter(s=>s.status==='Active');
   const newsletters = ls.get('tuf_newsletters',[]);
@@ -8247,6 +8463,7 @@ function renderEmailList(){
   else renderNewsletters();
   document.getElementById('topbar-actions').innerHTML=`
     <button class="btn btn-ghost btn-sm" onclick="importEmailModal()">Import CSV</button>
+    <button class="btn btn-ghost btn-sm" onclick="exportEmailCSV()">Export CSV</button>
     <button class="btn btn-k btn-sm" onclick="addSubscriberModal()">+ Add Subscriber</button>`;
 }
 
@@ -8335,7 +8552,7 @@ function syncBoardroomToEmailList(){
   renderEmailList();
 }
 // Network is the mailing list source: pull everyone in the Network segment with an email address.
-function syncNetworkToEmailList(){
+function syncNetworkToEmailList(quiet){
   const ppl=peopleAll().filter(p=>personSegment(p)==='network'&&(p.email||'').trim());
   const subs=ls.get('tuf_emaillist',[]);
   const haveP=new Set(subs.map(x=>x.personId).filter(Boolean));
@@ -8347,9 +8564,24 @@ function syncNetworkToEmailList(){
     subs.push({id:uid(),firstName:(p.name||'').split(' ')[0],lastName:(p.name||'').split(' ').slice(1).join(' '),email:p.email.trim(),source:'Network',tags:['Network'],status:'Active',addedDate:new Date().toISOString().slice(0,10),personId:p.id,notes:p.co||''});
     haveP.add(p.id); haveE.add(em); added++;
   });
-  ls.set('tuf_emaillist',subs);
-  alert(added>0?`${added} Network ${added!==1?'people':'person'} added to the email list.`:'Everyone in Network with an email is already on the list.');
-  renderEmailList();
+  if(added) ls.set('tuf_emaillist',subs);
+  if(!quiet){
+    alert(added>0?`${added} Network ${added!==1?'people':'person'} added to the email list.`:'Everyone in Network with an email is already on the list.');
+    renderEmailList();
+  }
+  return added;
+}
+// One-click export of the current view (respects the active filter).
+function exportEmailCSV(){
+  const subs=ls.get('tuf_emaillist',[]);
+  const rows=emailFilter==='All'?subs:subs.filter(x=>x.status===emailFilter||(x.tags||[]).includes(emailFilter));
+  const esc=v=>{v=String(v==null?'':v);return '"'+v.replace(/"/g,'""')+'"';};
+  const csv=[['First Name','Last Name','Email','Company / Notes','Source','Tags','Status','Added'].map(esc).join(',')]
+    .concat(rows.map(x=>[x.firstName,x.lastName,x.email,x.notes,x.source,(x.tags||[]).join(' · '),x.status,x.addedDate||''].map(esc).join(','))).join('\r\n');
+  const blob=new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='tuf-email-list-'+new Date().toISOString().slice(0,10)+'.csv';
+  document.body.appendChild(a); a.click(); a.remove();
+  addNotif('Email list exported: '+rows.length+' row'+(rows.length!==1?'s':''));
 }
 
 function renderNewsletters(){
