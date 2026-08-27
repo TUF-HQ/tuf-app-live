@@ -6975,7 +6975,7 @@ function updateIP(id){const list=ls.get('tuf_ip',[]);const i=list.findIndex(x=>x
 function deleteIP(id){if(!confirm('Delete?'))return;ls.set('tuf_ip',ls.get('tuf_ip',[]).filter(x=>x.id!==id));closeModal();renderIP();}
 
 // ═══ FILES ═══════════════════════════════════════════════════════════════════
-const FILE_CATS=['Boardroom Reports','Sales','Boardroom','Events','Content','Finance','Operations','Growth Plan','Other'];
+const FILE_CATS=['Founder to CEO','Boardroom Reports','Sales','Boardroom','Events','Content','Finance','Operations','Growth Plan','Other'];
 const DOCS_BUCKET='tuf-docs';
 function docType(name){ const e=(String(name||'').split('.').pop()||'').toLowerCase(); if(e==='pdf')return'pdf'; if(['ppt','pptx','key'].includes(e))return'deck'; if(['doc','docx'].includes(e))return'doc'; if(['xls','xlsx','csv'].includes(e))return'sheet'; if(['png','jpg','jpeg','gif','webp','heic'].includes(e))return'image'; return'other'; }
 function docIcon(t){ return t==='pdf'?'':t==='deck'?'':t==='doc'?'':t==='sheet'?'':t==='image'?'':''; }
