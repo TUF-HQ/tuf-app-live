@@ -1437,6 +1437,7 @@ function initApp(user){
   crmSegmentMigrate();
   crmSegmentFixV2();
   unitaskMigrate();
+  setTimeout(()=>{ try{ csuiteAutoRun(); }catch(e){} },8000);
   updateInboundBadge();
   renderHome();
   renderCapSidebar();
@@ -6040,7 +6041,7 @@ function renderSessions(){
     return `<div class="card" style="margin-bottom:8px;border-left:4px solid ${complete?'var(--grn)':'var(--y)'}">
       <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
         <div style="flex:1;cursor:pointer" onclick="sessOpen('${s.id}')"><div style="font-family:'Montserrat',sans-serif;font-size:15px;font-weight:700">${escHtml(s.name||('Session '+(i+1)))}</div><div style="font-size:12px;color:var(--mut)">${s.date?fmtDate(s.date):'No date set'}</div></div>
-        <span class="tag ${complete?'tag-g':'tag-a'}">${complete?'Complete':'Upcoming'}</span>
+        <span class="tag ${complete?'tag-g':'tag-a'}">${complete?'Complete':(s.date&&s.date<new Date().toISOString().slice(0,10)?'Date passed':'Upcoming')}</span>
         <button class="btn btn-ghost btn-sm" onclick="sessDelete('${s.id}')" title="Delete session">✕</button>
       </div></div>`;
   }).join('') || '<div class="empty">No sessions yet. Create your first session plan.</div>';
@@ -10685,6 +10686,12 @@ function buildHQContext(){
   const privMRR=members.filter(m=>m.type==='existing_client'&&m.status==='active').reduce((a,c)=>a+(c.clientFee||0),0);
   const brMRR=boardroomMRRof(brList); const totalMRR=brMRR+privMRR;
   s+=`\n\nREVENUE: Boardroom MRR £${brMRR} (${brCount} members), private MRR £${privMRR}, total MRR £${totalMRR}.`;
+  const subs=ls.get('tuf_emaillist',[])||[];
+  if(subs.length){
+    const act=subs.filter(x=>x.status==='Active');
+    const bySrc={}; act.forEach(x=>{const k=x.source||'Other'; bySrc[k]=(bySrc[k]||0)+1;});
+    s+=`\n\nEMAIL LIST: ${act.length} active subscribers of ${subs.length} total. By source: `+Object.entries(bySrc).map(([k,v])=>k+' '+v).join(', ')+'.';
+  }
   const tst=ls.get('tuf_testimonials',[])||[];
   if(tst.length) s+=`\n\nTESTIMONIALS (${tst.length}):\n`+tst.slice(0,12).map(t=>`- ${t.name||'?'}${t.co?' ('+t.co+')':''}: "${(t.quote||'').slice(0,160)}"`).join('\n');
   const pod=ls.get('tuf_podcast',[])||[];
@@ -11325,7 +11332,7 @@ function csuiteDeptContext(){
 }
 
 function csuiteSystemPrompt(role){
-  const common=`You are the AI ${CSUITE_ROLES[role].title} (${role}) of The Ultimate Founder (TUF), a structured programme and community for founder led SMEs founded by Danny Wicks. The team: Danny (founder, the expert), Joe (design and content), Jasper (events and network), James (systems, client management, AI), Chloe (PA). Commercial focus: UF Boardroom at £1,000/month + VAT, target 20 members. UF Network events (Padel, Golf, Dinners) are the free top of funnel. Five stage Founder Journey: Build, Establish, Scale, Multiply, Legacy.
+  const common=`You are the AI ${CSUITE_ROLES[role].title} (${role}) of The Ultimate Founder (TUF), a structured programme and community for founder led SMEs founded by Danny Wicks. The team: Danny (founder, the expert), Joe (design and content), Jasper (events and network), James (systems, client management, AI), Chloe (PA). Commercial focus: the Boardroom (new members £2,250 plus VAT a month on a twelve month term, existing members stay on current terms, capped at twenty member businesses) plus private 121 advisory clients. The category is The Founder CEO; the full positioning block is in the live data below and everything you write must sit inside it. UF Network events (Padel, Golf, Dinners) are the free top of funnel.
 
 Your remit: ${CSUITE_ROLES[role].remit}
 
@@ -11353,31 +11360,61 @@ function csuiteUserPrompt(role){
   return s;
 }
 
+// Core per-role runner, shared by the button and the Monday auto-run.
+async function csuiteRunRole(role,by){
+  const data=await claudeCall({model:'claude-sonnet-4-6',max_tokens:3000,system:csuiteSystemPrompt(role),messages:[{role:'user',content:csuiteUserPrompt(role)}]});
+  let text=data.content?.[0]?.text||'';
+  text=text.replace(/```json/gi,'').replace(/```/g,'').trim();
+  const start=text.indexOf('{'); const end=text.lastIndexOf('}');
+  if(start<0||end<0) throw new Error('Could not read the review. Try again.');
+  const report=JSON.parse(text.slice(start,end+1));
+  const all=csuiteReports();
+  if(!all[role]) all[role]=[];
+  all[role].unshift({ts:new Date().toISOString(),by:by||CURRENT_USER||'Team',report});
+  all[role]=all[role].slice(0,8);
+  ls.set('tuf_csuite',all);
+  return report;
+}
 async function runCSuiteReview(){
   const role=csuiteRole;
-  const apiKey=getApiKey();
-  if(!apiKey){ alert('API key not set. Go to Meeting Notes → Settings to add it.'); return; }
   const btn=document.getElementById('cs-run'); if(btn){ btn.disabled=true; btn.textContent='Reviewing…'; }
   const status=document.getElementById('cs-status');
-  if(status) status.innerHTML='<span style="color:var(--amb)">⏳ The '+role+' is reviewing the business…</span>';
+  if(status) status.innerHTML='<span style="color:var(--amb)">The '+role+' is reviewing the business…</span>';
   try{
-    const data=await claudeCall({model:'claude-sonnet-4-6',max_tokens:3000,system:csuiteSystemPrompt(role),messages:[{role:'user',content:csuiteUserPrompt(role)}]});
-    let text=data.content?.[0]?.text||'';
-    text=text.replace(/```json/gi,'').replace(/```/g,'').trim();
-    const start=text.indexOf('{'); const end=text.lastIndexOf('}');
-    if(start<0||end<0) throw new Error('Could not read the review. Try again.');
-    const report=JSON.parse(text.slice(start,end+1));
-    const all=csuiteReports();
-    if(!all[role]) all[role]=[];
-    all[role].unshift({ts:new Date().toISOString(),by:CURRENT_USER||'Team',report});
-    all[role]=all[role].slice(0,8);
-    ls.set('tuf_csuite',all);
+    await csuiteRunRole(role);
     addNotif(role+' weekly review completed');
     renderCSuite();
   }catch(err){
     if(status) status.innerHTML='<span style="color:var(--red)">'+escHtml(err.message||'Something went wrong')+'</span>';
     if(btn){ btn.disabled=false; btn.textContent='Run weekly review'; }
   }
+}
+// Monday auto-run (v66): the first login of each week runs all four reviews in
+// the background, department heads first so the CEO can synthesise them.
+// Ledger tuf_csuite_autorun (weekKey) is set BEFORE running so two teammates
+// logging in together do not both trigger it. Sequential with gaps + one retry
+// per role, respecting the Sonnet per-minute input limit.
+const CS_AUTO_GAP_MS=25000;
+function csuiteSleep(ms){ return new Promise(r=>setTimeout(r,ms)); }
+async function csuiteAutoRun(){
+  try{
+    if(!sbLoadOK||typeof sb==='undefined'||!sb) return;
+    const wk=weekKey();
+    if(ls.str('tuf_csuite_autorun')===wk) return;
+    ls.setStr('tuf_csuite_autorun',wk);
+    addNotif('C-Suite weekly reviews are running in the background');
+    const roles=['CMO','CFO','COO','CEO'];
+    let done=0;
+    for(const role of roles){
+      for(let attempt=0;attempt<2;attempt++){
+        try{ await csuiteRunRole(role,'Auto (weekly)'); done++; break; }
+        catch(e){ if(attempt===0&&e&&e.isRateLimit){ await csuiteSleep(65000); continue; } console.warn('C-Suite auto-run '+role+' failed',e); break; }
+      }
+      if(role!=='CEO') await csuiteSleep(CS_AUTO_GAP_MS);
+    }
+    addNotif('C-Suite weekly reviews finished: '+done+' of 4 reports filed');
+    const a=document.querySelector('.page.active'); if(a&&a.id==='page-csuite') renderCSuite();
+  }catch(e){ console.warn('csuiteAutoRun failed',e); }
 }
 
 function csuiteRagTag(rag){
