@@ -1682,6 +1682,25 @@ function seedDefaultData(){
       {id:'ip5',name:'4 Box Model (Guy Warren)',desc:"Guest's leadership framework from Boardroom S1. 9.1/10 — standout session.",owner:'Guy Warren',status:'Licensed',link:''},
     ]);
   }
+  // v61: the real Founder to CEO IP from Playbook v3.1 (one-shot, additive, editable)
+  if(sbLoadOK && !ls.str('tuf_ip_fceo_seeded')){
+    const list=ls.get('tuf_ip',[])||[];
+    [
+      {id:'ipf1',name:'The Founder CEO (category)',desc:'The category and identity TUF owns. Think like a founder. Operate like a CEO. Recognition: your business has outgrown the way you run it. Outcome: build a business that works for you.',status:'Client-Ready'},
+      {id:'ipf2',name:'The Founder CEO Transition Sequence',desc:'Danny\'s method in order: 0 the person, 1 strategy and confidence in direction, 2 structure aligned to strategy, 3 alignment and accountability, 4 build it out (people, process, rhythm, numbers), 5 the founder\'s own shift. Strategy before structure. Roles derived from strategy.',status:'Client-Ready'},
+      {id:'ipf3',name:'Three Phases of the Person',desc:'Founder, Founder CEO Transition, Founder CEO. Overlaid on the Five Stages of the business; the mismatch (mature business, Phase one founder) is the brick wall and the core client.',status:'Client-Ready'},
+      {id:'ipf4',name:'The Founder CEO Transition Scorecard',desc:'Ten dimensions scored 1 to 5 across the person, the business and the life; founder dependency weighted double; two open questions. Phases: to 2.4 Founder, 2.5 to 3.9 Transition, 4.0+ Founder CEO. The front door and the quarterly measure.',status:'Internal'},
+      {id:'ipf5',name:'The First 90 Days (chaos to Stability)',desc:'Day 1 welcome, dates, Fact Find + Scorecard due in 7 days. Strategy Session inside the first month producing the one page Founder CEO Transition Plan. First Day and Implementation Session as they fall. Day 90 Review with Scorecard retake.',status:'Client-Ready'},
+      {id:'ipf6',name:'The Boardroom Standard',desc:'Held by the members for each other: show up, prepare (Biggest Challenge before every Day, tracker 48 hours before every Implementation Session), commit and deliver, honesty, no selling in the room, confidentiality. People who do not prepare do not last.',status:'Client-Ready'},
+      {id:'ipf7',name:'The Guest Charter',desc:'Every Boardroom Day guest confirms it beforehand: room stays in the room, no selling, no taking contacts, contribute not observe, tell the truth, be present, no recording. Membership conversations happen with Danny only.',status:'Client-Ready'},
+      {id:'ipf8',name:'The Four Destinations',desc:'The transition never prescribes an end state. Lifestyle business, larger organisation you keep leading, built for exit, or an appointed CEO with the founder as owner. All four are wins; the transition comes first.',status:'Client-Ready'},
+      {id:'ipf9',name:'The Phrase Bank',desc:'The lines that belong to the brand: everything still comes back to you; when everyone is accountable to you, nobody is leading; you built it on grit, it will not scale on grit; the room is the method; accountability rather than control; from chaos to stability.',status:'Internal'},
+      {id:'ipf10',name:'Proof Rules',desc:'Named clients, role change story first, growth in multiples only, never absolute revenue, never a guarantee. Ollie 2x in 12 months, Viki 2x, Simon 2x, Jack 4x.',status:'Internal'},
+    ].forEach(e=>{ if(!list.some(x=>x.id===e.id)) list.push({...e,owner:'Danny',link:''}); });
+    ls.set('tuf_ip',list);
+    ls.setStr('tuf_ip_fceo_seeded','1');
+    addNotif('IP Register updated with the Founder to CEO frameworks from Playbook v3.1');
+  }
 }
 
 // ═══ NAVIGATION ══════════════════════════════════════════════════════════════
@@ -3700,7 +3719,7 @@ async function coPrepBrief(pid){
   coPrepShow(p, det.text+'SUGGESTED ANGLES\n· Thinking…');
   let angles='';
   try{
-    const prompt="You prepare Danny Wicks, business coach at The Ultimate Founder, for a coaching session. Based on this context, write exactly 3 short suggested opening angles or questions for the session, in Danny's warm direct style. No preamble, no numbering, one per line starting with '· '. Never use hyphens or dashes.\n\n"+det.text+(det.last&&det.last.recap_md?'\n\nFULL LAST RECAP:\n'+det.last.recap_md.slice(0,3000):'');
+    const prompt="You prepare Danny Wicks, Founder CEO coach at The Ultimate Founder, for a coaching session. Frame through the Founder to CEO lens: every client is somewhere in the sequence person, strategy, structure, accountability, rhythm, identity, and the goal is a business that works for them. Based on this context, write exactly 3 short suggested opening angles or questions for the session, in Danny's warm direct style. No preamble, no numbering, one per line starting with '· '. Never use hyphens or dashes.\n\n"+det.text+(det.last&&det.last.recap_md?'\n\nFULL LAST RECAP:\n'+det.last.recap_md.slice(0,3000):'');
     const data=await claudeCall({model:'claude-haiku-4-5-20251001',max_tokens:300,messages:[{role:'user',content:prompt}]});
     angles=((data.content&&data.content[0]&&data.content[0].text)||'').trim();
   }catch(e){
@@ -3827,6 +3846,9 @@ const BRIEF_TOPICS=[
   {k:'pipeline',label:'Pipeline follow ups and pending payments',def:['Danny','James']},
   {k:'clients',label:'Client care, renewals and guest trials',def:['Danny','Joe']},
 ];
+// Blended Boardroom target: what current members actually pay plus open seats
+// at the new member price (£2,250, Playbook v3.1). Existing members unchanged.
+function brxTargetMRR(members){ const cur=boardroomMRRof(members); return cur+Math.max(0,20-members.length)*2250; }
 function briefPrefs(){ const all=ls.get('tuf_brief_prefs',{})||{}; return all[CURRENT_USER]||{}; }
 function briefShow(k){ const p=briefPrefs(); if(typeof p[k]==='boolean') return p[k]; const t=BRIEF_TOPICS.find(x=>x.k===k); return t?t.def.includes(CURRENT_USER):true; }
 function briefOwnerMine(o){ const s=String(o||''); if(!s) return true; if(/team|review|all|everyone/i.test(s)) return true; return !!CURRENT_USER && s.toLowerCase().indexOf(CURRENT_USER.toLowerCase())>=0; }
@@ -3867,10 +3889,10 @@ function renderHome(){
   const s2=nextSess?daysUntil(nextSess.date):null;
   const tiles=[];
   if(briefShow('money')){
-    tiles.push(`<div class="ns-box key" onclick="goPage('boardroom')" title="Open Boardroom"><div class="ns-l">Boardroom Members</div><div class="ns-n">${bCount}/20</div><div class="ns-t">Target: 20 × £1,000/mo</div><div class="ns-bar"><div class="ns-fill" style="width:${Math.min(100,(bCount/20)*100)}%"></div></div></div>`);
-    tiles.push(`<div class="ns-box" onclick="goPage('boardroom')" title="Open Boardroom"><div class="ns-l">Boardroom MRR</div><div class="ns-n">£${boardroomMRR.toLocaleString()}</div><div class="ns-t">Target: £20,000</div><div class="ns-bar"><div class="ns-fill warn" style="width:${Math.min(100,(boardroomMRR/20000)*100)}%"></div></div></div>`);
+    tiles.push(`<div class="ns-box key" onclick="goPage('boardroom')" title="Open Boardroom"><div class="ns-l">Boardroom Members</div><div class="ns-n">${bCount}/20</div><div class="ns-t">Cap: 20 member businesses</div><div class="ns-bar"><div class="ns-fill" style="width:${Math.min(100,(bCount/20)*100)}%"></div></div></div>`);
+    tiles.push(`<div class="ns-box" onclick="goPage('boardroom')" title="Open Boardroom"><div class="ns-l">Boardroom MRR</div><div class="ns-n">£${boardroomMRR.toLocaleString()}</div><div class="ns-t">Target £${brxTargetMRR(boardroomMembers).toLocaleString()} at cap</div><div class="ns-bar"><div class="ns-fill warn" style="width:${Math.min(100,(boardroomMRR/Math.max(1,brxTargetMRR(boardroomMembers)))*100)}%"></div></div></div>`);
     tiles.push(`<div class="ns-box" onclick="goPage('members')" title="Open Existing Clients"><div class="ns-l">Private Client MRR</div><div class="ns-n">£${privateMRR.toLocaleString()}</div><div class="ns-t">${existingClients.length} client${existingClients.length!==1?'s':''}</div></div>`);
-    tiles.push(`<div class="ns-box key" onclick="goPage('kpis')" title="Open KPIs"><div class="ns-l">Total MRR</div><div class="ns-n">£${totalMRR.toLocaleString()}</div><div class="ns-t">Boardroom + Private</div><div class="ns-bar"><div class="ns-fill" style="width:${Math.min(100,(totalMRR/20000)*100)}%"></div></div></div>`);
+    tiles.push(`<div class="ns-box key" onclick="goPage('kpis')" title="Open KPIs"><div class="ns-l">Total MRR</div><div class="ns-n">£${totalMRR.toLocaleString()}</div><div class="ns-t">Boardroom + Private</div><div class="ns-bar"><div class="ns-fill" style="width:${Math.min(100,(totalMRR/Math.max(1,brxTargetMRR(boardroomMembers)+privateMRR))*100)}%"></div></div></div>`);
   }
   if(briefShow('padel')) tiles.push(`<div class="ns-box" onclick="goPage('padel')" title="Open Padel Event"><div class="ns-l">Days to Padel</div><div class="ns-n" style="color:${padel!=null&&padel<=7?'var(--red)':'var(--amb)'}">${padel==null?'—':(padel===0?'TODAY':(padel>0?padel:'PAST'))}</div><div class="ns-t">${nextPadelEv?fmtDate(nextPadelEv.date):'No padel event booked'}</div></div>`);
   if(briefShow('session')) tiles.push(`<div class="ns-box" onclick="goPage('boardroom')" title="Open the Boardroom calendar"><div class="ns-l">${nextSess?'Days to '+escHtml(nextSess.name):'Next session'}</div><div class="ns-n" style="color:${s2!=null&&s2<=7?'var(--red)':'var(--amb)'}">${s2==null?'—':(s2===0?'TODAY':s2)}</div><div class="ns-t">${nextSess?fmtDate(nextSess.date)+(nextSess.type==='Implementation Session'?' · online':''):'None booked'}</div></div>`);
@@ -5698,7 +5720,7 @@ async function proofDraftAsk(id){
   try{
     let data=null;
     for(let attempt=0;attempt<2&&!data;attempt++){
-      try{ data=await claudeCall({model:'claude-haiku-4-5-20251001',max_tokens:300,messages:[{role:'user',content:`Write a short WhatsApp message from Danny, founder of The Ultimate Founder (a boardroom and coaching community for ambitious founders), to ${r.name}${r.co?' of '+r.co:''}, asking for a short written testimonial. Context on why now: ${r.reason||'a valued member doing great work'}. Danny's voice: direct, warm, ambitious, energetic, jargon free. Rules: 60 to 90 words, greet by first name (${first}), one clear ask (two or three sentences in their own words on what TUF has done for them and their business), mention it helps other founders, never use hyphens or double dashes, no emojis, no sign off. Return only the message text.`}]}); }
+      try{ data=await claudeCall({model:'claude-haiku-4-5-20251001',max_tokens:300,messages:[{role:'user',content:`Write a short WhatsApp message from Danny, founder of The Ultimate Founder (a boardroom and coaching community for ambitious founders), to ${r.name}${r.co?' of '+r.co:''}, asking for a short written testimonial. Context on why now: ${r.reason||'a valued member doing great work'}. Danny's voice: direct, warm, ambitious, energetic, jargon free. Rules: 60 to 90 words, greet by first name (${first}), one clear ask (two or three sentences in their own words on the role change: what they used to carry themselves and what their team owns now, plus results as multiples or percentages only, never absolute revenue), mention it helps other founders, never use hyphens or double dashes, no emojis, no sign off. Return only the message text.`}]}); }
       catch(e){ if(attempt===1) throw e; await new Promise(r2=>setTimeout(r2,1500)); }
     }
     const t=data&&data.content&&data.content[0]&&data.content[0].text; if(t) text=t.trim();
@@ -10108,7 +10130,7 @@ function renderKPIs(){
       ${stat(boardroom.length+'/20','Boardroom Members','y')}
       ${stat('£'+totalMRR.toLocaleString(),'Total MRR','y')}
       ${stat(priv.length,'Private 121 Clients · £'+privMRR.toLocaleString(),'')}
-      ${stat(((totalMRR/20000)*100).toFixed(0)+'%','To £20k MRR Target','g')}
+      ${stat(((totalMRR/Math.max(1,brxTargetMRR(boardroom)+privMRR))*100).toFixed(0)+'%','To Target At Cap','g')}
     </div>
     <div class="sec-hdr">Pipeline</div>
     <div class="grid-4" style="margin-bottom:20px">
@@ -10566,6 +10588,18 @@ function hqFormat(t){
   return h;
 }
 
+// ═══ FOUNDER TO CEO POSITIONING (Playbook v3.1, 25 Aug 2026) ═════════════════
+// The single reference for every AI surface (Ask HQ, C-Suite, coaching prep).
+const TUF_POSITIONING=`TUF POSITIONING (Founder to CEO Playbook v3.1, 25 Aug 2026, the single reference):
+CATEGORY: The Founder CEO. Defining idea: "Think like a founder. Operate like a CEO." Journey: Founder to CEO. Recognition line: "Your business has outgrown the way you run it." Outcome line: "Build a business that works for you." Retired language, never use: "works without you", "escape from".
+THREE PHASES OF THE PERSON: Founder, Founder CEO Transition, Founder CEO (takes about a year). Founder Journey of the business: 1 Build/Hustler, 2 Establish/Operator, 3 Scale/Leader (the core client, in Transition), 4 Multiply/Owner, 5 Legacy/Architect. A mature business with a Phase one founder is the brick wall.
+THE TRANSITION SEQUENCE (Danny's method, in order): 0 the person (the intended life shapes the strategy), 1 strategy and confidence in direction, 2 structure aligned to strategy, 3 alignment and accountability, 4 build it out (people, process, systems, rhythm, numbers), 5 the founder's own shift (identity). Strategy before structure. Roles derived from strategy.
+IDEAL CLIENT: founder of an established, growing business (proxy £1m to £25m but position on the STATE, never the number), first managers in place, no senior leadership team yet, everything routes through the founder. The buying signal in their words: "Everything still comes back to me." Not for: bulldozers, too early, course or networking seekers.
+THE BOARDROOM (the vehicle): 6 Boardroom Days + 6 Implementation Sessions a year, an early Strategy Session, Quarterly CEO Reviews with Danny, the Founder CEO Transition Scorecard at joining, 90 days and quarterly, WhatsApp group between sessions. First 90 days: from chaos to Stability. Months 3 to 12: Structure. Year two on: Scale. New members £2,250 plus VAT a month, twelve month minimum, capped at twenty member businesses, apply to join. EXISTING MEMBERS STAY ON CURRENT TERMS. The standard is held by the members: prepare (Biggest Challenge before Days, tracker 48 hours before Implementation Sessions), commit in the room, deliver, honesty, no selling in the room.
+SCORECARD DIMENSIONS (1 to 5 each): strategy and focus, confidence in direction, structure and roles, leadership ownership, rhythm and numbers, founder dependency (weighted double), how you lead and decide, personal capacity, life and relationships, freedom and choice. Phases: 1.0 to 2.4 Founder, 2.5 to 3.9 Transition, 4.0 to 5.0 Founder CEO.
+PROOF RULES: named clients, role change story first, growth as multiples only (Ollie, Marchon 2x in 12 months; Viki, Rave Coffee 2x; Simon, Renewell Water 2x; Jack, WillU 4x; Andrew Rhodes: best boardroom of a 50 year career). Never absolute client revenue. Never guarantee growth.
+MARKET: roughly 20,000 to 30,000 UK founders match the profile. Competitors sell a room (Vistage, EO, Helm), a curriculum (10KSB, Cranfield), a coach or system (EOS, Scaling Up), or an online mastermind. Nobody else sells the Founder CEO transition as one integrated twelve month journey with a standard the room holds. Priced above UK peer boards, below EOS or Scaling Up.
+VOICE: direct, calm, experienced. Recognition first, identity second, outcome third. Practical words: decisions, ownership, structure, headspace, rhythm. Never hustle cliches, curriculum words (module, programme, graduate), "small business owners", absolute client revenue, em dashes or hyphens.`;
 function buildHQContext(){
   const today=new Date().toISOString().slice(0,10);
   const tasks=(ls.get('tuf_tasks',[])||[]).filter(utIsBoard);
@@ -10580,6 +10614,7 @@ function buildHQContext(){
   const tline=t=>`- [${t.owner||'?'}] ${t.title} (${t.priority||'-'}, due ${t.dueDate||'none'}, ${t.status||'To Do'})`;
   let s='';
   s+=`TODAY: ${today}. LOGGED-IN USER: ${CURRENT_USER||'unknown'}.\n\n`;
+  s+=TUF_POSITIONING+'\n\n';
   s+=`OPEN TASKS (${open.length}, ${overdue.length} overdue):\n`+open.slice(0,45).map(tline).join('\n')+'\n\n';
   s+=`CLIENTS/MEMBERS (${members.length}):\n`+members.slice(0,40).map(m=>`- ${m.name||'?'}${m.company?' ('+m.company+')':''} | ${m.type||'member'} | status ${m.status||'-'}${m.fee?' | £'+m.fee:''}`).join('\n')+'\n\n';
   s+=`SALES PIPELINE PROSPECTS (${prospects.length}):\n`+prospects.slice(0,40).map(p=>`- ${p.name||'?'}${p.company?' ('+p.company+')':''} | stage ${p.stage||'-'} | ${p.temp||'-'}${p.score?' | score '+p.score:''}`).join('\n')+'\n\n';
