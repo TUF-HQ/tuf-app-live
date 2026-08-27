@@ -11325,7 +11325,7 @@ function csuiteDeptContext(){
     if(!e){ s+=`\n${role}: no report yet.\n`; return; }
     any=true;
     const r=e.report||{};
-    s+=`\n=== ${role} report (${fmtDate(e.ts)}) ===\nRAG: ${r.rag||'-'}. ${r.headline||''}\nObservations: ${(r.observations||[]).join(' | ')}\nRecommendations: ${(r.recommendations||[]).map(x=>x.title+': '+(x.detail||'')).join(' | ')}\nGaps: ${(r.gaps||[]).map(g=>g.area+': '+g.gap).join(' | ')}\n`;
+    s+=(`\n=== ${role} report (${fmtDate(e.ts)}) ===\nRAG: ${r.rag||'-'}. ${r.headline||''}\nObservations: ${(r.observations||[]).join(' | ')}\nRecommendations: ${(r.recommendations||[]).map(x=>x.title+': '+(x.detail||'')).join(' | ')}\nGaps: ${(r.gaps||[]).map(g=>g.area+': '+g.gap).join(' | ')}\n`).slice(0,2200);
   });
   if(!any) s+='\nNote: no department reports exist yet, so synthesise directly from the raw business data instead and say you have done so.';
   return s;
@@ -11350,9 +11350,12 @@ Give exactly 3 recommendations, prioritised 1 to 3, and 2 to 4 gaps.`;
 function csuiteUserPrompt(role){
   let s=`Today is ${new Date().toISOString().slice(0,10)}. Here is the live TUF HQ data for your weekly ${role} review.\n\n`;
   s+=buildHQContext()+'\n\n';
-  s+=csuiteCapMapContext()+'\n\n';
-  s+=csuiteMeetingContext()+'\n\n';
-  if(role==='CEO') s+=csuiteDeptContext()+'\n\n';
+  if(role!=='CEO'){
+    s+=csuiteCapMapContext()+'\n\n';
+    s+=csuiteMeetingContext()+'\n\n';
+  } else {
+    s+=csuiteDeptContext()+'\n\n';
+  }
   if(role==='CFO') s+='REMINDER: You have no access to live financial data (bank, Stripe, accounts). The budget and MRR figures above are internal planning models. Review the LOGIC of commercial plans, capability investment and resource allocation. Flag where decisions are being made without the financial information a CFO would expect.\n\n';
   if(role==='CMO') s+='Focus on: content calendar consistency and quality mix, social stats trajectory, podcast pipeline, testimonials and social proof, email list, event marketing, lead generation into the Boardroom, and brand consistency.\n\n';
   if(role==='COO') s+='Focus on: task discipline (overdue and unowned work), onboarding delivery, session planning standards, event run processes, capability map reds and ambers, roles and responsibilities coverage, and weekly review cadence.\n\n';
@@ -11410,7 +11413,7 @@ async function csuiteAutoRun(){
         try{ await csuiteRunRole(role,'Auto (weekly)'); done++; break; }
         catch(e){ if(attempt===0&&e&&e.isRateLimit){ await csuiteSleep(65000); continue; } console.warn('C-Suite auto-run '+role+' failed',e); break; }
       }
-      if(role!=='CEO') await csuiteSleep(CS_AUTO_GAP_MS);
+      await csuiteSleep(role==='COO'?65000:CS_AUTO_GAP_MS);
     }
     addNotif('C-Suite weekly reviews finished: '+done+' of 4 reports filed');
     const a=document.querySelector('.page.active'); if(a&&a.id==='page-csuite') renderCSuite();
