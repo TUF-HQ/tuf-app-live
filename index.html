@@ -10707,7 +10707,13 @@ function cmKeysAt(off){ const d=new Date(); d.setDate(d.getDate()+(off||0)); con
 // All personal writes go through utCommit (a serialised commitTasks) so rapid
 // clicks cannot interleave and clobber each other.
 let utQueue=Promise.resolve();
-function utCommit(apply){ utQueue=utQueue.then(()=>commitTasks(apply)).catch(()=>{}); return utQueue; }
+// Each queued commit is followed by a settle gap: ls.set's server upsert is
+// fire-and-forget, so the next commit's fresh pull must not race the previous
+// write (that race silently dropped items during the v60 migration).
+function utCommit(apply){
+  utQueue=utQueue.then(()=>commitTasks(apply)).then(r=>new Promise(res=>setTimeout(()=>res(r),1200))).catch(()=>{});
+  return utQueue;
+}
 function utApplyLocal(apply){ const local=ls.get('tuf_tasks',[]); apply(local); localStorage.setItem('tuf_tasks',JSON.stringify(local)); }
 function utPersonalSlot(t,person,cad,key){ return t.scope==='personal'&&!t.template&&t.owner===person&&t.cadence===cad&&t.period===key; }
 function cmGet(person,cad,key){
