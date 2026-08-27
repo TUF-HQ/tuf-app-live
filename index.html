@@ -22,10 +22,10 @@
 <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
 :root{color-scheme:light;
-  --k:#0A0A0B;--y:#FBFF00;--w:#fff;--bg:#a6a6a6;--bg-2:#b5b5b5;
+  --k:#0A0A0B;--y:#FBFF00;--w:#fff;--bg:#EFEDE6;--bg-2:#E6E2D6;
   --red:#C0392B;--amb:#E67E22;--grn:#27AE60;--blu:#2471A3;--pur:#8E44AD;
   --rbg:#FDECEA;--abg:#FEF9EC;--gbg:#E8F5E9;--bbg:#EBF5FB;--pbg:#F5EEF8;
-  --txt:#0A0A0B;--mut:#737373;--bdr:#737373;--bdr-2:#8c8c8c;--card:#fff;
+  --txt:#141414;--mut:#8A8578;--bdr:#DEDACE;--bdr-2:#E7E4DA;--card:#fff;
   --side:#0C0D10;--side-w:230px;
   --danny:#8E44AD;--joe:#2471A3;--jasper:#16A085;--james:#E67E22;
   --font-display:'Montserrat',sans-serif;
@@ -41,7 +41,7 @@
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:'Montserrat',sans-serif;background:var(--bg);color:var(--txt);font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
 ::selection{background:var(--y);color:var(--k)}
-.page::-webkit-scrollbar{width:10px;height:10px}.page::-webkit-scrollbar-thumb{background:#737373;border-radius:8px;border:3px solid var(--bg)}.page::-webkit-scrollbar-thumb:hover{background:#5f5f5f}.page{scrollbar-width:thin;scrollbar-color:#737373 transparent}
+.page::-webkit-scrollbar{width:10px;height:10px}.page::-webkit-scrollbar-thumb{background:#C9C5B6;border-radius:8px;border:3px solid var(--bg)}.page::-webkit-scrollbar-thumb:hover{background:#B5B0A0}.page{scrollbar-width:thin;scrollbar-color:#C9C5B6 transparent}
 /* ── AUTH ── */
 #auth{position:fixed;inset:0;background:radial-gradient(1200px 600px at 50% -10%,#1a1b20 0%,#0A0A0B 55%,#000 100%);display:flex;align-items:center;justify-content:center;z-index:1000}
 .auth-box{background:linear-gradient(180deg,#161719 0%,#0E0F11 100%);border:1px solid rgba(255,255,255,.08);border-radius:var(--r-lg);padding:44px 40px;width:360px;text-align:center;box-shadow:0 24px 70px rgba(0,0,0,.6),0 0 0 1px rgba(251,255,0,.04)}
@@ -117,11 +117,11 @@ body{font-family:'Montserrat',sans-serif;background:var(--bg);color:var(--txt);f
 .grid-4{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:14px}
 @media(max-width:900px){.grid-3,.grid-4{grid-template-columns:1fr 1fr}.grid-2{grid-template-columns:1fr}}
 /* stat boxes */
-.stat{background:var(--k);color:var(--w);border:1px solid #26272b;border-radius:var(--r-md);padding:18px;text-align:center;box-shadow:var(--sh-sm);transition:box-shadow .18s,transform .18s,border-color .18s}
+.stat{background:var(--card);border:1px solid var(--bdr);border-radius:var(--r-md);padding:18px;text-align:center;box-shadow:var(--sh-sm);transition:box-shadow .18s,transform .18s,border-color .18s}
 .stat:hover{box-shadow:var(--sh-md);transform:translateY(-2px)}
 .stat .n{font-family:var(--font-display);font-size:33px;font-weight:800;line-height:1;letter-spacing:-.3px;font-variant-numeric:tabular-nums}
-.stat .l{font-size:10px;color:#B4B7BE;margin-top:5px;text-transform:uppercase;letter-spacing:.6px;font-weight:700}
-.stat.r .n{color:var(--red)}.stat.a .n{color:var(--amb)}.stat.g .n{color:var(--grn)}.stat.y{border:1px solid var(--y);box-shadow:0 0 0 3px rgba(251,255,0,.18),var(--sh-sm)}
+.stat .l{font-size:10px;color:var(--mut);margin-top:5px;text-transform:uppercase;letter-spacing:.6px;font-weight:700}
+.stat.r .n{color:var(--red)}.stat.a .n{color:var(--amb)}.stat.g .n{color:var(--grn)}.stat.y{background:var(--k);border-color:var(--k);color:var(--w)}.stat.y .n{color:var(--y)}.stat.y .l{color:#9DA0A6}
 /* buttons */
 .btn{padding:8px 16px;border-radius:var(--r-sm);border:none;cursor:pointer;font-size:12px;font-weight:700;font-family:inherit;transition:transform .1s,box-shadow .15s,background .15s;letter-spacing:.2px}
 .btn:active{transform:translateY(1px)}
@@ -186,8 +186,8 @@ details>summary::-webkit-details-marker{display:none}
 .stage-pill:hover{border-color:var(--k);color:var(--txt)}
 .stage-pill.active{background:var(--k);color:var(--w);border-color:var(--k)}
 /* values bar */
-.values-bar{display:flex;background:linear-gradient(90deg,#FBFF00,#F2F500);overflow:hidden;flex-shrink:0;box-shadow:inset 0 -1px 0 rgba(0,0,0,.08)}
-.val-item{flex:1;text-align:center;padding:7px 5px;font-family:'Montserrat',sans-serif;font-size:10px;font-weight:800;color:var(--k);letter-spacing:.4px;text-transform:uppercase;border-right:1px solid rgba(0,0,0,.1)}
+.values-bar{display:flex;background:var(--k);overflow:hidden;flex-shrink:0;border-bottom:1px solid #1E1F23}
+.val-item{flex:1;text-align:center;padding:8px 5px;font-family:'Montserrat',sans-serif;font-size:9.5px;font-weight:800;color:var(--y);letter-spacing:1px;text-transform:uppercase;border-right:1px solid rgba(255,255,255,.07)}
 .val-item:last-child{border-right:none}
 /* calendar */
 .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-bottom:12px}
@@ -218,12 +218,12 @@ details>summary::-webkit-details-marker{display:none}
 /* north star */
 .ns-row{display:grid;grid-template-columns:repeat(6,1fr);gap:14px;margin-bottom:20px}
 @media(max-width:900px){.ns-row{grid-template-columns:1fr 1fr 1fr}}@media(max-width:600px){.ns-row{grid-template-columns:1fr 1fr}}
-.ns-box{background:var(--k);color:var(--w);border:1px solid #26272b;border-radius:var(--r-md);padding:16px;text-align:left;cursor:pointer;transition:box-shadow .15s,transform .15s,border-color .15s;box-shadow:var(--sh-sm);position:relative;overflow:hidden}
-.ns-box:hover{box-shadow:var(--sh-md);transform:translateY(-2px)}.ns-box.key{border-color:transparent;box-shadow:0 0 0 2px var(--y),var(--sh-sm)}.ns-box.key:hover{box-shadow:0 0 0 2px var(--y),var(--sh-md)}
+.ns-box{background:var(--card);border:1px solid var(--bdr);border-radius:var(--r-md);padding:16px;text-align:left;cursor:pointer;transition:box-shadow .15s,transform .15s,border-color .15s;box-shadow:var(--sh-sm);position:relative;overflow:hidden}
+.ns-box:hover{box-shadow:var(--sh-md);transform:translateY(-2px)}.ns-box.key{background:var(--k);border-color:var(--k);color:var(--w)}.ns-box.key .ns-n{color:var(--y)}.ns-box.key .ns-l,.ns-box.key .ns-t{color:#9DA0A6}.ns-box.key .ns-bar{background:rgba(255,255,255,.16)}.ns-box.key .ns-fill{background:var(--y)}
 .ns-n{font-family:var(--font-display);font-size:31px;font-weight:800;margin:6px 0 2px;letter-spacing:-.3px;line-height:1.05;font-variant-numeric:tabular-nums}
-.ns-l{font-size:9px;color:#B4B7BE;text-transform:uppercase;letter-spacing:.8px;font-weight:700}
-.ns-t{font-size:10px;color:#B4B7BE;margin-top:3px}
-.ns-bar{height:6px;background:rgba(255,255,255,.16);border-radius:20px;overflow:hidden;margin-top:9px}
+.ns-l{font-size:9px;color:var(--mut);text-transform:uppercase;letter-spacing:.8px;font-weight:700}
+.ns-t{font-size:10px;color:var(--mut);margin-top:3px}
+.ns-bar{height:6px;background:var(--bg-2);border-radius:20px;overflow:hidden;margin-top:9px}
 .ns-fill{height:100%;background:var(--grn);transition:width .5s ease;border-radius:20px}
 .ns-fill.warn{background:var(--amb)}.ns-fill.danger{background:var(--red)}
 /* member card */
@@ -486,57 +486,57 @@ details>summary::-webkit-details-marker{display:none}
 
     <!-- ARCHIVED v55 (hidden, data kept): budget, content (calendar), daily (progress), watemplates. v56: fourbox (its four boxes now live on the KPIs page). Restore any of them by re-adding its sb-item row. -->
     <div class="sb-section">Overview</div>
-    <div class="sb-item" data-page="myday" onclick="nav('myday',this)"><span class="ico">☀️</span>My Day</div>
-    <div class="sb-item active" data-page="home" onclick="nav('home',this)"><span class="ico">🌅</span>Morning Brief</div>
-    <div class="sb-item" data-page="teamoverview" onclick="nav('teamoverview',this)"><span class="ico">🧑‍🤝‍🧑</span>Team Overview</div>
-    <div class="sb-item" data-page="teamtasks" onclick="nav('teamtasks',this)"><span class="ico">🗒</span>Team Tasks</div>
-    <div class="sb-item" data-page="tasks" onclick="nav('tasks',this)"><span class="ico">✅</span>Tasks <span class="sb-badge" id="sb-tasks" style="background:var(--amb);display:none">0</span></div>
-    <div class="sb-item" data-page="transcript" onclick="nav('transcript',this)"><span class="ico">🎙</span>Meeting Notes</div>
+    <div class="sb-item" data-page="myday" onclick="nav('myday',this)">My Day</div>
+    <div class="sb-item active" data-page="home" onclick="nav('home',this)">Morning Brief</div>
+    <div class="sb-item" data-page="teamoverview" onclick="nav('teamoverview',this)">Team Overview</div>
+    <div class="sb-item" data-page="teamtasks" onclick="nav('teamtasks',this)">Team Tasks</div>
+    <div class="sb-item" data-page="tasks" onclick="nav('tasks',this)">Tasks <span class="sb-badge" id="sb-tasks" style="background:var(--amb);display:none">0</span></div>
+    <div class="sb-item" data-page="transcript" onclick="nav('transcript',this)">Meeting Notes</div>
 
     <div class="sb-section">CRM</div>
-    <div class="sb-item" data-page="people" data-filter="network" onclick="navPeople('network',this)"><span class="ico">🗂</span>Network</div>
-    <div class="sb-item" data-page="people" data-filter="introducers" onclick="navPeople('introducers',this)"><span class="ico">🤝</span>Introducers</div>
-    <div class="sb-item" data-page="pipeline" onclick="nav('pipeline',this)"><span class="ico">💰</span>Pipeline</div>
-    <div class="sb-item" data-page="members" data-filter="boardroom" onclick="navMembers('boardroom',this)"><span class="ico">🏛</span>Boardroom Members</div>
-    <div class="sb-item" data-page="members" data-filter="private121" onclick="navMembers('private121',this)"><span class="ico">🎯</span>Private 121s</div>
-    <div class="sb-item" data-page="inbound" onclick="nav('inbound',this)"><span class="ico">📥</span>Inbound <span class="sb-badge amb" id="sb-inbound" style="display:none">0</span></div>
+    <div class="sb-item" data-page="people" data-filter="network" onclick="navPeople('network',this)">Network</div>
+    <div class="sb-item" data-page="people" data-filter="introducers" onclick="navPeople('introducers',this)">Introducers</div>
+    <div class="sb-item" data-page="pipeline" onclick="nav('pipeline',this)">Pipeline</div>
+    <div class="sb-item" data-page="members" data-filter="boardroom" onclick="navMembers('boardroom',this)">Boardroom Members</div>
+    <div class="sb-item" data-page="members" data-filter="private121" onclick="navMembers('private121',this)">Private 121s</div>
+    <div class="sb-item" data-page="inbound" onclick="nav('inbound',this)">Inbound <span class="sb-badge amb" id="sb-inbound" style="display:none">0</span></div>
     <div class="sb-sub" data-page="onboarding" onclick="nav('onboarding',this)">Onboarding</div>
     <div class="sb-sub" data-page="clientanalysis" onclick="nav('clientanalysis',this)">Client Analysis</div>
-    <div class="sb-item" data-page="coaching" onclick="nav('coaching',this)"><span class="ico">🎯</span>Coaching</div>
+    <div class="sb-item" data-page="coaching" onclick="nav('coaching',this)">Coaching</div>
 
     <div class="sb-section">Products</div>
-    <div class="sb-item" data-page="padel" onclick="nav('padel',this)"><span class="ico">🏆</span>Padel Event</div>
-    <div class="sb-item" data-page="boardroom" onclick="nav('boardroom',this)"><span class="ico">🏛</span>Boardroom</div>
-    <div class="sb-item" data-page="sessions" onclick="nav('sessions',this)"><span class="ico">📅</span>Session Planning</div>
-    <div class="sb-item" data-page="ip" onclick="nav('ip',this)"><span class="ico">💡</span>IP Register</div>
+    <div class="sb-item" data-page="padel" onclick="nav('padel',this)">Padel Event</div>
+    <div class="sb-item" data-page="boardroom" onclick="nav('boardroom',this)">Boardroom</div>
+    <div class="sb-item" data-page="sessions" onclick="nav('sessions',this)">Session Planning</div>
+    <div class="sb-item" data-page="ip" onclick="nav('ip',this)">IP Register</div>
 
     <div class="sb-section">Marketing</div>
-    <div class="sb-item" data-page="social" onclick="nav('social',this)"><span class="ico">📊</span>Social Media</div>
-    <div class="sb-item" data-page="podcast" onclick="nav('podcast',this)"><span class="ico">🎙</span>Podcast</div>
-    <div class="sb-item" data-page="growthplan" onclick="nav('growthplan',this)"><span class="ico">📈</span>Growth Plan</div>
-    <div class="sb-item" data-page="files" onclick="nav('files',this)"><span class="ico">📁</span>Documents</div>
-    <div class="sb-item" data-page="testimonials" onclick="nav('testimonials',this)"><span class="ico">⭐</span>Testimonials</div>
-    <div class="sb-item" data-page="emaillist" onclick="nav('emaillist',this)"><span class="ico">📧</span>Email List</div>
+    <div class="sb-item" data-page="social" onclick="nav('social',this)">Social Media</div>
+    <div class="sb-item" data-page="podcast" onclick="nav('podcast',this)">Podcast</div>
+    <div class="sb-item" data-page="growthplan" onclick="nav('growthplan',this)">Growth Plan</div>
+    <div class="sb-item" data-page="files" onclick="nav('files',this)">Documents</div>
+    <div class="sb-item" data-page="testimonials" onclick="nav('testimonials',this)">Testimonials</div>
+    <div class="sb-item" data-page="emaillist" onclick="nav('emaillist',this)">Email List</div>
 
     <div class="sb-section">Intelligence</div>
-    <div class="sb-item" data-page="capmap" onclick="nav('capmap',this)"><span class="ico">📊</span>Capability Map <span class="sb-badge" id="sb-red" style="display:none">—</span></div>
-    <div class="sb-item" data-page="goals" onclick="nav('goals',this)"><span class="ico">🎯</span>Goals & OKRs</div>
+    <div class="sb-item" data-page="capmap" onclick="nav('capmap',this)">Capability Map <span class="sb-badge" id="sb-red" style="display:none">—</span></div>
+    <div class="sb-item" data-page="goals" onclick="nav('goals',this)">Goals & OKRs</div>
 
     <div class="sb-section">Team</div>
-    <div class="sb-item" data-page="dannycal" onclick="nav('dannycal',this)"><span class="ico">📆</span>Danny's Calendar</div>
-    <div class="sb-item" data-page="roles" onclick="nav('roles',this)"><span class="ico">👥</span>Roles & Responsibilities</div>
-    <div class="sb-item" data-page="reviews" onclick="nav('reviews',this)"><span class="ico">📝</span>Weekly Review</div>
-    <div class="sb-item" data-page="holidays" onclick="nav('holidays',this)"><span class="ico">🏖</span>Holidays</div>
-    <div class="sb-item" data-page="kpis" onclick="nav('kpis',this)"><span class="ico">📈</span>KPIs</div>
-    <div class="sb-item" data-page="aidump" onclick="nav('aidump',this)"><span class="ico">🤖</span>AI Tool (Dump)</div>
-    <div class="sb-item" data-page="buildreq" onclick="nav('buildreq',this)"><span class="ico">🛠</span>Build Requests <span class="sb-badge" id="sb-buildreq" style="background:var(--amb);display:none">0</span></div>
-    <div class="sb-item" data-page="notifs" onclick="nav('notifs',this)"><span class="ico">🔔</span>Notifications <span class="sb-badge" id="sb-notif" style="display:none">0</span></div>
+    <div class="sb-item" data-page="dannycal" onclick="nav('dannycal',this)">Danny's Calendar</div>
+    <div class="sb-item" data-page="roles" onclick="nav('roles',this)">Roles & Responsibilities</div>
+    <div class="sb-item" data-page="reviews" onclick="nav('reviews',this)">Weekly Review</div>
+    <div class="sb-item" data-page="holidays" onclick="nav('holidays',this)">Holidays</div>
+    <div class="sb-item" data-page="kpis" onclick="nav('kpis',this)">KPIs</div>
+    <div class="sb-item" data-page="aidump" onclick="nav('aidump',this)">AI Tool (Dump)</div>
+    <div class="sb-item" data-page="buildreq" onclick="nav('buildreq',this)">Build Requests <span class="sb-badge" id="sb-buildreq" style="background:var(--amb);display:none">0</span></div>
+    <div class="sb-item" data-page="notifs" onclick="nav('notifs',this)">Notifications <span class="sb-badge" id="sb-notif" style="display:none">0</span></div>
 
     <div class="sb-section">C-Suite</div>
-    <div class="sb-item" data-page="csuite" onclick="csuiteNav('CEO',this)"><span class="ico">👑</span>CEO</div>
-    <div class="sb-item" data-page="csuite" onclick="csuiteNav('CMO',this)"><span class="ico">📣</span>CMO</div>
-    <div class="sb-item" data-page="csuite" onclick="csuiteNav('CFO',this)"><span class="ico">💷</span>CFO</div>
-    <div class="sb-item" data-page="csuite" onclick="csuiteNav('COO',this)"><span class="ico">⚙️</span>COO</div>
+    <div class="sb-item" data-page="csuite" onclick="csuiteNav('CEO',this)">CEO</div>
+    <div class="sb-item" data-page="csuite" onclick="csuiteNav('CMO',this)">CMO</div>
+    <div class="sb-item" data-page="csuite" onclick="csuiteNav('CFO',this)">CFO</div>
+    <div class="sb-item" data-page="csuite" onclick="csuiteNav('COO',this)">COO</div>
 
     <div class="sb-footer">TUF HQ · v1.0 · Changes save automatically</div>
   </aside>
@@ -588,7 +588,7 @@ details>summary::-webkit-details-marker{display:none}
         <!-- Right: client detail -->
         <div style="overflow-y:auto">
           <div id="ca-detail">
-            <div class="empty" style="margin-top:40px"><div class="ico">🔍</div>Select a private client to view their analysis</div>
+            <div class="empty" style="margin-top:40px">Select a private client to view their analysis</div>
           </div>
         </div>
       </div>
@@ -652,7 +652,7 @@ details>summary::-webkit-details-marker{display:none}
               <input class="form-input" id="tr-title" placeholder="e.g. Morning standup 4 June">
             </div>
             <div class="form-row">
-              <label class="form-label">Notes / Transcript <button type="button" class="mic-btn" title="Speak" onclick="dictate('tr-text',this)" style="font-size:11px;padding:3px 8px;margin-left:6px;vertical-align:middle">🎤 Speak</button></label>
+              <label class="form-label">Notes / Transcript <button type="button" class="mic-btn" title="Speak" onclick="dictate('tr-text',this)" style="font-size:11px;padding:3px 8px;margin-left:6px;vertical-align:middle">Speak</button></label>
               <textarea class="form-textarea" id="tr-text" style="min-height:280px;font-size:12px" placeholder="Paste transcript or meeting notes here…&#10;&#10;Examples of things Claude will pick up:&#10;• 'Danny to follow up with Ben Coomer this week'&#10;• 'Joe — we need the onboarding doc before the 20th'&#10;• 'Action: James orders Jasper's laptop today'&#10;• Any decision, commitment or action from the conversation"></textarea>
             </div>
             <button class="btn btn-k" id="tr-btn" onclick="extractTasks()" style="width:100%;padding:12px;font-size:14px;font-family:'Montserrat',sans-serif">
@@ -663,7 +663,7 @@ details>summary::-webkit-details-marker{display:none}
 
           <div class="sec-hdr">AI</div>
           <div class="card">
-            <div style="font-size:12px;color:var(--mut);line-height:1.6">🔒 AI features run securely through the team's server. There's no API key to manage here anymore — it's stored safely on the server, never in this app.</div>
+            <div style="font-size:12px;color:var(--mut);line-height:1.6">AI features run securely through the team's server. There's no API key to manage here anymore — it's stored safely on the server, never in this app.</div>
           </div>
         </div>
 
@@ -671,7 +671,6 @@ details>summary::-webkit-details-marker{display:none}
           <div class="sec-hdr">Extracted Tasks <span id="tr-count" style="font-size:11px;font-weight:400;color:var(--mut)"></span></div>
           <div id="tr-results">
             <div class="empty" style="min-height:200px">
-              <div class="ico">🤖</div>
               Extracted tasks will appear here for you to review before saving.
             </div>
           </div>
@@ -700,7 +699,7 @@ details>summary::-webkit-details-marker{display:none}
       <div class="grid-4" id="members-stats" style="margin-bottom:16px"></div>
       <div class="grid-2" style="margin-bottom:16px;align-items:start">
         <div><div class="sec-hdr">Boardroom Members</div><div id="members-list"></div></div>
-        <div><div class="sec-hdr">Member Profile</div><div id="member-detail"><div class="empty"><div class="ico">👤</div>Select a member to view their profile</div></div></div>
+        <div><div class="sec-hdr">Member Profile</div><div id="member-detail"><div class="empty">Select a member to view their profile</div></div></div>
       </div>
     </div>
 
@@ -724,7 +723,7 @@ details>summary::-webkit-details-marker{display:none}
     <div class="page" id="page-onboarding">
       <div class="grid-2">
         <div><div class="sec-hdr">Select Member</div><div id="ob-member-list"></div></div>
-        <div><div class="sec-hdr">Onboarding Progress</div><div id="ob-detail"><div class="empty"><div class="ico">📋</div>Select a member to view their onboarding</div></div></div>
+        <div><div class="sec-hdr">Onboarding Progress</div><div id="ob-detail"><div class="empty">Select a member to view their onboarding</div></div></div>
       </div>
     </div>
 
@@ -839,7 +838,7 @@ details>summary::-webkit-details-marker{display:none}
 <div id="sb-backdrop" onclick="toggleSidebar(false)"></div>
 
 <!-- ASK HQ ASSISTANT -->
-<button id="hq-fab" onclick="hqToggle(true)"><span class="hq-spark">✨</span>Ask HQ</button>
+<button id="hq-fab" onclick="hqToggle(true)">Ask HQ</button>
 <div id="hq-overlay" onclick="if(event.target===this)hqToggle(false)">
   <div id="hq-panel">
     <div class="hq-head">
@@ -855,7 +854,7 @@ details>summary::-webkit-details-marker{display:none}
     </div>
     <div class="hq-input-row">
       <textarea id="hq-input" placeholder="Ask anything, or ask me to draft something…" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();hqSend();}"></textarea>
-      <button type="button" class="mic-btn" title="Speak" onclick="dictate('hq-input',this)" style="margin-right:6px">🎤</button>
+      <button type="button" class="mic-btn" title="Speak" onclick="dictate('hq-input',this)" style="margin-right:6px">Mic</button>
       <button class="hq-send" id="hq-send" onclick="hqSend()">Send</button>
     </div>
   </div>
@@ -886,7 +885,7 @@ details>summary::-webkit-details-marker{display:none}
         <textarea id="okr-input" placeholder="Type the room's answer, then Send…" onkeydown="if(event.key==='Enter'&&(event.metaKey||event.ctrlKey)){event.preventDefault();okrSend();}"></textarea>
         <div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px">
           <span style="font-size:11px;color:#5f5f68">Cmd/Ctrl + Enter to send</span>
-          <span style="display:flex;gap:6px;align-items:center"><button type="button" class="mic-btn" title="Speak the answer" onclick="dictate('okr-input',this)">🎤</button><button class="btn btn-k" id="okr-send" onclick="okrSend()">Send →</button></span>
+          <span style="display:flex;gap:6px;align-items:center"><button type="button" class="mic-btn" title="Speak the answer" onclick="dictate('okr-input',this)">Mic</button><button class="btn btn-k" id="okr-send" onclick="okrSend()">Send →</button></span>
         </div>
       </div>
     </div>
@@ -1731,7 +1730,7 @@ function mdListCard(kind,title,items,doneCount){
       <span class="chk-text" style="flex:1;cursor:pointer" onclick="mdToggle('${kind}','${it.id}')">${escHtml(it.text)}</span>
       <button class="btn btn-ghost btn-sm" style="padding:2px 7px;font-size:10px" onclick="mdEdit('${kind}','${it.id}')">edit</button>
       <button class="btn btn-ghost btn-sm" style="padding:2px 7px;font-size:10px" onclick="mdDelete('${kind}','${it.id}')">✕</button>
-    </div>`).join(''):'<div class="empty" style="padding:14px"><div class="ico">✶</div>Nothing yet. Add the first one.</div>';
+    </div>`).join(''):'<div class="empty" style="padding:14px">Nothing yet. Add the first one.</div>';
   return `<div class="card">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
       <div class="card-title" style="margin:0">${title}</div>
@@ -1777,7 +1776,7 @@ function renderMyDay(){
         <button class="btn btn-ghost btn-sm" onclick="nav('tasks',document.querySelector('[data-page=tasks]'))">Open task board</button>
       </div>
       <div style="font-size:11px;color:var(--mut);margin-bottom:10px">Your open items from the team task board. Tap the box to advance status.</div>
-      ${myTasks.length?`<div style="border-radius:8px;overflow:hidden;border:1px solid var(--bdr);border-top:none">${renderTaskRows(myTasks,today)}</div>`:'<div class="empty" style="padding:18px"><div class="ico">✅</div>No open tasks assigned to you.</div>'}
+      ${myTasks.length?`<div style="border-radius:8px;overflow:hidden;border:1px solid var(--bdr);border-top:none">${renderTaskRows(myTasks,today)}</div>`:'<div class="empty" style="padding:18px">No open tasks assigned to you.</div>'}
     </div>
     <div class="card" style="margin-top:14px">
       <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
@@ -1789,7 +1788,7 @@ function renderMyDay(){
           <div style="width:8px;height:8px;border-radius:50%;background:var(--y);flex-shrink:0"></div>
           <div style="flex:1"><div style="font-size:13px;font-weight:600">${escHtml(e.name||'Event')}</div><div style="font-size:11px;color:var(--mut)">${escHtml(fmtDate(e.date))}${e.type?' · '+escHtml(e.type):''}${(e.location&&e.location!=='TBC')?' · '+escHtml(e.location):''}</div></div>
           <span class="tag ${e.du===0?'tag-r':e.du<=2?'tag-a':'tag-g'}" style="font-size:10px">${e.du===0?'Today':e.du===1?'Tomorrow':'in '+e.du+' days'}</span>
-        </div>`).join(''):'<div class="empty" style="padding:18px"><div class="ico">📅</div>Nothing in the next 7 days.</div>'}
+        </div>`).join(''):'<div class="empty" style="padding:18px">Nothing in the next 7 days.</div>'}
     </div>
     ${mdModulesHtml(d)}
   `;
@@ -1820,14 +1819,14 @@ function mdModToggle(kind,id){
 function mdModPodcastBody(){
   const c=podChkGet(); const all=[...(c.before||[]),...(c.after||[])]; const done=all.filter(it=>c.done[it.id]).length;
   const nd=podNextDay();
-  const ndLine=nd?`<div style="font-size:12px;font-weight:700;margin-bottom:8px">🎙 Next recording: ${fmtDate(nd.date)} · ${daysUntil(nd.date)===0?'today':'in '+daysUntil(nd.date)+'d'} · ${nd.eps.length} episode${nd.eps.length!==1?'s':''}</div>`:`<div style="font-size:12px;font-weight:700;color:var(--amb);margin-bottom:8px">🎙 No recording day booked</div>`;
+  const ndLine=nd?`<div style="font-size:12px;font-weight:700;margin-bottom:8px">Next recording: ${fmtDate(nd.date)} · ${daysUntil(nd.date)===0?'today':'in '+daysUntil(nd.date)+'d'} · ${nd.eps.length} episode${nd.eps.length!==1?'s':''}</div>`:`<div style="font-size:12px;font-weight:700;color:var(--amb);margin-bottom:8px">No recording day booked</div>`;
   return `${ndLine}${podChkBar(done,all.length)}
     <div style="font-size:11px;color:var(--mut);margin:6px 0 10px">${done}/${all.length} done${c.updatedBy?' · last by '+escHtml(c.updatedBy):''}</div>
     ${[['before','Before recording'],['after','After recording']].map(([k,t])=>{ const items=c[k]||[]; return `<div style="font-size:10px;font-weight:700;color:var(--mut);text-transform:uppercase;letter-spacing:.5px;margin:8px 0 4px">${t}</div>`+items.map(it=>`<div class="chk-row ${c.done[it.id]?'done':''}"><div class="chk-box" onclick="mdModToggle('podcast','${it.id}')">${c.done[it.id]?'✓':''}</div><span class="chk-text" style="flex:1;cursor:pointer" onclick="mdModToggle('podcast','${it.id}')">${escHtml(it.text)}</span></div>`).join(''); }).join('')}`;
 }
 function mdModBoardroomBody(){
   const list=ls.get('tuf_boardroom_checklist',[])||[];
-  if(!list.length) return '<div class="empty" style="padding:14px"><div class="ico">✶</div>No boardroom checklist items yet. Open Boardroom to add them.</div>';
+  if(!list.length) return '<div class="empty" style="padding:14px">No boardroom checklist items yet. Open Boardroom to add them.</div>';
   const done=list.filter(i=>i.done).length;
   return `${podChkBar(done,list.length)}
     <div style="font-size:11px;color:var(--mut);margin:6px 0 10px">${done}/${list.length} done</div>
@@ -1871,7 +1870,7 @@ function mdModulesHtml(d){
         <button class="btn btn-k btn-sm" onclick="mdAddModule()">Add section</button>
       </div>
     </div>`:'';
-  return `<div class="sec-hdr" style="margin-top:18px">My sections</div>${cards||'<div class="empty" style="padding:14px"><div class="ico">➕</div>No sections pinned yet. Add the area you own below.</div>'}${adder}`;
+  return `<div class="sec-hdr" style="margin-top:18px">My sections</div>${cards||'<div class="empty" style="padding:14px">No sections pinned yet. Add the area you own below.</div>'}${adder}`;
 }
 function fmtShort(d){return new Date(d+'T00:00:00').toLocaleDateString('en-GB',{day:'numeric',month:'short'});}
 function weekKey(){const d=new Date();const m=new Date(d);m.setDate(d.getDate()-d.getDay()+1);return m.toISOString().slice(0,10);}
@@ -1909,7 +1908,7 @@ function getApiKey(){
 const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
 let micRec=null, micBtn=null, micTarget=null, micBase='';
 function micSupported(){ return !!SpeechRec; }
-function micBtnHtml(targetId, cls){ if(!micSupported()) return ''; return `<button type="button" class="mic-btn ${cls||''}" title="Speak instead of typing" onclick="dictate('${targetId}',this)">🎤</button>`; }
+function micBtnHtml(targetId, cls){ if(!micSupported()) return ''; return `<button type="button" class="mic-btn ${cls||''}" title="Speak instead of typing" onclick="dictate('${targetId}',this)">Mic</button>`; }
 function micCleanup(){ if(micBtn) micBtn.classList.remove('mic-on'); micRec=null; micBtn=null; micTarget=null; }
 function dictate(targetId, btn){
   if(!micSupported()){ alert('Voice input is not supported in this browser. Try Chrome, Edge or Safari.'); return; }
@@ -2098,7 +2097,7 @@ ${text}
       status.innerHTML = '<span style="color:var(--amb)">No tasks found. Try adding more detail to your notes.</span>';
       btn.disabled = false;
       btn.textContent = 'Extract Tasks with Claude';
-      document.getElementById('tr-results').innerHTML = '<div class="empty"><div class="ico">🤔</div>No action items detected. Make sure your notes include commitments, follow-ups or decisions.</div>';
+      document.getElementById('tr-results').innerHTML = '<div class="empty">No action items detected. Make sure your notes include commitments, follow-ups or decisions.</div>';
       return;
     }
 
@@ -2127,7 +2126,7 @@ ${text}
 
   } catch(e) {
     status.innerHTML = `<span style="color:var(--red)">Error: ${escHtml(e.message)}</span>`;
-    document.getElementById('tr-results').innerHTML = `<div class="empty" style="border-color:var(--red)"><div class="ico">⚠️</div>${escHtml(e.message)}</div>`;
+    document.getElementById('tr-results').innerHTML = `<div class="empty" style="border-color:var(--red)">${escHtml(e.message)}</div>`;
   } finally {
     btn.disabled = false;
     btn.textContent = 'Extract Tasks with Claude';
@@ -2251,7 +2250,7 @@ function confirmExtractedTasks(){
 
 function clearExtracted(){
   extractedTasks = [];
-  document.getElementById('tr-results').innerHTML = '<div class="empty"><div class="ico">🤖</div>Extracted tasks will appear here for review.</div>';
+  document.getElementById('tr-results').innerHTML = '<div class="empty">Extracted tasks will appear here for review.</div>';
   document.getElementById('tr-confirm-bar').style.display = 'none';
   document.getElementById('tr-count').textContent = '';
   document.getElementById('tr-text').value = '';
@@ -2262,14 +2261,14 @@ function clearExtracted(){
 // ═══ TASKS ═══════════════════════════════════════════════════════════════════
 const TASK_PRIORITIES = ['High','Medium','Low'];
 const TASK_SECTIONS = [
-  {id:'events',    label:'Events & Networking', ico:'🎾', color:'#16A085'},
-  {id:'boardroom', label:'Boardroom',            ico:'🏛', color:'#1A252F'},
-  {id:'sales',     label:'Sales',                ico:'💰', color:'#E67E22'},
-  {id:'clients',   label:'1-2-1 Clients',        ico:'👤', color:'#8E44AD'},
-  {id:'content',   label:'Content & Marketing',  ico:'📣', color:'#2471A3'},
-  {id:'podcast',   label:'Podcast',              ico:'🎙', color:'#6C3483'},
-  {id:'ops',       label:'Operations',           ico:'⚙️', color:'#555'},
-  {id:'team',      label:'Team',                 ico:'👥', color:'#333'},
+  {id:'events',    label:'Events & Networking', ico:'', color:'#16A085'},
+  {id:'boardroom', label:'Boardroom',            ico:'', color:'#1A252F'},
+  {id:'sales',     label:'Sales',                ico:'', color:'#E67E22'},
+  {id:'clients',   label:'1-2-1 Clients',        ico:'', color:'#8E44AD'},
+  {id:'content',   label:'Content & Marketing',  ico:'', color:'#2471A3'},
+  {id:'podcast',   label:'Podcast',              ico:'', color:'#6C3483'},
+  {id:'ops',       label:'Operations',           ico:'', color:'#555'},
+  {id:'team',      label:'Team',                 ico:'', color:'#333'},
 ];
 const TASK_STATUSES = ['To Do','In Progress','Done'];
 const TASK_PEOPLE = ['Danny','Joe','Jasper','James','Chloe'];
@@ -2476,7 +2475,7 @@ function renderTasksBySection(tasks,today){
     </div>`;
   });
   // Any remaining unmatched tasks get inferred section — no "Other" bucket needed
-  document.getElementById('action-list').innerHTML=html||`<div class="empty"><div class="ico">✅</div>No tasks found.</div>`;
+  document.getElementById('action-list').innerHTML=html||`<div class="empty">No tasks found.</div>`;
 }
 
 function renderTasksByPerson(tasks,today){
@@ -2593,7 +2592,7 @@ async function saveTask(){
   closeModal();
   await commitTasks(arr=>{ arr.push(newTask); });
   addNotif(`Task added: "${title}" → ${newTask.owner}`);
-  sendTaskEmail(newTask,'assigned').catch(e=>addNotif('⚠️ Email failed: '+e.message));
+  sendTaskEmail(newTask,'assigned').catch(e=>addNotif('Email failed: '+e.message));
   renderTasks();
   renderBriefTasks();
 }
@@ -2941,14 +2940,14 @@ function gpEditItem(sid,iid){
     </div>
     <div class="form-row"><label class="form-label">Evidence (${(it.evidence||[]).length})</label>
       ${(it.evidence||[]).length?(it.evidence||[]).map(e=>`<div style="display:flex;gap:8px;align-items:center;padding:5px 0;border-bottom:1px solid #EEE;font-size:12px">
-        <span>${e.kind==='file'?'📄':e.kind==='link'?'🔗':'📝'}</span>
+        <span>${e.kind==='file'?'':e.kind==='link'?'':''}</span>
         ${e.kind==='note'?`<span style="flex:1;white-space:pre-wrap">${escHtml(e.text||'')}</span>`:`<a href="#" onclick="event.preventDefault();gpEvOpen('${sid}','${iid}','${e.id}')" style="flex:1">${escHtml(e.name||'')}</a>`}
         <span style="font-size:10px;color:var(--mut);white-space:nowrap">${escHtml(e.by||'')}${e.date?' · '+fmtShort(e.date):''}</span>
         <button class="btn btn-ghost btn-sm" style="padding:1px 7px" title="Remove from this item (uploaded files stay in Documents)" onclick="gpEvDel('${sid}','${iid}','${e.id}')">✕</button>
       </div>`).join(''):'<div style="font-size:11.5px;color:var(--mut)">Nothing attached yet. Upload the finished document, link to it, or leave a note.</div>'}
-      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px"><button class="btn btn-ghost btn-sm" onclick="gpEvUpload('${sid}','${iid}')">📎 Upload file</button></div>
-      <div style="display:flex;gap:6px;margin-top:6px"><input class="form-input" id="gp-ev-url" placeholder="https://…" style="flex:2;padding:5px 9px;font-size:12px"><input class="form-input" id="gp-ev-urlname" placeholder="Name (optional)" style="flex:1;padding:5px 9px;font-size:12px"><button class="btn btn-ghost btn-sm" onclick="gpEvAddLink('${sid}','${iid}')">🔗 Link</button></div>
-      <div style="display:flex;gap:6px;margin-top:6px"><input class="form-input" id="gp-ev-note" placeholder="Add a note as evidence…" style="flex:1;padding:5px 9px;font-size:12px"><button class="btn btn-ghost btn-sm" onclick="gpEvAddNote('${sid}','${iid}')">📝 Note</button></div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px"><button class="btn btn-ghost btn-sm" onclick="gpEvUpload('${sid}','${iid}')">Upload file</button></div>
+      <div style="display:flex;gap:6px;margin-top:6px"><input class="form-input" id="gp-ev-url" placeholder="https://…" style="flex:2;padding:5px 9px;font-size:12px"><input class="form-input" id="gp-ev-urlname" placeholder="Name (optional)" style="flex:1;padding:5px 9px;font-size:12px"><button class="btn btn-ghost btn-sm" onclick="gpEvAddLink('${sid}','${iid}')">Link</button></div>
+      <div style="display:flex;gap:6px;margin-top:6px"><input class="form-input" id="gp-ev-note" placeholder="Add a note as evidence…" style="flex:1;padding:5px 9px;font-size:12px"><button class="btn btn-ghost btn-sm" onclick="gpEvAddNote('${sid}','${iid}')">Note</button></div>
     </div>
   `,`${it.taskId?`<span style="font-size:11px;color:var(--grn);align-self:center;margin-right:auto">✓ linked to a team task</span>`:`<button class="btn btn-ghost btn-sm" onclick="closeModal();gpPushTask('${sid}','${iid}')">→ Make a task</button>`}<button class="btn btn-red btn-sm" onclick="closeModal();gpDelItem('${sid}','${iid}')">Delete</button><button class="btn btn-ghost" onclick="closeModal()">Cancel</button><button class="btn btn-k" onclick="gpEditItemSave('${sid}','${iid}')">Save</button>`);
 }
@@ -3021,7 +3020,7 @@ function gpWeekView(g){
     ${due.length?due.map(x=>`<div class="chk-row${x.i.done?' done':''}">
       <div class="chk-box" onclick="gpToggleItem('${x.s.id}','${x.i.id}')">${x.i.done?'✓':''}</div>
       <span class="chk-text" style="flex:1;font-size:12.5px;cursor:pointer" onclick="gpToggleItem('${x.s.id}','${x.i.id}')"><span style="color:var(--mut)">${escHtml(x.s.title.replace(/^\d+\.\s*/,''))} · </span>${escHtml(x.i.text)}</span>
-      ${(x.i.evidence&&x.i.evidence.length)?`<span class="tag tag-b" style="font-size:9px;white-space:nowrap">📎${x.i.evidence.length}</span>`:''}
+      ${(x.i.evidence&&x.i.evidence.length)?`<span class="tag tag-b" style="font-size:9px;white-space:nowrap">${x.i.evidence.length} attached</span>`:''}
       ${x.i.owner?`<span class="tag tag-b" style="font-size:9px">${escHtml(x.i.owner)}</span>`:''}
       <span style="font-size:10.5px;color:${x.d<0?'var(--red)':'var(--mut)'};white-space:nowrap">${x.d<0?Math.abs(x.d)+'d overdue':x.d===0?'due today':fmtShort(x.i.due)}</span>
     </div>`).join(''):'<div style="font-size:12.5px;color:var(--mut)">Nothing with a deadline in the next two weeks. Set deadlines on build items and they will surface here.</div>'}
@@ -3056,7 +3055,7 @@ function gpSecView(g){
       <div class="chk-box" onclick="gpToggleItem('${s.id}','${i.id}')">${i.done?'✓':''}</div>
       <span class="chk-text" style="flex:1;font-size:13px;cursor:pointer" onclick="gpToggleItem('${s.id}','${i.id}')">${escHtml(i.text)}</span>
       ${i.done&&i.doneBy?`<span style="font-size:10px;color:var(--mut);white-space:nowrap">· ${escHtml(i.doneBy)}, ${fmtShort(i.doneAt)}</span>`:''}
-      ${(i.evidence&&i.evidence.length)?`<span class="tag tag-b" style="font-size:9px;cursor:pointer;white-space:nowrap" title="Evidence attached" onclick="gpEditItem('${s.id}','${i.id}')">📎${i.evidence.length}</span>`:''}
+      ${(i.evidence&&i.evidence.length)?`<span class="tag tag-b" style="font-size:9px;cursor:pointer;white-space:nowrap" title="Evidence attached" onclick="gpEditItem('${s.id}','${i.id}')">${i.evidence.length} attached</span>`:''}
       ${i.owner?`<span class="tag tag-b" style="font-size:9px">${escHtml(i.owner)}</span>`:''}
       ${i.due?`<span style="font-size:10.5px;color:${daysUntil(i.due)<0&&!i.done?'var(--red)':'var(--mut)'};white-space:nowrap">${fmtShort(i.due)}</span>`:''}
       ${i.taskId?`<span title="Linked to a team task" style="font-size:10px;color:var(--grn);white-space:nowrap">✓ task</span>`:''}
@@ -3277,7 +3276,7 @@ function coSendModal(id){
     <div class="form-row"><label class="form-label">Subject</label><input class="form-input" id="cosnd-subj" value="${escHtml('Your coaching session recap · '+fmtDate(sess.session_date))}"></div>
     <div class="form-row"><label class="form-label">Email</label><textarea class="form-textarea" id="cosnd-body" style="min-height:200px">${escHtml(coSendBody(sess,p))}</textarea></div>
     <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px">
-      ${pdf?`<button class="btn btn-ghost btn-sm" onclick="coFileOpen('${pdf.id}')">📄 Download recap PDF</button>`:'<span style="font-size:11px;color:var(--amb)">No recap PDF on this session yet.</span>'}
+      ${pdf?`<button class="btn btn-ghost btn-sm" onclick="coFileOpen('${pdf.id}')">Download recap PDF</button>`:'<span style="font-size:11px;color:var(--amb)">No recap PDF on this session yet.</span>'}
       <button class="btn btn-ghost btn-sm" id="cosnd-copy" onclick="coCopyEmail()">Copy email text</button>
       <button class="btn btn-ghost btn-sm" onclick="coMailto()">Open in Mail</button>
     </div>
@@ -3302,7 +3301,7 @@ async function coMarkSent(id){
 }
 function renderCoaching(){
   const el=document.getElementById('coaching-content'); if(!el) return;
-  el.innerHTML='<div class="empty"><div class="ico">⏳</div>Loading coaching data…</div>';
+  el.innerHTML='<div class="empty">Loading coaching data…</div>';
   const ta=document.getElementById('topbar-actions'); if(ta) ta.innerHTML='';
   coLoad().then(r=>{
     const still=document.getElementById('coaching-content'); if(!still) return;
@@ -3327,7 +3326,7 @@ function coDraw(){
   if(ta) ta.innerHTML=`<button class="btn btn-k btn-sm" onclick="coPersonModal()">+ Add Person</button>`;
 }
 function coListView(){
-  if(!coData.people.length) return `<div class="empty"><div class="ico">🎯</div>No coaching people yet. Add the individuals Danny coaches inside client businesses.</div>`;
+  if(!coData.people.length) return `<div class="empty">No coaching people yet. Add the individuals Danny coaches inside client businesses.</div>`;
   const byCo={};
   coData.people.forEach(p=>{ const c=p.company||'(no company)'; (byCo[c]=byCo[c]||[]).push(p); });
   return Object.keys(byCo).sort().map(c=>`
@@ -3340,7 +3339,7 @@ function coListView(){
             <div style="font-weight:700">${escHtml(p.name)}${p.role?` <span style="color:var(--mut);font-weight:500">· ${escHtml(p.role)}</span>`:''}</div>
             <div style="font-size:12px;color:var(--mut)">${escHtml(p.engagement_type||'121')} · ${sess} session${sess!==1?'s':''}${last?' · last '+fmtShort(last.session_date):' · no sessions yet'}${open?` · <b>${open} open action${open!==1?'s':''}</b>`:''}</div>
           </div>
-          <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();coPrepBrief('${p.id}')" title="Prep brief">⚡</button>
+          <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();coPrepBrief('${p.id}')" title="Prep brief">Prep</button>
           <span class="tag ${p.status==='active'?'tag-g':'tag-a'}" style="font-size:9px">${escHtml(p.status)}</span>
         </div>
       </div>`;
@@ -3420,14 +3419,14 @@ function coPersonView(){
           <div style="font-weight:700">Session ${s.session_no||'?'} · ${fmtDate(s.session_date)} <span style="color:var(--mut);font-weight:500">· ${escHtml(s.meeting_type)}</span></div>
           <div style="font-size:11.5px;color:var(--mut);display:flex;gap:8px;align-items:center;flex-wrap:wrap">${coStatusStrip(s)}<span>${s.sent_at?'Sent '+fmtDate(String(s.sent_at).slice(0,10))+(s.sent_to&&s.sent_to.length?' to '+escHtml(s.sent_to.join(', ')):''):s.sent_to&&s.sent_to.length?'To send to '+escHtml(s.sent_to.join(', ')):''}${s.read_ai_meeting_id?' · Read AI linked':''}</span></div>
         </div>
-        ${s.status==='draft'?`<button class="btn btn-k btn-sm" onclick="coSessStatus('${s.id}','approved')">✓ Approve</button>`:s.status==='approved'?`<button class="btn btn-k btn-sm" onclick="coSendModal('${s.id}')">✉ Send recap</button>`:''}
+        ${s.status==='draft'?`<button class="btn btn-k btn-sm" onclick="coSessStatus('${s.id}','approved')">✓ Approve</button>`:s.status==='approved'?`<button class="btn btn-k btn-sm" onclick="coSendModal('${s.id}')">Send recap</button>`:''}
         <select class="form-select" style="width:auto;padding:3px 8px;font-size:11px" onchange="coSessStatus('${s.id}',this.value)">${CO_SESSION_STATUSES.map(x=>`<option${x===s.status?' selected':''}>${x}</option>`).join('')}</select>
         <button class="btn btn-ghost btn-sm" onclick="coSessModal('${s.id}')">Edit</button>
       </div>
       ${recap?`<div style="font-size:12.5px;color:var(--mut);margin-top:8px;white-space:pre-wrap">${escHtml(recap.slice(0,280))}${recap.length>280?'… ':''}</div>${recap.length>280?`<button class="btn btn-ghost btn-sm" style="margin-top:4px;padding:1px 8px" onclick="coRecapModal('${s.id}')">View full recap</button>`:''}`:''}
       <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;font-size:12px">
         ${s.recording_url?`<a href="${escHtml(s.recording_url)}" target="_blank" rel="noopener" class="btn btn-ghost btn-sm">▶ Recording</a>`:''}
-        ${fl.map(f=>`<button class="btn btn-ghost btn-sm" onclick="coFileOpen('${f.id}')">${f.kind==='recap_pdf'?'📄':f.kind==='transcript'?'📝':'📎'} ${escHtml(f.name||f.kind)}</button>`).join('')}
+        ${fl.map(f=>`<button class="btn btn-ghost btn-sm" onclick="coFileOpen('${f.id}')">${f.kind==='recap_pdf'?'':f.kind==='transcript'?'':''} ${escHtml(f.name||f.kind)}</button>`).join('')}
         <button class="btn btn-ghost btn-sm" onclick="coUploadFile('${s.id}','recap_pdf')">+ Recap PDF</button>
         <button class="btn btn-ghost btn-sm" onclick="coUploadFile('${s.id}','transcript')">+ Transcript file</button>
         <button class="btn btn-ghost btn-sm" onclick="coPasteTranscript('${s.id}')">+ Paste transcript</button>
@@ -3449,7 +3448,7 @@ function coPersonView(){
         <div style="font-size:18px;font-weight:800">${escHtml(p.name)}${p.role?` <span style="font-size:13px;color:var(--mut);font-weight:500">· ${escHtml(p.role)}</span>`:''}</div>
         <div style="font-size:12.5px;color:var(--mut);margin-top:2px">${escHtml(p.company||'')}${clientM?' · client: '+escHtml(clientM.name):''} · ${escHtml(p.engagement_type||'121')} · ${sess.length} session${sess.length!==1?'s':''}${p.email?` · <a href="mailto:${escHtml(p.email)}">${escHtml(p.email)}</a>`:''}</div>
       </div>
-      <button class="btn btn-ghost btn-sm" onclick="coPrepBrief('${p.id}')" title="Everything Danny needs before the session">⚡ Prep brief</button>
+      <button class="btn btn-ghost btn-sm" onclick="coPrepBrief('${p.id}')" title="Everything Danny needs before the session">Prep brief</button>
       <button class="btn btn-k btn-sm" onclick="coSessModal(null,'${p.id}')">+ Log session</button>
       <button class="btn btn-ghost btn-sm" onclick="coPersonModal('${p.id}')">Edit</button>
       <button class="btn btn-ghost btn-sm" onclick="coNav('list')">← All people</button>
@@ -3461,7 +3460,7 @@ function coPersonView(){
     ${open.length?open.map(a=>coActionRow(a,'open')).join(''):'<div style="font-size:12.5px;color:var(--mut)">Nothing open. Clean slate.</div>'}
   </div>
   <div class="sec-hdr">Session history</div>
-  ${sess.length?sess.map(sessCard).join(''):'<div class="empty"><div class="ico">📅</div>No sessions yet. Log the first one.</div>'}`;
+  ${sess.length?sess.map(sessCard).join(''):'<div class="empty">No sessions yet. Log the first one.</div>'}`;
 }
 function coRecapModal(sid){
   const s=coData.sessions.find(x=>x.id===sid); if(!s) return;
@@ -3632,7 +3631,7 @@ async function coPrepBrief(pid){
   coPrepShow(p,full);
 }
 function coPrepShow(p,text){
-  showModal('⚡ Prep brief · '+escHtml(p.name),
+  showModal('Prep brief · '+escHtml(p.name),
     `<div style="white-space:pre-wrap;font-size:13px;line-height:1.6" id="coprep-text">${escHtml(text)}</div>`,
     `<button class="btn btn-ghost btn-sm" onclick="coPrepRegen('${p.id}')">↻ Regenerate</button><button class="btn btn-ghost btn-sm" id="coprep-copy" onclick="coPrepCopy()">Copy</button><button class="btn btn-k" onclick="closeModal()">Done</button>`);
 }
@@ -3690,7 +3689,7 @@ function coDannyView(){
     return `<div class="card" style="margin-bottom:8px;border-left:4px solid var(--grn)">
       <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
         <div style="flex:1;min-width:200px"><div style="font-weight:700">${escHtml(p?p.name:'')} <span style="color:var(--mut);font-weight:500">· Session ${s.session_no||'?'} · ${fmtDate(s.session_date)}</span></div></div>
-        <button class="btn btn-k btn-sm" onclick="coSendModal('${s.id}')">✉ Send recap</button>
+        <button class="btn btn-k btn-sm" onclick="coSendModal('${s.id}')">Send recap</button>
         <button class="btn btn-ghost btn-sm" onclick="coOpenPerson('${s.person_id}')">Open</button>
       </div>
     </div>`;}).join(''):'';})()}
@@ -3724,7 +3723,7 @@ async function coBriefNudges(){
     const el=document.getElementById('brief-items'); if(!el) return;
     const mk=(type,text)=>`<div class="pi ${type}"><span class="pi-tag ${type}">COACHING</span><span style="font-size:10px;font-weight:700;background:var(--k);color:var(--w);border-radius:20px;padding:2px 9px;flex-shrink:0;margin-top:1px">Danny</span><span style="flex:1;font-size:12.5px;line-height:1.45;margin-left:4px">${text}</span></div>`;
     let html='';
-    if(todays.length) html+=mk('info',`Coaching today: ${todays.map(p=>escHtml(p.name)).join(', ')}. Prep brief${todays.length!==1?'s':''} ready in Coaching (⚡).`);
+    if(todays.length) html+=mk('info',`Coaching today: ${todays.map(p=>escHtml(p.name)).join(', ')}. Prep brief${todays.length!==1?'s':''} ready in Coaching ().`);
     const drafts=coData.sessions.filter(s=>s.status==='draft');
     const ready=coData.sessions.filter(s=>s.status==='approved');
     if(ready.length) html+=mk('soon',`${ready.length} approved coaching recap${ready.length!==1?'s':''} ready to send: ${ready.slice(0,3).map(s=>escHtml((coPerson(s.person_id)||{}).name||'')).join(', ')}.`);
@@ -3788,10 +3787,10 @@ function renderHome(){
   const s2=nextSess?daysUntil(nextSess.date):null;
   const tiles=[];
   if(briefShow('money')){
-    tiles.push(`<div class="ns-box key" onclick="goPage('boardroom')" title="Open Boardroom"><div class="ns-l">Boardroom Members</div><div class="ns-n" style="color:var(--grn)">${bCount}/20</div><div class="ns-t">Target: 20 × £1,000/mo</div><div class="ns-bar"><div class="ns-fill" style="width:${Math.min(100,(bCount/20)*100)}%"></div></div></div>`);
-    tiles.push(`<div class="ns-box" onclick="goPage('boardroom')" title="Open Boardroom"><div class="ns-l">Boardroom MRR</div><div class="ns-n" style="color:var(--grn)">£${boardroomMRR.toLocaleString()}</div><div class="ns-t">Target: £20,000</div><div class="ns-bar"><div class="ns-fill warn" style="width:${Math.min(100,(boardroomMRR/20000)*100)}%"></div></div></div>`);
-    tiles.push(`<div class="ns-box" onclick="goPage('members')" title="Open Existing Clients"><div class="ns-l">Private Client MRR</div><div class="ns-n" style="color:var(--blu)">£${privateMRR.toLocaleString()}</div><div class="ns-t">${existingClients.length} client${existingClients.length!==1?'s':''}</div></div>`);
-    tiles.push(`<div class="ns-box key" style="border-color:var(--blu)" onclick="goPage('kpis')" title="Open KPIs"><div class="ns-l">Total MRR</div><div class="ns-n" style="color:var(--blu)">£${totalMRR.toLocaleString()}</div><div class="ns-t">Boardroom + Private</div><div class="ns-bar"><div class="ns-fill" style="width:${Math.min(100,(totalMRR/20000)*100)}%;background:var(--blu)"></div></div></div>`);
+    tiles.push(`<div class="ns-box key" onclick="goPage('boardroom')" title="Open Boardroom"><div class="ns-l">Boardroom Members</div><div class="ns-n">${bCount}/20</div><div class="ns-t">Target: 20 × £1,000/mo</div><div class="ns-bar"><div class="ns-fill" style="width:${Math.min(100,(bCount/20)*100)}%"></div></div></div>`);
+    tiles.push(`<div class="ns-box" onclick="goPage('boardroom')" title="Open Boardroom"><div class="ns-l">Boardroom MRR</div><div class="ns-n">£${boardroomMRR.toLocaleString()}</div><div class="ns-t">Target: £20,000</div><div class="ns-bar"><div class="ns-fill warn" style="width:${Math.min(100,(boardroomMRR/20000)*100)}%"></div></div></div>`);
+    tiles.push(`<div class="ns-box" onclick="goPage('members')" title="Open Existing Clients"><div class="ns-l">Private Client MRR</div><div class="ns-n">£${privateMRR.toLocaleString()}</div><div class="ns-t">${existingClients.length} client${existingClients.length!==1?'s':''}</div></div>`);
+    tiles.push(`<div class="ns-box key" onclick="goPage('kpis')" title="Open KPIs"><div class="ns-l">Total MRR</div><div class="ns-n">£${totalMRR.toLocaleString()}</div><div class="ns-t">Boardroom + Private</div><div class="ns-bar"><div class="ns-fill" style="width:${Math.min(100,(totalMRR/20000)*100)}%"></div></div></div>`);
   }
   if(briefShow('padel')) tiles.push(`<div class="ns-box" onclick="goPage('padel')" title="Open Padel Event"><div class="ns-l">Days to Padel</div><div class="ns-n" style="color:${padel!=null&&padel<=7?'var(--red)':'var(--amb)'}">${padel==null?'—':(padel===0?'TODAY':(padel>0?padel:'PAST'))}</div><div class="ns-t">${nextPadelEv?fmtDate(nextPadelEv.date):'No padel event booked'}</div></div>`);
   if(briefShow('session')) tiles.push(`<div class="ns-box" onclick="goPage('boardroom')" title="Open the Boardroom calendar"><div class="ns-l">${nextSess?'Days to '+escHtml(nextSess.name):'Next session'}</div><div class="ns-n" style="color:${s2!=null&&s2<=7?'var(--red)':'var(--amb)'}">${s2==null?'—':(s2===0?'TODAY':s2)}</div><div class="ns-t">${nextSess?fmtDate(nextSess.date)+(nextSess.type==='Implementation Session'?' · online':''):'None booked'}</div></div>`);
@@ -3851,7 +3850,7 @@ function renderHome(){
   if(dn) dn.value=ls.str('tuf_note_'+new Date().toISOString().slice(0,10),'');
   document.getElementById('topbar-actions').innerHTML=`
     <button class="btn btn-k btn-sm" onclick="nav('tasks',document.querySelector('[data-page=tasks]'))">+ Add Task</button>
-    <button class="btn btn-ghost btn-sm" onclick="briefPrefsModal()">⚙ Customise my brief</button>`;
+    <button class="btn btn-ghost btn-sm" onclick="briefPrefsModal()">Customise my brief</button>`;
   renderDailyControl();
   renderBriefTasks();
   updateTaskBadge();
@@ -4020,7 +4019,7 @@ function renderPrivate121s(existing){
         <button class="btn btn-ghost btn-sm" onclick="showMemberDetail('${r.memberId}')">Details</button>
         ${r.coach?`<button class="btn btn-ghost btn-sm" onclick="goPage('coaching')">Sessions →</button>`:''}
       </div>
-    </div>`).join(''):'<div class="empty"><div class="ico">🎯</div>No paying 121 founders yet. Add one with the button above.</div>'}`;
+    </div>`).join(''):'<div class="empty">No paying 121 founders yet. Add one with the button above.</div>'}`;
 }
 function showMemberDetail(id){
   const m = ls.get('tuf_members',[]).find(x=>x.id===id);
@@ -4032,8 +4031,8 @@ function showMemberDetail(id){
       <div class="mc-name" style="font-size:16px;font-family:'Montserrat',sans-serif">${escHtml(m.name)}</div>
       <div class="mc-co" style="margin-bottom:6px">${escHtml(m.co)}</div>
       <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px">
-        ${m.email?`<a href="mailto:${escHtml(m.email)}" style="display:flex;align-items:center;gap:4px;font-size:12px;color:var(--blu);text-decoration:none" onclick="event.stopPropagation()">✉️ ${escHtml(m.email)}</a>`:''}
-        ${m.phone?`<a href="tel:${escHtml(m.phone)}" style="display:flex;align-items:center;gap:4px;font-size:12px;color:var(--grn);text-decoration:none" onclick="event.stopPropagation()">📞 ${escHtml(m.phone)}</a>`:''}
+        ${m.email?`<a href="mailto:${escHtml(m.email)}" style="display:flex;align-items:center;gap:4px;font-size:12px;color:var(--blu);text-decoration:none" onclick="event.stopPropagation()">${escHtml(m.email)}</a>`:''}
+        ${m.phone?`<a href="tel:${escHtml(m.phone)}" style="display:flex;align-items:center;gap:4px;font-size:12px;color:var(--grn);text-decoration:none" onclick="event.stopPropagation()">${escHtml(m.phone)}</a>`:''}
         ${!m.email&&!m.phone?`<span style="font-size:11px;color:var(--mut)">No contact details yet — click Edit Profile to add</span>`:''}
       </div>
       <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px">
@@ -4063,7 +4062,7 @@ function addMemberModal(defaultType='boardroom'){
   const isBoardroom = defaultType==='boardroom';
   showModal(isBoardroom?'Add Boardroom Member':'Add Private Client',`
     <div style="padding:8px 12px;border-radius:6px;margin-bottom:12px;${isBoardroom?'background:var(--gbg);border-left:4px solid var(--grn)':'background:var(--bbg);border-left:4px solid var(--blu)'}">
-      <strong style="font-size:12px">${isBoardroom?'💳 Boardroom Member — £1,000/month (counts towards the 20-member target)':'👤 Private Client — existing 1-2-1 advisory client (does not count towards Boardroom target)'}</strong>
+      <strong style="font-size:12px">${isBoardroom?'Boardroom Member — £1,000/month (counts towards the 20-member target)':'Private Client — existing 1-2-1 advisory client (does not count towards Boardroom target)'}</strong>
     </div>
     <div class="form-row"><label class="form-label">Member Type</label>
       <select class="form-select" id="m-type" onchange="toggleClientFeeField()">
@@ -4192,7 +4191,7 @@ function memberToPipeline(id){
   addNotif(`${m.name} moved back to Sales Pipeline${(fs&&/^\d{4}-\d{2}-\d{2}$/.test(fs))?' (start '+fs+')':''}`);
   journeyLog(m.name,'Boardroom member → back to Sales Pipeline (delayed start)');
   renderMembers();
-  const det=document.getElementById('member-detail'); if(det) det.innerHTML='<div class="empty"><div class="ico">↩</div>Moved to Sales Pipeline. Find them under Sales Pipeline.</div>';
+  const det=document.getElementById('member-detail'); if(det) det.innerHTML='<div class="empty">Moved to Sales Pipeline. Find them under Sales Pipeline.</div>';
 }
 // ── Shared person profiles ──
 function profileKey(name){ return (name||'').trim().toLowerCase(); }
@@ -4453,11 +4452,11 @@ function renderPeople(){
         <div style="min-width:0">
           <div style="font-weight:700;font-size:14px">${escHtml(p.name)}${p.co?` <span style="font-weight:400;color:var(--mut)">· ${escHtml(p.co)}</span>`:''}</div>
           <div style="font-size:11px;color:var(--mut);margin-top:3px">${[p.email,p.phone].filter(Boolean).map(escHtml).join(' · ')||'<span style="color:var(--amb)">No contact details</span>'}</div>
-          ${personEventTags(p).length?`<div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:4px">${personEventTags(p).map(t=>`<span class="tag tag-b" style="font-size:9px">🎟 ${escHtml(t)}</span>`).join('')}</div>`:''}
+          ${personEventTags(p).length?`<div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:4px">${personEventTags(p).map(t=>`<span class="tag tag-b" style="font-size:9px">${escHtml(t)}</span>`).join('')}</div>`:''}
         </div>
         <div style="display:flex;gap:4px;flex-wrap:wrap;justify-content:flex-end;max-width:60%"><span class="tag tag-y" style="font-size:9px;font-weight:800">${SEG_LABEL[personSegment(p)]}</span>${personSectionChips(p).map(c=>`<span class="tag ${c.cls}" style="font-size:9px">${escHtml(c.label)}</span>`).join('')}</div>
       </div>
-    </div>`).join(''):'<div class="empty"><div class="ico">🗂</div>Nobody in this segment yet.</div>'}`;
+    </div>`).join(''):'<div class="empty">Nobody in this segment yet.</div>'}`;
 }
 function personOpen(id){ personSelId=id; renderPeople(); }
 // ═══ RECLASSIFY TOOL — bulk-sort every person into one of the five segments ═══
@@ -4498,13 +4497,13 @@ function renderReclassify(){
           <div style="font-weight:700;font-size:13px;cursor:pointer" onclick="personOpen('${p.id}')">${escHtml(p.name)}${p.co?` <span style="font-weight:400;color:var(--mut)">· ${escHtml(p.co)}</span>`:''} ${reviewed.has(p.id)?'<span style="color:var(--grn);font-size:11px">✓</span>':''}</div>
           <div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:3px">
             ${personSectionChips(p).map(c=>`<span class="tag ${c.cls}" style="font-size:8.5px">${escHtml(c.label)}</span>`).join('')}
-            ${personEventTags(p).map(t=>`<span class="tag tag-b" style="font-size:8.5px">🎟 ${escHtml(t)}</span>`).join('')}
+            ${personEventTags(p).map(t=>`<span class="tag tag-b" style="font-size:8.5px">${escHtml(t)}</span>`).join('')}
           </div>
           ${notes?`<div style="font-size:10.5px;color:var(--mut);margin-top:3px">${escHtml(notes.slice(0,80))}${notes.length>80?'…':''}</div>`:''}
         </div>
         <div style="display:flex;gap:4px;flex-wrap:wrap">${segBtns(p)}</div>
       </div>
-    </div>`;}).join('')||'<div class="empty"><div class="ico">✅</div>Nothing matches.</div>'}`;
+    </div>`;}).join('')||'<div class="empty">Nothing matches.</div>'}`;
 }
 function rcMarkReviewed(ids){
   const reviewed=ls.get('tuf_segment_reviewed',[])||[];
@@ -4636,7 +4635,7 @@ function renderPersonProfile(id){
       'Padel',`goPage('padel')`);
   });
   L.ba.length&&(panels+=panel('Boardroom sessions attended',`<span class="tag tag-g" style="font-size:9px">×${L.ba.length}</span>`,
-    L.ba.map(a=>`<div style="font-size:12px;padding:3px 0">🏛 ${escHtml(a.sessionName||'Session')}${a.sessionDate?' · '+fmtDate(a.sessionDate):''}</div>`).join(''),
+    L.ba.map(a=>`<div style="font-size:12px;padding:3px 0">${escHtml(a.sessionName||'Session')}${a.sessionDate?' · '+fmtDate(a.sessionDate):''}</div>`).join(''),
     'Event Attendees',`navMembers('attendees',document.querySelector('[data-page=members][data-filter=attendees]'))`));
   L.inbound.forEach(x=>{
     const d=x.diagnostic;
@@ -4712,7 +4711,7 @@ function personDealSave(mid){
   renderPeople();
 }
 
-function deleteMember(id){if(!confirm('Delete this member?'))return;const members=ls.get('tuf_members',[]).filter(x=>x.id!==id);ls.set('tuf_members',members);closeModal();renderMembers();document.getElementById('member-detail').innerHTML='<div class="empty"><div class="ico">👤</div>Select a member to view their profile</div>';}
+function deleteMember(id){if(!confirm('Delete this member?'))return;const members=ls.get('tuf_members',[]).filter(x=>x.id!==id);ls.set('tuf_members',members);closeModal();renderMembers();document.getElementById('member-detail').innerHTML='<div class="empty">Select a member to view their profile</div>';}
 function logTouchpoint(id){
   const members=ls.get('tuf_members',[]);const i=members.findIndex(x=>x.id===id);if(i<0)return;
   members[i].touchpoint=new Date().toISOString().slice(0,10);
@@ -4732,7 +4731,7 @@ function memberFormsHtml(m){
   const sec=(type,label)=>{
     const list=files.filter(f=>f.formType===type).sort((a,b)=>(b.updated||'').localeCompare(a.updated||''));
     return `<div style="display:flex;justify-content:space-between;align-items:center;margin-top:12px"><div class="form-label" style="margin:0">${label} (${list.length})</div><button class="btn btn-ghost btn-sm" onclick="memberFormModal('${m.id}','${type}')">+ File one</button></div>
-    ${list.length?list.map(f=>`<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:12px;padding:6px 8px;border:1px solid var(--bdr);border-radius:6px;margin-top:5px"><span style="min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${f.kind==='upload'?'📎':'📝'} ${escHtml(f.name)}</span><span style="display:flex;gap:6px;align-items:center;flex-shrink:0"><span style="color:var(--mut);font-size:10.5px">${f.updated?fmtDate(f.updated):''}</span><button class="btn btn-ghost btn-sm" onclick="memberFormOpen('${f.id}')">Open</button></span></div>`).join(''):`<div style="font-size:11px;color:var(--mut);margin-top:4px">None filed yet.</div>`}`;
+    ${list.length?list.map(f=>`<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:12px;padding:6px 8px;border:1px solid var(--bdr);border-radius:6px;margin-top:5px"><span style="min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${f.kind==='upload'?'':''} ${escHtml(f.name)}</span><span style="display:flex;gap:6px;align-items:center;flex-shrink:0"><span style="color:var(--mut);font-size:10.5px">${f.updated?fmtDate(f.updated):''}</span><button class="btn btn-ghost btn-sm" onclick="memberFormOpen('${f.id}')">Open</button></span></div>`).join(''):`<div style="font-size:11px;color:var(--mut);margin-top:4px">None filed yet.</div>`}`;
   };
   return sec('prep','Prep forms')+sec('feedback','Feedback forms');
 }
@@ -4799,7 +4798,7 @@ function baFormsHtml(a){
   const sec=(type,label)=>{
     const list=files.filter(f=>f.formType===type).sort((x,y)=>(y.updated||'').localeCompare(x.updated||''));
     return `<div style="display:flex;justify-content:space-between;align-items:center;margin-top:12px"><div class="form-label" style="margin:0">${label} (${list.length})</div><button class="btn btn-ghost btn-sm" onclick="memberFormModal('${a.id}','${type}','ba')">+ File one</button></div>
-    ${list.length?list.map(f=>`<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:12px;padding:6px 8px;border:1px solid var(--bdr);border-radius:6px;margin-top:5px"><span style="min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${f.kind==='upload'?'📎':'📝'} ${escHtml(f.name)}</span><span style="display:flex;gap:6px;align-items:center;flex-shrink:0"><span style="color:var(--mut);font-size:10.5px">${f.updated?fmtDate(f.updated):''}</span><button class="btn btn-ghost btn-sm" onclick="memberFormOpen('${f.id}')">Open</button></span></div>`).join(''):`<div style="font-size:11px;color:var(--mut);margin-top:4px">None filed yet.</div>`}`;
+    ${list.length?list.map(f=>`<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:12px;padding:6px 8px;border:1px solid var(--bdr);border-radius:6px;margin-top:5px"><span style="min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${f.kind==='upload'?'':''} ${escHtml(f.name)}</span><span style="display:flex;gap:6px;align-items:center;flex-shrink:0"><span style="color:var(--mut);font-size:10.5px">${f.updated?fmtDate(f.updated):''}</span><button class="btn btn-ghost btn-sm" onclick="memberFormOpen('${f.id}')">Open</button></span></div>`).join(''):`<div style="font-size:11px;color:var(--mut);margin-top:4px">None filed yet.</div>`}`;
   };
   return sec('prep','Prep forms')+sec('feedback','Feedback forms');
 }
@@ -4910,7 +4909,7 @@ function followupRow(p){
         </div>
         ${p.nextAction?`<div style="font-size:11.5px;margin-top:3px">${escHtml(p.nextAction)}</div>`:''}
       </div>
-      <button class="btn btn-y btn-sm" onclick="event.stopPropagation();draftFollowupModal('${p.id}')">✏️ Draft</button>
+      <button class="btn btn-y btn-sm" onclick="event.stopPropagation();draftFollowupModal('${p.id}')">Draft</button>
       <button class="btn btn-k btn-sm" onclick="event.stopPropagation();logContactModal('${p.id}')">✓ Log contact</button>
     </div>
   </div>`;
@@ -4931,7 +4930,7 @@ function renderFollowups(){
     <div class="stat g"><div class="n">${won}</div><div class="l">Converted</div></div>
   </div>`;
   if(!overdue.length&&!dueToday.length){
-    html+=`<div class="empty"><div class="ico">✅</div>All caught up — no follow-ups due.<div style="font-size:11px;margin-top:8px">Set a "next action date" on a prospect (or use Log contact) to schedule your next chase.</div></div>`;
+    html+=`<div class="empty">All caught up — no follow-ups due.<div style="font-size:11px;margin-top:8px">Set a "next action date" on a prospect (or use Log contact) to schedule your next chase.</div></div>`;
   } else {
     if(overdue.length){ html+=`<div class="sec-hdr" style="color:var(--red)">Overdue · ${overdue.length}</div>`+overdue.map(followupRow).join(''); }
     if(dueToday.length){ html+=`<div class="sec-hdr" style="margin-top:16px">Due today · ${dueToday.length}</div>`+dueToday.map(followupRow).join(''); }
@@ -5026,7 +5025,7 @@ function renderKanban(){
     <div style="display:flex;gap:10px;align-items:center;margin-bottom:12px;flex-wrap:wrap">
       <input class="form-input" id="pipe-search" placeholder="Search the pipeline…" value="${escAttr(pipelineSearch)}" style="max-width:260px" oninput="pipelineSearch=this.value;renderKanban();const s=document.getElementById('pipe-search');if(s){s.focus();s.setSelectionRange(s.value.length,s.value.length);}">
       <span style="font-size:11.5px;color:var(--mut)">${q?prospects.length+' match'+(prospects.length!==1?'es':''):'Only people deliberately flagged as prospects live here.'}</span>
-      <button class="btn btn-ghost btn-sm" style="margin-left:auto" onclick="crmSettingsModal()" title="Contact recency thresholds">⚙ ${s.nudgeDays}d / ${s.staleDays}d</button>
+      <button class="btn btn-ghost btn-sm" style="margin-left:auto" onclick="crmSettingsModal()" title="Contact recency thresholds">${s.nudgeDays}d / ${s.staleDays}d</button>
     </div>
     <div class="grid-4" style="margin-bottom:14px">
       <div class="stat y"><div class="n">${all.length}</div><div class="l">In pipeline</div></div>
@@ -5048,7 +5047,7 @@ function renderKanban(){
               ${p.temp?`<span class="tag ${p.temp==='Hot'?'tag-r':p.temp==='Warm'?'tag-a':'tag-b'}" style="font-size:9px">${p.temp}</span>`:''}
               ${getStaleLabel(p.lastContact)?`<span class="tag tag-r" style="font-size:9px">${getStaleLabel(p.lastContact)}</span>`:''}
             </div>
-            ${p.email||p.phone?`<div style="display:flex;gap:6px;margin-top:4px">${p.email?`<a href="mailto:${escHtml(p.email)}" style="font-size:9px;color:var(--blu)" onclick="event.stopPropagation()">✉️</a>`:''} ${p.phone?`<a href="tel:${escHtml(p.phone)}" style="font-size:9px;color:var(--grn)" onclick="event.stopPropagation()">📞</a>`:''}</div>`:''}
+            ${p.email||p.phone?`<div style="display:flex;gap:6px;margin-top:4px">${p.email?`<a href="mailto:${escHtml(p.email)}" style="font-size:9px;color:var(--blu)" onclick="event.stopPropagation()">Email</a>`:''} ${p.phone?`<a href="tel:${escHtml(p.phone)}" style="font-size:9px;color:var(--grn)" onclick="event.stopPropagation()">Call</a>`:''}</div>`:''}
             ${(p.nextAction||p.nextActionDate)?`<div style="font-size:10px;color:var(--mut);margin-top:4px">${escHtml(p.nextAction||'')}${p.nextActionDate?` <span style="font-weight:700;color:${(p.nextActionDate<new Date().toISOString().slice(0,10))?'var(--red)':'var(--blu)'}">· ${fmtShort(p.nextActionDate)}</span>`:''}</div>`:''}
             ${p.futureStart?`<div style="font-size:9px;font-weight:700;color:var(--blu);margin-top:3px">Starts ${fmtShort(p.futureStart)}</div>`:''}
           </div>`).join('')}
@@ -5115,7 +5114,7 @@ function elRow(a){
     <td><div style="display:flex;gap:4px;flex-wrap:wrap;justify-content:flex-end">
       <button class="btn btn-ghost btn-sm" onclick="elToggleNotes('${a.id}')" title="Notes">Notes</button>
       <button class="btn btn-ghost btn-sm" onclick="editELModal('${a.id}')">Edit</button>
-      ${a.source==='Stripe'?'<span class="tag tag-b" style="font-size:9px" title="Added automatically from a Stripe checkout">💳 Stripe</span>':''}${a.promotedToProspectId?'<span class="tag tag-g" style="font-size:9px">In pipeline</span>':`<button class="btn btn-ghost btn-sm" onclick="convertELtoPipeline('${a.id}')" title="Send to Sales Pipeline">→ Pipeline</button>`}
+      ${a.source==='Stripe'?'<span class="tag tag-b" style="font-size:9px" title="Added automatically from a Stripe checkout">Stripe</span>':''}${a.promotedToProspectId?'<span class="tag tag-g" style="font-size:9px">In pipeline</span>':`<button class="btn btn-ghost btn-sm" onclick="convertELtoPipeline('${a.id}')" title="Send to Sales Pipeline">→ Pipeline</button>`}
     </div></td>
   </tr>
   <tr id="elnotes-${a.id}" style="display:none"><td colspan="8" style="background:var(--bg)">
@@ -5161,7 +5160,7 @@ function renderEventCRM(){
     ${rows.length?`<table class="tbl">
       <thead><tr><th>Name</th><th>Business</th><th>Contact</th><th>Event</th><th>Event date</th><th>Owner</th><th>Likelihood</th><th></th></tr></thead>
       <tbody>${rows.map(elRow).join('')}</tbody>
-    </table>`:'<div class="empty"><div class="ico">🎟️</div>No attendees yet. Add the people who have attended an event.</div>'}`;
+    </table>`:'<div class="empty">No attendees yet. Add the people who have attended an event.</div>'}`;
 }
 
 function addELModal(){
@@ -5232,7 +5231,7 @@ function baSessionSelect(id,sel){ return `<select class="form-select" id="${id}"
 function baSessionMeta(id){ const s=baSessions().find(x=>x.id===id); return s?{sessionName:s.name,sessionDate:s.date||''}:{sessionName:'',sessionDate:''}; }
 function renderBoardroomAttendees(){
   const list=baStore().slice().sort((a,b)=>(b.sessionDate||b.addedDate||'').localeCompare(a.sessionDate||a.addedDate||''));
-  const rows=list.length?list.map(a=>{const contact=[a.email?`✉️ ${escHtml(a.email)}`:'',a.phone?`📞 ${escHtml(a.phone)}`:''].filter(Boolean).join('&nbsp;·&nbsp;');return `<div class="card" style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:8px"><div style="min-width:0"><div style="font-weight:700;font-size:13px">${escHtml(a.name||'')}${a.co?` <span style="font-weight:400;color:var(--mut)">· ${escHtml(a.co)}</span>`:''}</div><div style="font-size:11px;color:var(--mut);margin-top:3px">${a.sessionName?'🏛 '+escHtml(a.sessionName):'No session set'}${a.sessionDate?' · '+fmtDate(a.sessionDate):''}${contact?'<br>'+contact:'<br><span style="color:var(--amb)">No contact details</span>'}</div></div><div style="display:flex;gap:6px;flex-shrink:0"><button class="btn btn-ghost btn-sm" onclick="baEditModal('${a.id}')">Edit</button><button class="btn btn-ghost btn-sm" onclick="baToPipeline('${a.id}')" title="Add to Sales Pipeline">→ Pipeline</button></div></div>`;}).join(''):'<div class="empty" style="margin-top:0"><div class="ico">🏛</div>No Boardroom attendees logged yet. Add the people who came to a Boardroom Day or Implementation Session.</div>';
+  const rows=list.length?list.map(a=>{const contact=[a.email?`${escHtml(a.email)}`:'',a.phone?`${escHtml(a.phone)}`:''].filter(Boolean).join('&nbsp;·&nbsp;');return `<div class="card" style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:8px"><div style="min-width:0"><div style="font-weight:700;font-size:13px">${escHtml(a.name||'')}${a.co?` <span style="font-weight:400;color:var(--mut)">· ${escHtml(a.co)}</span>`:''}</div><div style="font-size:11px;color:var(--mut);margin-top:3px">${a.sessionName?''+escHtml(a.sessionName):'No session set'}${a.sessionDate?' · '+fmtDate(a.sessionDate):''}${contact?'<br>'+contact:'<br><span style="color:var(--amb)">No contact details</span>'}</div></div><div style="display:flex;gap:6px;flex-shrink:0"><button class="btn btn-ghost btn-sm" onclick="baEditModal('${a.id}')">Edit</button><button class="btn btn-ghost btn-sm" onclick="baToPipeline('${a.id}')" title="Add to Sales Pipeline">→ Pipeline</button></div></div>`;}).join(''):'<div class="empty" style="margin-top:0">No Boardroom attendees logged yet. Add the people who came to a Boardroom Day or Implementation Session.</div>';
   document.getElementById('members-list').innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:6px"><div class="sec-hdr" style="margin:0">Boardroom Event Attendees (${list.length})</div><div style="display:flex;gap:6px"><button class="btn btn-ghost btn-sm" onclick="baAddFromModal()">+ From clients/members</button><button class="btn btn-k btn-sm" onclick="baAddModal()">+ Add attendee</button></div></div><div style="font-size:11px;color:var(--mut);margin-bottom:12px">Everyone who attended a Boardroom Day or Implementation Session, including those who did not become paying members. Keep their contacts here.</div>${rows}`;
 }
 function baFormRows(a){ a=a||{}; return `<div class="grid-2"><div class="form-row"><label class="form-label">Name</label><input class="form-input" id="ba-name" value="${escAttr(a.name||'')}"></div><div class="form-row"><label class="form-label">Business</label><input class="form-input" id="ba-co" value="${escAttr(a.co||'')}"></div></div>
@@ -5277,7 +5276,7 @@ function editELModal(id){
   const evNames=elEventNameOpts();
   showModal('Edit attendee',`
     <datalist id="el-evnames">${evNames.map(n=>`<option value="${escHtml(n)}">`).join('')}</datalist>
-    ${a.source==='Stripe'?`<div style="font-size:11px;color:var(--mut);margin-bottom:8px">Origin: 💳 <strong>Stripe checkout</strong>${a.stripeSessionId?' · session '+escHtml(a.stripeSessionId.slice(0,18))+'…':''}</div>`:''}
+    ${a.source==='Stripe'?`<div style="font-size:11px;color:var(--mut);margin-bottom:8px">Origin: <strong>Stripe checkout</strong>${a.stripeSessionId?' · session '+escHtml(a.stripeSessionId.slice(0,18))+'…':''}</div>`:''}
     <div class="grid-2"><div class="form-row"><label class="form-label">Name</label><input class="form-input" id="eel-name" value="${escHtml(a.name||'')}"></div><div class="form-row"><label class="form-label">Business</label><input class="form-input" id="eel-co" value="${escHtml(a.co||'')}"></div></div>
     <div class="grid-2"><div class="form-row"><label class="form-label">Email</label><input class="form-input" type="email" id="eel-email" value="${escHtml(a.email||'')}"></div><div class="form-row"><label class="form-label">Phone</label><input class="form-input" type="tel" id="eel-phone" value="${escHtml(a.phone||'')}"></div></div>
     <div class="grid-2"><div class="form-row"><label class="form-label">Event attended</label><input class="form-input" id="eel-event" list="el-evnames" value="${escHtml(a.event||'')}" onchange="elFillEventDate('eel-event','eel-evdate')"></div><div class="form-row"><label class="form-label">Date of event</label><input class="form-input" type="date" id="eel-evdate" value="${a.eventDate||''}"></div></div>
@@ -5370,11 +5369,11 @@ function renderInbound(){
   const tab=(k,label)=>`<button class="btn btn-sm ${inboundFilter===k?'btn-k':'btn-ghost'}" onclick="setInboundFilter('${k}')">${label}${counts[k]!=null?` (${counts[k]})`:''}</button>`;
   const head=`
     <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px">
-      <div style="display:flex;gap:6px;flex-wrap:wrap">${tab('new','New')}${tab('converted','Added')}${tab('archived','Archived')}<button class="btn btn-sm ${inboundFilter==='all'?'btn-k':'btn-ghost'}" onclick="setInboundFilter('all')">All</button><button class="btn btn-sm ${inboundSrc==='diag'?'btn-k':'btn-ghost'}" onclick="setInboundSrc(inboundSrc==='diag'?'all':'diag')">🧭 Diagnostic${diagCount?` (${diagCount})`:''}</button></div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">${tab('new','New')}${tab('converted','Added')}${tab('archived','Archived')}<button class="btn btn-sm ${inboundFilter==='all'?'btn-k':'btn-ghost'}" onclick="setInboundFilter('all')">All</button><button class="btn btn-sm ${inboundSrc==='diag'?'btn-k':'btn-ghost'}" onclick="setInboundSrc(inboundSrc==='diag'?'all':'diag')">Diagnostic${diagCount?` (${diagCount})`:''}</button></div>
       <div style="font-size:12px;color:var(--mut)">Signups land in Network automatically. Review here, then flag the strong ones to the Pipeline.</div>
     </div>
     ${inboundSrc==='diag'?`<div style="display:flex;gap:6px;flex-wrap:wrap;margin:-4px 0 14px">${[0,1,2,3,4,5].map(n=>`<button class="btn btn-sm ${inbStage===n?'btn-k':'btn-ghost'}" onclick="setInbStage(${n})">${n?'Stage '+n:'All stages'}</button>`).join('')}</div>`:''}`;
-  if(!list.length){ el.innerHTML=head+`<div class="empty"><div class="ico">📥</div>${inboundSrc==='diag'?'No diagnostic results'+(inbStage?' at Stage '+inbStage:'')+' yet.':inboundFilter==='new'?'No new website signups right now.':'Nothing here.'}</div>`; updateInboundBadge(); return; }
+  if(!list.length){ el.innerHTML=head+`<div class="empty">${inboundSrc==='diag'?'No diagnostic results'+(inbStage?' at Stage '+inbStage:'')+' yet.':inboundFilter==='new'?'No new website signups right now.':'Nothing here.'}</div>`; updateInboundBadge(); return; }
   const field=(label,val)=> val?`<div style="margin-top:8px"><div style="font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--mut);font-weight:700">${label}</div><div style="font-size:13.5px;white-space:pre-wrap">${escHtml(val)}</div></div>`:'';
   const diagBlock=l=>{
     const d=l.diagnostic; if(!d) return '';
@@ -5388,7 +5387,7 @@ function renderInbound(){
     </div>`;
   };
   const card=l=>{
-    const contact=[l.email?`✉️ <a href="mailto:${escAttr(l.email)}">${escHtml(l.email)}</a>`:'', l.phone?`📞 ${escHtml(l.phone)}`:'', l.website?`🌐 ${escHtml(l.website)}`:''].filter(Boolean).join('&nbsp;&nbsp;·&nbsp;&nbsp;');
+    const contact=[l.email?`<a href="mailto:${escAttr(l.email)}">${escHtml(l.email)}</a>`:'', l.phone?`${escHtml(l.phone)}`:'', l.website?`${escHtml(l.website)}`:''].filter(Boolean).join('&nbsp;&nbsp;·&nbsp;&nbsp;');
     const srcChip=(l.source==='Diagnostic'||l.diagnostic)
       ? `<span style="background:var(--y);color:var(--k);font-size:10px;font-weight:800;padding:2px 8px;border-radius:10px;text-transform:uppercase;letter-spacing:.04em">Diagnostic</span>`
       : `<span style="background:rgba(0,0,0,.06);color:var(--mut);font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;text-transform:uppercase;letter-spacing:.04em">Website</span>`;
@@ -5475,7 +5474,7 @@ function editProspectModal(id){
   const p=ls.get('tuf_prospects',[]).find(x=>x.id===id);if(!p)return;
   showModal(`${p.name} — ${p.co}`,`
     ${p.sourceEvent?`<div style="font-size:11px;color:var(--mut);margin-bottom:8px">Origin: event lead from <strong>${escHtml(p.sourceEvent)}</strong></div>`:''}
-    ${p.source==='Website'?`<div style="font-size:11px;color:var(--mut);margin-bottom:8px">Origin: 🌐 <strong>Website signup</strong></div>`:''}
+    ${p.source==='Website'?`<div style="font-size:11px;color:var(--mut);margin-bottom:8px">Origin: <strong>Website signup</strong></div>`:''}
     ${p.convertedToMemberId?`<div style="font-size:11px;color:var(--grn);font-weight:600;margin-bottom:8px">✓ Converted to a member.</div>`:''}
     ${(()=>{ try{ const per=personOf(p); if(!per) return ''; const L=personLinks(per); const na=escAttr(p.name);
       const chips=personSectionChips(per).map(c=>`<span class="tag ${c.cls}" style="font-size:9px">${escHtml(c.label)}</span>`).join(' ');
@@ -5581,7 +5580,7 @@ function renderTestimonials(){
         </div>
       </div>
     </div>`).join('')
-    :'<div class="empty"><div class="ico">⭐</div>No testimonials yet. Add quotes from S1 attendees.</div>';
+    :'<div class="empty">No testimonials yet. Add quotes from S1 attendees.</div>';
   document.getElementById('topbar-actions').innerHTML=`<button class="btn btn-k btn-sm" onclick="addTestModal()">+ Add Testimonial</button>`;
 }
 function addTestModal(){showModal('Add Testimonial',`
@@ -5632,7 +5631,7 @@ function renderOnboarding(){
       </div>
       ${allDone?`<div style="font-size:10px;font-weight:700;color:var(--grn);margin-top:4px">✓ All steps complete — open to finish</div>`:`<div style="font-size:10px;color:var(--mut);margin-top:4px">${steps.length-done} step${steps.length-done!==1?'s':''} remaining</div>`}
     </div>`;
-  }).join(''):`<div class="empty"><div class="ico">🎉</div>All members fully onboarded. Add a new member to start a new onboarding flow.</div>`;
+  }).join(''):`<div class="empty">All members fully onboarded. Add a new member to start a new onboarding flow.</div>`;
 }
 
 function showOnboarding(memberId){
@@ -5679,8 +5678,7 @@ function showOnboarding(memberId){
       ${m.onboardingType==='bespoke'?`<button class="btn btn-ghost btn-sm" style="margin-top:8px" onclick="obAddStep('${memberId}')">+ Add step</button>`:''}
       ${allDone?`
       <div style="margin-top:16px;padding:14px;background:var(--gbg);border-radius:8px;border:1px solid #C8E6C9;text-align:center">
-        <div style="font-size:22px;margin-bottom:6px">🎉</div>
-        <div style="font-weight:700;font-size:13px;margin-bottom:4px">${escHtml(firstName)} is fully onboarded!</div>
+                <div style="font-weight:700;font-size:13px;margin-bottom:4px">${escHtml(firstName)} is fully onboarded!</div>
         <div style="font-size:11px;color:var(--mut);margin-bottom:12px">All ${steps.length} steps complete. ${m.onboardingType==='existing'?'Add them to the Boardroom with free access.':m.onboardingType==='bespoke'?'Mark onboarding complete.':'Move them to the active Boardroom section.'}</div>
         <button class="btn btn-k" onclick="completeOnboarding('${memberId}')" style="width:100%">${m.onboardingType==='existing'?'Add to Boardroom (free access) ✓':m.onboardingType==='bespoke'?'Complete onboarding ✓':'Move to Boardroom ✓'}</button>
       </div>`:''}
@@ -5709,7 +5707,7 @@ function completeOnboarding(memberId){
   else { members[i].type='boardroom'; outcome='an active Boardroom member'; }
   ls.set('tuf_members',members);
   addNotif(`${name} onboarding complete — ${outcome}`);
-  document.getElementById('ob-detail').innerHTML=`<div class="pi good" style="border-radius:8px;padding:16px"><span class="pi-tag good">DONE</span><span style="flex:1;font-size:13px;margin-left:10px">${escHtml(name)} is now ${outcome}. 🎉</span></div>`;
+  document.getElementById('ob-detail').innerHTML=`<div class="pi good" style="border-radius:8px;padding:16px"><span class="pi-tag good">DONE</span><span style="flex:1;font-size:13px;margin-left:10px">${escHtml(name)} is now ${outcome}. </span></div>`;
   renderOnboarding();
 }
 function setOnboardingType(memberId,type){
@@ -5729,7 +5727,7 @@ function obDeleteMember(memberId){
   ls.set('tuf_members',members.filter(x=>x.id!==memberId));
   try{ localStorage.removeItem('tuf_ob_'+memberId); if(sb) sb.from('tuf_state').delete().eq('key','tuf_ob_'+memberId).then(()=>{}).catch(()=>{}); }catch(e){}
   addNotif(`${m.name} removed from onboarding`);
-  const det=document.getElementById('ob-detail'); if(det) det.innerHTML='<div class="empty"><div class="ico">👤</div>Select a member to view their onboarding</div>';
+  const det=document.getElementById('ob-detail'); if(det) det.innerHTML='<div class="empty">Select a member to view their onboarding</div>';
   renderOnboarding();
 }
 
@@ -5762,7 +5760,7 @@ function renderSessions(){
         <span class="tag ${complete?'tag-g':'tag-a'}">${complete?'Complete':'Upcoming'}</span>
         <button class="btn btn-ghost btn-sm" onclick="sessDelete('${s.id}')" title="Delete session">✕</button>
       </div></div>`;
-  }).join('') || '<div class="empty"><div class="ico">📅</div>No sessions yet. Create your first session plan.</div>';
+  }).join('') || '<div class="empty">No sessions yet. Create your first session plan.</div>';
   document.getElementById('sessions-list').innerHTML=cards+renderSessionFeedback();
   document.getElementById('topbar-actions').innerHTML=`<button class="btn btn-k btn-sm" onclick="sessNewSession()">+ New Session</button>`;
 }
@@ -5797,7 +5795,7 @@ function sessDropBlock(e,sid){
   let start='11:15'; if(s.blocks.length){ let best='09:30',maxEnd=-1; s.blocks.forEach(b=>{const en=spMins(b.start)+(+b.dur||0); if(en>maxEnd){maxEnd=en;best=spAddMin(b.start,b.dur);}}); start=best; }
   const nb={id:uid(),key:type,title,start,dur,fields:{}}; s.blocks.push(nb); ls.set('tuf_sessions',sess); sessExpanded=nb.id; renderSessions();
 }
-function spFixedHtml(it){ return `<div class="sp-block sp-fixed"><div class="sp-time">${it.start}</div><div style="flex:1"><div class="sp-title" style="color:var(--mut)">🔒 ${escHtml(it.label)}</div></div></div>`; }
+function spFixedHtml(it){ return `<div class="sp-block sp-fixed"><div class="sp-time">${it.start}</div><div style="flex:1"><div class="sp-title" style="color:var(--mut)">${escHtml(it.label)}</div></div></div>`; }
 function spBlockHtml(s,b){
   const isAnchor=b.key==='anchor';
   if(sessExpanded===b.id){
@@ -5823,7 +5821,7 @@ function spBlockHtml(s,b){
   const detail=spDetail(b);
   return `<div class="sp-block"><div class="sp-time">${b.start}–${spAddMin(b.start,b.dur)}</div><div style="flex:1"><div class="sp-title">${escHtml(b.title||'Block')}</div>${detail?`<div class="sp-detail">${escHtml(detail)}</div>`:''}</div><span style="cursor:pointer;font-size:14px" title="Edit" onclick="sessToggleBlock('${b.id}')">✎</span></div>`;
 }
-function spFileRow(f){ return `<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--bdr)"><span style="cursor:pointer;flex:1;font-size:12px;font-weight:600;color:var(--blu)" onclick="sessFileOpen('${f.id}')">${f.kind==='link'?'🔗':'📄'} ${escHtml(f.name)}</span><span class="tag" style="font-size:9px;background:var(--bg);color:var(--mut)">${escHtml(f.ftype||'')}</span><span style="font-size:10px;color:var(--mut)">${escHtml(f.date||'')} · ${escHtml(f.by||'')}</span><span style="cursor:pointer;color:var(--mut);font-weight:700" onclick="sessFileDelete('${f.id}')">×</span></div>`; }
+function spFileRow(f){ return `<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--bdr)"><span style="cursor:pointer;flex:1;font-size:12px;font-weight:600;color:var(--blu)" onclick="sessFileOpen('${f.id}')">${f.kind==='link'?'':''} ${escHtml(f.name)}</span><span class="tag" style="font-size:9px;background:var(--bg);color:var(--mut)">${escHtml(f.ftype||'')}</span><span style="font-size:10px;color:var(--mut)">${escHtml(f.date||'')} · ${escHtml(f.by||'')}</span><span style="cursor:pointer;color:var(--mut);font-weight:700" onclick="sessFileDelete('${f.id}')">×</span></div>`; }
 function renderSessionPlan(id){
   const sess=ls.get('tuf_sessions',[]); const s=sess.find(x=>x.id===id); if(!s){ sessBack(); return; }
   if(!s.blocks){ s.blocks=sessDefaultBlocks(); } if(!s.files) s.files=[]; if(sessEnsureAnchors(s)) ls.set('tuf_sessions',sess);
@@ -5897,8 +5895,8 @@ function linkedToTarget(targetVal){
   const tasks=ls.get('tuf_tasks',[]).filter(t=>t.linkedTo===targetVal&&t.status!=='Done');
   if(!posts.length&&!tasks.length) return '<div style="font-size:11px;color:var(--mut)">No marketing or tasks linked yet.</div>';
   let h='';
-  if(posts.length){ h+=`<div style="font-size:11px;font-weight:700;color:var(--mut);margin:6px 0 4px">Marketing (${posts.length})</div>`+posts.map(p=>`<div style="font-size:11.5px;padding:3px 0">📣 ${escHtml(p.title)} <span style="color:var(--mut)">· ${escHtml(p.platform||'')}${p.date?' · '+fmtShort(p.date):''} · ${escHtml(p.status||'')}</span></div>`).join(''); }
-  if(tasks.length){ h+=`<div style="font-size:11px;font-weight:700;color:var(--mut);margin:6px 0 4px">Open tasks (${tasks.length})</div>`+tasks.map(t=>`<div style="font-size:11.5px;padding:3px 0">✅ ${escHtml(t.title)} <span style="color:var(--mut)">· ${escHtml(t.owner||'')}${t.dueDate?' · '+fmtShort(t.dueDate):''}</span></div>`).join(''); }
+  if(posts.length){ h+=`<div style="font-size:11px;font-weight:700;color:var(--mut);margin:6px 0 4px">Marketing (${posts.length})</div>`+posts.map(p=>`<div style="font-size:11.5px;padding:3px 0">${escHtml(p.title)} <span style="color:var(--mut)">· ${escHtml(p.platform||'')}${p.date?' · '+fmtShort(p.date):''} · ${escHtml(p.status||'')}</span></div>`).join(''); }
+  if(tasks.length){ h+=`<div style="font-size:11px;font-weight:700;color:var(--mut);margin:6px 0 4px">Open tasks (${tasks.length})</div>`+tasks.map(t=>`<div style="font-size:11.5px;padding:3px 0">${escHtml(t.title)} <span style="color:var(--mut)">· ${escHtml(t.owner||'')}${t.dueDate?' · '+fmtShort(t.dueDate):''}</span></div>`).join(''); }
   return h;
 }
 function linkedPanelHtml(targetVal){return `<div style="margin-top:10px;border-top:1px solid var(--bdr);padding-top:8px"><div style="font-size:11px;font-weight:700;color:var(--mut);margin-bottom:2px">LINKED MARKETING & TASKS</div>${linkedToTarget(targetVal)}</div>`;}
@@ -6218,7 +6216,7 @@ function ccToggleDaily(id){ const k=ccToday(); const d=ls.get('tuf_content_daily
 // ---- render ----
 function renderContent(){
   const host=document.getElementById('content-render'); if(!host) return;
-  document.getElementById('topbar-actions').innerHTML=`<button class="btn btn-k btn-sm" onclick="ccGenerate()">⚡ Generate 8-week plan</button><button class="btn btn-ghost btn-sm" onclick="ccAddModal()">+ Add post</button>`;
+  document.getElementById('topbar-actions').innerHTML=`<button class="btn btn-k btn-sm" onclick="ccGenerate()">Generate 8-week plan</button><button class="btn btn-ghost btn-sm" onclick="ccAddModal()">+ Add post</button>`;
   const posts=ls.get('tuf_content',[])||[];
   const qa=ccQA(posts);
   host.innerHTML = ccSummary(posts,qa) + ccDailyMustsCard() + ccWeek(posts) + ccRulesPanel();
@@ -6234,7 +6232,7 @@ function ccSummary(posts,qa){
     ? `<div class="cc-tile warn" onclick="document.getElementById('cc-qa').scrollIntoView({behavior:'smooth'})"><div class="n">${qa.length}</div><div class="l">to fix</div></div>`
     : `<div class="cc-tile ok"><div class="n">✓</div><div class="l">rules ok</div></div>`;
   return `<div class="cc-strip">${tile(wk.length,'This week')}${tile(li,'LinkedIn')}${tile(reels,'IG reels')}${tile(shorts,'YT shorts')}${qaTile}</div>
-    ${qa.length?`<div class="card" id="cc-qa"><div class="card-title">Rule check</div>${qa.map(m=>`<div style="font-size:12.5px;color:var(--mut);padding:5px 0;border-top:1px solid var(--bdr)">⚠️ ${escHtml(m)}</div>`).join('')}</div>`:''}`;
+    ${qa.length?`<div class="card" id="cc-qa"><div class="card-title">Rule check</div>${qa.map(m=>`<div style="font-size:12.5px;color:var(--mut);padding:5px 0;border-top:1px solid var(--bdr)">${escHtml(m)}</div>`).join('')}</div>`:''}`;
 }
 function ccWeek(posts){
   const wkMon=ccAddDays(mondayOf(new Date()),ccWeekOffset*7);
@@ -6311,17 +6309,16 @@ function dcAgo(iso){ const s=Math.round((Date.now()-new Date(iso).getTime())/100
 function renderDannyCal(){
   const host=document.getElementById('dannycal-render'); if(!host) return;
   const url=ls.str(DC_URL_KEY,'');
-  document.getElementById('topbar-actions').innerHTML = url ? `<button class="btn btn-ghost btn-sm" onclick="dcSettingsModal()">⚙︎ Calendar link</button>` : '';
+  document.getElementById('topbar-actions').innerHTML = url ? `<button class="btn btn-ghost btn-sm" onclick="dcSettingsModal()">Calendar link</button>` : '';
   if(!url){ host.innerHTML=dcSetupHtml(); return; }
   const cache=ls.get(DC_CACHE_KEY,null);
-  if(cache&&cache.ics){ dcRenderFromCache(cache); } else { host.innerHTML='<div class="empty"><div class="ico">📆</div>Loading Danny\'s calendar…</div>'; }
+  if(cache&&cache.ics){ dcRenderFromCache(cache); } else { host.innerHTML='<div class="empty">Loading Danny\'s calendar…</div>'; }
   const stale=!cache||!cache.fetchedAt||(Date.now()-new Date(cache.fetchedAt).getTime()>15*60*1000);
   if(stale) dcRefresh(true);
 }
 function dcSetupHtml(){
   return `<div class="card" style="max-width:640px">
-    <div style="font-size:34px">📆</div>
-    <h3 style="margin:6px 0">See how busy Danny is</h3>
+        <h3 style="margin:6px 0">See how busy Danny is</h3>
     <p style="color:var(--mut);font-size:13.5px">Connect Danny's Outlook calendar to show his week here — meetings, times and free slots — for the whole team.</p>
     <ol style="color:var(--mut);font-size:13px;line-height:1.8;padding-left:18px;margin:10px 0 16px">
       <li>Danny publishes his calendar in Outlook and copies the ICS link.</li>
@@ -6360,7 +6357,7 @@ async function dcRefresh(silent){
     if(btn){ btn.disabled=false; btn.textContent='↻ Refresh'; }
     if(!silent){
       const nice=notReady?"The calendar-proxy function isn't deployed yet — see DANNY_CALENDAR_SETUP.md.":msg;
-      if(!ls.get(DC_CACHE_KEY)){ const host=document.getElementById('dannycal-render'); if(host) host.innerHTML='<div class="empty"><div class="ico">⚠️</div>'+escHtml(nice)+'<br><br><button class="btn btn-ghost btn-sm" onclick="dcSettingsModal()">Calendar link</button></div>'; }
+      if(!ls.get(DC_CACHE_KEY)){ const host=document.getElementById('dannycal-render'); if(host) host.innerHTML='<div class="empty">'+escHtml(nice)+'<br><br><button class="btn btn-ghost btn-sm" onclick="dcSettingsModal()">Calendar link</button></div>'; }
       else alert(nice);
     }
   }
@@ -6532,7 +6529,7 @@ function renderPodcast(){
         <button class="btn btn-k btn-sm" onclick="podEpModal()">+ Add episode</button>
       </div>
       <div style="margin-top:10px">
-        ${next.eps.map(e=>`<div style="display:flex;gap:10px;align-items:center;padding:6px 0;border-top:1px solid #EEE;font-size:13px"><span style="font-weight:700">🎙 ${escHtml(e.title)}</span>${e.guestName?`<span style="color:var(--mut)">with ${escHtml(e.guestName)}</span>`:''}<span style="flex:1"></span><button class="btn btn-ghost btn-sm" onclick="podEpModal('${e.id}')">Edit</button></div>`).join('')}
+        ${next.eps.map(e=>`<div style="display:flex;gap:10px;align-items:center;padding:6px 0;border-top:1px solid #EEE;font-size:13px"><span style="font-weight:700">${escHtml(e.title)}</span>${e.guestName?`<span style="color:var(--mut)">with ${escHtml(e.guestName)}</span>`:''}<span style="flex:1"></span><button class="btn btn-ghost btn-sm" onclick="podEpModal('${e.id}')">Edit</button></div>`).join('')}
       </div>
       <div style="margin-top:10px">${podChkBar(chkDone,allItems.length)}<div style="font-size:11px;color:var(--mut);margin-top:4px">Production checklist: ${chkDone}/${allItems.length} done</div></div>
     </div>`:`
@@ -6572,7 +6569,7 @@ function renderPodcast(){
     </div>`;
   document.getElementById('pod-schedule').innerHTML=`
     <div class="sec-hdr">Episode schedule</div>
-    ${upcoming.length?upcoming.map(epCard).join(''):'<div class="empty"><div class="ico">🎙</div>No upcoming episodes planned. Book the next recording day.</div>'}
+    ${upcoming.length?upcoming.map(epCard).join(''):'<div class="empty">No upcoming episodes planned. Book the next recording day.</div>'}
     ${past.length?`<div class="sec-hdr" style="margin-top:14px">Published and past (${past.length})</div>`+past.map(e=>`<div style="display:flex;gap:10px;align-items:center;padding:6px 10px;border-bottom:1px solid #EEE;font-size:12.5px"><span class="tag ${e.status==='Published'?'tag-g':'tag-a'}" style="font-size:9px">${e.status}</span><span style="font-weight:600">${escHtml(e.title)}</span>${e.guestName?`<span style="color:var(--mut)">· ${escHtml(e.guestName)}</span>`:''}<span style="flex:1"></span><span style="color:var(--mut)">${e.recordDate?fmtShort(e.recordDate):''}</span><button class="btn btn-ghost btn-sm" style="padding:1px 8px" onclick="podEpModal('${e.id}')">Edit</button></div>`).join(''):''}
   `;
   // Guest pipeline
@@ -6584,7 +6581,7 @@ function renderPodcast(){
         <td><select class="form-select" style="padding:4px 6px;font-size:11px" onchange="updatePodStatus('${g.id}',this.value)">${PODCAST_STATUSES.map(s=>`<option${s===g.status?' selected':''}>${s}</option>`).join('')}</select></td>
         <td style="font-size:11px">${g.date?fmtShort(g.date):''}</td>
         <td style="font-size:11px;color:var(--mut)">${escHtml(g.notes||'')}</td>
-        <td style="white-space:nowrap">${g.status==='Confirmed'?`<button class="btn btn-ghost btn-sm" onclick="podEpModal(null,'${g.id}')" title="Book an episode with this guest">🎙 Book</button>`:''}<button class="btn btn-ghost btn-sm" onclick="editGuestModal('${g.id}')">Edit</button></td>
+        <td style="white-space:nowrap">${g.status==='Confirmed'?`<button class="btn btn-ghost btn-sm" onclick="podEpModal(null,'${g.id}')" title="Book an episode with this guest">Book</button>`:''}<button class="btn btn-ghost btn-sm" onclick="editGuestModal('${g.id}')">Edit</button></td>
       </tr>`).join('')}
       </tbody></table>`
     : '<div class="empty">No podcast guests yet. Target: 20+ in the pipeline.</div>');
@@ -6728,7 +6725,7 @@ function deleteIP(id){if(!confirm('Delete?'))return;ls.set('tuf_ip',ls.get('tuf_
 const FILE_CATS=['Boardroom Reports','Sales','Boardroom','Events','Content','Finance','Operations','Growth Plan','Other'];
 const DOCS_BUCKET='tuf-docs';
 function docType(name){ const e=(String(name||'').split('.').pop()||'').toLowerCase(); if(e==='pdf')return'pdf'; if(['ppt','pptx','key'].includes(e))return'deck'; if(['doc','docx'].includes(e))return'doc'; if(['xls','xlsx','csv'].includes(e))return'sheet'; if(['png','jpg','jpeg','gif','webp','heic'].includes(e))return'image'; return'other'; }
-function docIcon(t){ return t==='pdf'?'📄':t==='deck'?'📊':t==='doc'?'📝':t==='sheet'?'📈':t==='image'?'🖼':'📁'; }
+function docIcon(t){ return t==='pdf'?'':t==='deck'?'':t==='doc'?'':t==='sheet'?'':t==='image'?'':''; }
 function fmtSize(b){ if(b==null||isNaN(b))return''; if(b<1024)return b+' B'; if(b<1048576)return (b/1024).toFixed(0)+' KB'; return (b/1048576).toFixed(1)+' MB'; }
 function renderFiles(){
   const list=ls.get('tuf_files',[]);
@@ -6737,7 +6734,7 @@ function renderFiles(){
     ? cats.map(cat=>`
         <div class="sec-hdr" style="margin-top:14px">${escHtml(cat)}</div>
         ${list.filter(f=>f.cat===cat).map(f=>{
-          const meta=[f.memberName?'👤 '+escHtml(f.memberName):'', f.by?'by '+escHtml(f.by):'', f.updated?fmtDate(f.updated):'', f.kind==='upload'?fmtSize(f.size):(f.link?'link':'')].filter(Boolean).join(' · ');
+          const meta=[f.memberName?''+escHtml(f.memberName):'', f.by?'by '+escHtml(f.by):'', f.updated?fmtDate(f.updated):'', f.kind==='upload'?fmtSize(f.size):(f.link?'link':'')].filter(Boolean).join(' · ');
           const open = f.kind==='upload'
             ? `<button class="btn btn-k btn-sm" onclick="docOpen('${f.id}')">Open ↗</button>`
             : f.kind==='text'
@@ -6751,8 +6748,8 @@ function renderFiles(){
           </div>`;
         }).join('')}
       `).join('')
-    : '<div class="empty"><div class="ico">📁</div>No documents yet. Upload a file (e.g. the Boardroom report) or add a link.</div>';
-  document.getElementById('topbar-actions').innerHTML=`<button class="btn btn-k btn-sm" onclick="uploadDocModal()">⬆ Upload</button><button class="btn btn-ghost btn-sm" onclick="addFileModal()">+ Link</button>`;
+    : '<div class="empty">No documents yet. Upload a file (e.g. the Boardroom report) or add a link.</div>';
+  document.getElementById('topbar-actions').innerHTML=`<button class="btn btn-k btn-sm" onclick="uploadDocModal()">Upload</button><button class="btn btn-ghost btn-sm" onclick="addFileModal()">+ Link</button>`;
 }
 function uploadDocModal(){showModal('Upload a File',`
   <div class="form-row"><label class="form-label">Category</label><select class="form-select" id="uf-cat">${FILE_CATS.map(c=>`<option>${c}</option>`).join('')}</select></div>
@@ -6776,7 +6773,7 @@ async function doUploadDoc(){
     const list=ls.get('tuf_files',[]);
     list.push({id:uid(),name:f.name,cat:document.getElementById('uf-cat').value,type:docType(f.name),kind:'upload',path,size:f.size,by:CURRENT_USER,updated:new Date().toISOString().slice(0,10)});
     ls.set('tuf_files',list);
-    addNotif('📄 Document uploaded: '+f.name);
+    addNotif('Document uploaded: '+f.name);
     closeModal(); renderFiles();
   }catch(e){
     const msg=String((e&&e.message)||e);
@@ -6884,7 +6881,7 @@ function renderCapMap(){
     owners.forEach(o=>{ const mine=CAPS.filter(x=>ownersOf(x).includes(o)); if(!mine.length)return; html+=`<div style="font-family:'Montserrat',sans-serif;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.6px;color:${USER_COLOURS[o]||'#888'};margin:14px 0 8px">${o}</div>`+mine.map(capCard).join(''); });
   } else {
     let caps=CAPS.slice(); if(capView==='attention') caps=caps.filter(c=>getRAG(c.id)!=='green');
-    if(capView==='attention'&&!caps.length){ html+=`<div class="empty">Nothing red or amber — everything's green. 🎉</div>`; }
+    if(capView==='attention'&&!caps.length){ html+=`<div class="empty">Nothing red or amber — everything's green. </div>`; }
     else pillars.forEach(p=>{ const inP=caps.filter(c=>c.p===p); if(!inP.length)return; html+=`<div style="font-family:'Montserrat',sans-serif;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.6px;color:var(--mut);margin:14px 0 8px">${p}</div>`+inP.map(capCard).join(''); });
   }
   const wrap=document.getElementById('cap-render');
@@ -6973,7 +6970,7 @@ function okrRenderBuild(){
     <div class="okr-ob-st">${escHtml(o.statement||'(objective)')} <button class="okr-mini" onclick="okrEditWorking(${oi})">edit</button><button class="okr-mini" onclick="okrDeleteWorking(${oi})">✕</button></div>
     <div class="okr-ob-meta">${o.owner?`<span class="okr-chip owner">${escHtml(o.owner)}</span>`:''}${okrConfChip(o.confidence)}</div>
     ${(o.keyResults||[]).map(k=>`<div class="okr-kr"><span class="okr-kr-x">KR</span><span>${escHtml(k.description||'')}${(k.baseline||k.target)?` <span style="color:#7d7d85">(${escHtml(k.baseline||'?')} → ${escHtml(k.target||'?')}${k.dueDate?' by '+escHtml(k.dueDate):''})</span>`:''}${k.measure?` · ${escHtml(k.measure)}`:''}</span></div>`).join('')}
-    ${(o.risks&&o.risks.length)?`<div class="okr-risk">⚠ ${o.risks.map(escHtml).join('; ')}</div>`:''}
+    ${(o.risks&&o.risks.length)?`<div class="okr-risk">${o.risks.map(escHtml).join('; ')}</div>`:''}
   </div>`).join('');
 }
 // Hand-edits to the working set mid-session (native prompts avoid clashing with the full-screen overlay).
@@ -7127,7 +7124,7 @@ function okrObjectiveCard(o){
         <span style="flex:1">${escHtml(k.description||'')}${(k.baseline||k.target)?` <span style="color:var(--mut)">(${escHtml(k.baseline||'?')} → ${escHtml(k.target||'?')}${k.dueDate?' by '+escHtml(fmtShort(k.dueDate)):''})</span>`:''}${k.measure?` <span style="color:var(--mut)">· ${escHtml(k.measure)}</span>`:''}</span>
         <span style="display:flex;gap:4px;flex-shrink:0"><button class="btn btn-ghost btn-sm" style="padding:2px 7px;font-size:10px" onclick="okrEditKR('${o.id}','${k.id}')">edit</button><button class="btn btn-ghost btn-sm" style="padding:2px 7px;font-size:10px" onclick="okrDeleteKR('${o.id}','${k.id}')">✕</button></span>
       </div>`).join('')}
-      ${(o.risks&&o.risks.length)?`<div style="font-size:11px;color:var(--red);margin-top:6px">⚠ ${o.risks.map(escHtml).join('; ')}</div>`:''}
+      ${(o.risks&&o.risks.length)?`<div style="font-size:11px;color:var(--red);margin-top:6px">${o.risks.map(escHtml).join('; ')}</div>`:''}
       <button class="btn btn-ghost btn-sm" style="margin-top:8px" onclick="okrAddKR('${o.id}')">+ Key result</button>
     </div>
   </div>`;
@@ -7871,7 +7868,7 @@ function buildDefaultTasks(){
 // ════════════════════════════════════════════════════════════════════
 const SM_PLATFORMS = {
   instagram: {
-    label:'Instagram', ico:'📸', color:'#e1306c', bg:'#fff0f5',
+    label:'Instagram', ico:'', color:'#e1306c', bg:'#fff0f5',
     sections:[
       {title:'Audience',fields:[{key:'followers',label:'Followers'},{key:'new_followers',label:'New Followers'}]},
       {title:'Content',fields:[{key:'posts',label:'Posts Published'},{key:'views',label:'Views'},{key:'story_views',label:'Story Views'}]},
@@ -7882,7 +7879,7 @@ const SM_PLATFORMS = {
     primary:'followers', chartKeys:['followers','impressions','likes'], chartLabels:['Followers','Impressions','Likes'],
   },
   linkedin: {
-    label:'LinkedIn', ico:'💼', color:'#0a66c2', bg:'#f0f6ff',
+    label:'LinkedIn', ico:'', color:'#0a66c2', bg:'#f0f6ff',
     sections:[
       {title:'Audience',fields:[{key:'followers',label:'Followers'},{key:'new_followers',label:'New Followers'}]},
       {title:'Content',fields:[{key:'posts',label:'Posts Published'},{key:'impressions',label:'Impressions'}]},
@@ -7892,14 +7889,14 @@ const SM_PLATFORMS = {
     primary:'followers', chartKeys:['followers','impressions','reactions'], chartLabels:['Followers','Impressions','Reactions'],
   },
   spotify: {
-    label:'Podcast (Spotify)', ico:'🎙', color:'#1db954', bg:'#f0fbf4',
+    label:'Podcast (Spotify)', ico:'', color:'#1db954', bg:'#f0fbf4',
     sections:[
       {title:'Metrics',fields:[{key:'views',label:'Plays/Streams'},{key:'new_followers',label:'New Followers'},{key:'watch_hours',label:'Listen Hours'},{key:'episodes_posted',label:'Episodes Posted'}]},
     ],
     primary:'views', chartKeys:['views','watch_hours','new_followers'], chartLabels:['Plays','Listen Hours','New Followers'],
   },
   youtube: {
-    label:'YouTube', ico:'▶️', color:'#ff0000', bg:'#fff5f5',
+    label:'YouTube', ico:'▶', color:'#ff0000', bg:'#fff5f5',
     sections:[
       {title:'Audience',fields:[{key:'subscribers',label:'Subscribers'},{key:'new_subscribers',label:'New Subscribers'}]},
       {title:'Content',fields:[{key:'videos_published',label:'Videos Published'},{key:'impressions',label:'Impressions'}]},
@@ -7925,7 +7922,7 @@ function renderSocial(){
   const monthLabel = `${SM_MONTHS[smMonth]} ${smYear}`;
   // Tabs
   document.getElementById('social-tabs').innerHTML=
-    [['overview','📊 Overview'],...Object.entries(SM_PLATFORMS).map(([k,v])=>[k,v.ico+' '+v.label])]
+    [['overview','Overview'],...Object.entries(SM_PLATFORMS).map(([k,v])=>[k,v.ico+' '+v.label])]
     .map(([k,l])=>`<button class="btn ${smTab===k?'btn-k':'btn-ghost'} btn-sm" onclick="setSmTab('${k}')">${l}</button>`).join('');
   // Month nav
   document.getElementById('social-month-nav').innerHTML=`
@@ -8145,7 +8142,7 @@ async function sendTaskEmail(task, eventType){
       <span style="color:#FBFF00;font-size:18px;font-weight:900;letter-spacing:0.5px">THE ULTIMATE FOUNDER</span>
     </div>
     <div style="padding:24px;background:#fafafa">
-      <h2 style="margin:0 0 4px;font-size:18px;color:#000">${isNew?'✅ New task assigned to you':'🎉 Task completed'}</h2>
+      <h2 style="margin:0 0 4px;font-size:18px;color:#000">${isNew?'New task assigned to you':'Task completed'}</h2>
       <p style="margin:0 0 18px;color:#777;font-size:13px">Hi ${task.owner}, here's what's been added to your list.</p>
       <div style="background:#fff;border:1px solid #e0e0e0;border-left:4px solid #FBFF00;border-radius:6px;padding:16px 18px;margin-bottom:16px">
         <div style="font-size:16px;font-weight:700;color:#000;margin-bottom:10px">${task.title}</div>
@@ -8168,16 +8165,16 @@ async function sendTaskEmail(task, eventType){
     });
     if(res.ok){
       console.log('Email sent to',toEmail);
-      addNotif('📧 Email sent to '+task.owner+' ('+toEmail+')');
+      addNotif('Email sent to '+task.owner+' ('+toEmail+')');
     } else {
       const err=await res.json();
       console.warn('Resend error:',err);
-      addNotif('⚠️ Email to '+task.owner+' failed: '+(err.message||err.name||'unknown error'));
+      addNotif('Email to '+task.owner+' failed: '+(err.message||err.name||'unknown error'));
     }
   } catch(e){
     console.warn('Email failed:',e);
     // CORS or network issue — log but don't break the app
-    addNotif('⚠️ Email notification failed (network). Task saved successfully.');
+    addNotif('Email notification failed (network). Task saved successfully.');
   }
 }
 
@@ -8192,7 +8189,7 @@ function renderTeamEmailSettings(){
   const emails = ls.get('tuf_team_emails',{});
   const people = ['Danny','Joe','Jasper','James','Chloe'];
   return `<div class="card" style="margin-top:20px">
-    <div class="card-title">📧 Team Email Addresses</div>
+    <div class="card-title">Team Email Addresses</div>
     <p style="font-size:12px;color:var(--mut);margin-bottom:12px">Each person's work email. Used to match their login to their name (auto-filled when they sign in).</p>
     ${people.map(p=>`<div class="form-row" style="display:flex;align-items:center;gap:10px">
       <label style="font-size:12px;font-weight:700;width:70px;flex-shrink:0">${p}</label>
@@ -8208,10 +8205,10 @@ function renderTeamEmailSettings(){
 
 function testEmailNotification(){
   const emails = ls.get('tuf_team_emails',{});
-  if(!emails.James){ addNotif('⚠️ Save email addresses first'); return; }
+  if(!emails.James){ addNotif('Save email addresses first'); return; }
   const testTask = {id:'test',title:'Test notification from TUF HQ',owner:'James',section:'ops',priority:'High',dueDate:new Date().toISOString().slice(0,10),notes:'This is a test to confirm email notifications are working.',createdBy:CURRENT_USER};
   addNotif('Sending test email to '+emails.James+'...');
-  sendTaskEmail(testTask,'assigned').catch(e=>addNotif('⚠️ '+e.message));
+  sendTaskEmail(testTask,'assigned').catch(e=>addNotif(''+e.message));
 }
 
 function saveTeamEmails(){
@@ -8275,7 +8272,7 @@ function renderEmailSubList(){
         <td style="font-size:11px;color:var(--mut)">${s.addedDate?fmtShort(s.addedDate):''}</td>
         <td><button class="btn btn-ghost btn-sm" onclick="editSubscriberModal('${s.id}')">⋯</button></td>
       </tr>`).join('')}</tbody>
-    </table>` : `<div class="empty"><div class="ico">📧</div>${emailFilter==='All'?'No subscribers yet. Add your first one or import a CSV.':'No subscribers in this segment.'}</div>`}`;
+    </table>` : `<div class="empty">${emailFilter==='All'?'No subscribers yet. Add your first one or import a CSV.':'No subscribers in this segment.'}</div>`}`;
 }
 
 function setEmailFilter(f){ emailFilter=f; renderEmailList(); }
@@ -8380,7 +8377,7 @@ function renderNewsletters(){
           </div>
         </div>
       </div>`) .join('')
-    : `<div class="empty"><div class="ico">📨</div>No newsletters yet. Create your first draft — content from podcasts, read.ai recordings, and events goes here.</div>`}`;
+    : `<div class="empty">No newsletters yet. Create your first draft — content from podcasts, read.ai recordings, and events goes here.</div>`}`;
 }
 
 function addSubscriberModal(){
@@ -8639,7 +8636,7 @@ function brxNextView(){
       <div class="brx-group">1 · To do for upcoming events</div>
       <div style="display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap">
         <button class="btn btn-ghost btn-sm" onclick="brxSeedEssentials()" title="Adds the standard must do items for the next session type">+ Seed the essentials</button>
-        <button class="btn btn-ghost btn-sm" onclick="brxAISuggest()" ${brxAIBusy?'disabled':''}>${brxAIBusy?'Thinking…':'✨ AI suggestions'}</button>
+        <button class="btn btn-ghost btn-sm" onclick="brxAISuggest()" ${brxAIBusy?'disabled':''}>${brxAIBusy?'Thinking…':'AI suggestions'}</button>
       </div>
       ${sugs&&sugs.length?`<div class="brx-card" style="margin-bottom:12px;border-color:#3A3520">
         <div style="font-size:10.5px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--y);margin-bottom:6px">AI suggested · tap + to add</div>
@@ -8825,7 +8822,7 @@ function brxSvcSection(k){
       `<div style="font-size:11px;color:var(--mut);margin-bottom:10px">Ticks reset automatically each new week and month. Items stay on the checklist for every period until removed.</div>
        <div class="grid-2">${brxSvcChecklistCol(k,svc,'weekly','This week')}${brxSvcChecklistCol(k,svc,'monthly','This month')}</div>`)
     +brxSec('svc-'+k+'-struct','Session structure',
-      (struct.length?struct.map(b=>`<div class="brx-row"><span style="font-size:12.5px"><b style="color:var(--y);font-variant-numeric:tabular-nums">${escHtml(b.start||'')}</b>&nbsp; ${escHtml(b.title||'')}</span><span style="display:flex;gap:5px;align-items:center"><span style="font-size:11px;color:var(--mut)">${b.dur?b.dur+'min':''}</span><button class="btn btn-ghost btn-sm" style="padding:2px 8px" onclick="brxSvcStructModal('${k}','${b.id}')">✏️</button></span></div>`).join('')+'<div style="font-size:10.5px;color:#54545C;margin-top:8px">The standard running order for this service. Build a specific date in the Session Planner.</div>':'<div style="font-size:12px;color:var(--mut)">No structure yet.</div>'),
+      (struct.length?struct.map(b=>`<div class="brx-row"><span style="font-size:12.5px"><b style="color:var(--y);font-variant-numeric:tabular-nums">${escHtml(b.start||'')}</b>&nbsp; ${escHtml(b.title||'')}</span><span style="display:flex;gap:5px;align-items:center"><span style="font-size:11px;color:var(--mut)">${b.dur?b.dur+'min':''}</span><button class="btn btn-ghost btn-sm" style="padding:2px 8px" onclick="brxSvcStructModal('${k}','${b.id}')">Edit</button></span></div>`).join('')+'<div style="font-size:10.5px;color:#54545C;margin-top:8px">The standard running order for this service. Build a specific date in the Session Planner.</div>':'<div style="font-size:12px;color:var(--mut)">No structure yet.</div>'),
       `<button class="btn btn-ghost btn-sm" onclick="brxSvcStructModal('${k}','')">+ Add</button>`);
   const title=`<span style="font-size:14px;text-transform:none;letter-spacing:0;color:#fff">${escHtml(svc.name)}</span><span style="font-weight:600;color:var(--mut);text-transform:none;letter-spacing:0;font-size:11px"> — ${escHtml((svc.rhythm||'').split('·')[0].trim())}</span>`;
   return brxSec('svc-'+k,title,`<div style="padding-top:2px">${body}</div>`);
@@ -8972,9 +8969,9 @@ function brxSessionView(id){
   const fbs=ls.get('tuf_session_feedback',[])||[];
   const fb=fbs.find(f=>s.name&&f.session&&(s.name.includes(f.session)||f.session.includes(s.name)));
   const past=(s.date||'')<new Date().toISOString().slice(0,10)||s.status==='Complete';
-  const formRow=f=>`<div class="brx-row"><span style="font-size:12.5px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">📝 <b>${escHtml(f.memberName||'')}</b> <span style="color:var(--mut)">· ${escHtml(f.name)}</span></span><button class="btn btn-ghost btn-sm" onclick="memberFormOpen('${f.id}')">Open</button></div>`;
+  const formRow=f=>`<div class="brx-row"><span style="font-size:12.5px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"><b>${escHtml(f.memberName||'')}</b> <span style="color:var(--mut)">· ${escHtml(f.name)}</span></span><button class="btn btn-ghost btn-sm" onclick="memberFormOpen('${f.id}')">Open</button></div>`;
   const blocks=(s.blocks||[]).slice().sort((a,b)=>(a.start||'').localeCompare(b.start||''));
-  const agendaBody=(blocks.length?blocks.map(b=>`<div class="brx-row"><span style="font-size:12.5px"><b style="color:var(--y);font-variant-numeric:tabular-nums">${escHtml(b.start||'')}</b>&nbsp; ${escHtml(b.title||'')}${b.fields&&b.fields.speaker?` <span style="color:var(--mut)">· ${escHtml(b.fields.speaker)}</span>`:''}</span><span style="display:flex;gap:5px;align-items:center;flex-shrink:0"><span style="font-size:11px;color:var(--mut)">${b.dur?b.dur+'min':''}</span><button class="btn btn-ghost btn-sm" style="padding:2px 8px" onclick="brxBlockModal('${s.id}','${b.id}')">✏️</button><button class="btn btn-ghost btn-sm" style="padding:2px 8px" onclick="brxBlockDelete('${s.id}','${b.id}')">✕</button></span></div>`).join(''):'<div style="font-size:12px;color:var(--mut)">No agenda yet. Add rows here or build the full day in the Session Planner.</div>')
+  const agendaBody=(blocks.length?blocks.map(b=>`<div class="brx-row"><span style="font-size:12.5px"><b style="color:var(--y);font-variant-numeric:tabular-nums">${escHtml(b.start||'')}</b>&nbsp; ${escHtml(b.title||'')}${b.fields&&b.fields.speaker?` <span style="color:var(--mut)">· ${escHtml(b.fields.speaker)}</span>`:''}</span><span style="display:flex;gap:5px;align-items:center;flex-shrink:0"><span style="font-size:11px;color:var(--mut)">${b.dur?b.dur+'min':''}</span><button class="btn btn-ghost btn-sm" style="padding:2px 8px" onclick="brxBlockModal('${s.id}','${b.id}')">Edit</button><button class="btn btn-ghost btn-sm" style="padding:2px 8px" onclick="brxBlockDelete('${s.id}','${b.id}')">✕</button></span></div>`).join(''):'<div style="font-size:12px;color:var(--mut)">No agenda yet. Add rows here or build the full day in the Session Planner.</div>')
     +`<div style="font-size:10.5px;color:#54545C;margin-top:8px">Fuller builder with drag and drop lives in the Session Planner.</div>`;
   const debriefBody=fb?`<table class="tbl"><tbody>
       ${fb.attendees?`<tr><td style="color:var(--mut);font-size:11px;padding-right:12px">Attendees</td><td style="font-size:12px">${escHtml(String(fb.attendees))}</td></tr>`:''}
@@ -9129,7 +9126,7 @@ function brxPaymentsBoard(){
   const mo=new Date().toISOString().slice(0,7);
   const thisMonth=pays.filter(p=>(p.paidDate||'').slice(0,7)===mo);
   const total=p=>'£'+((p.amount||0)/100).toLocaleString('en-GB');
-  const row=p=>`<div class="brx-row"><span style="font-size:12.5px;min-width:0"><b>${escHtml(p.name)}</b> <span style="color:var(--mut)">· ${p.paidDate?fmtDate(p.paidDate):''}</span></span><span style="display:flex;gap:8px;align-items:center;flex-shrink:0"><b style="color:#5AC98E;font-variant-numeric:tabular-nums">${total(p)}</b><span class="brx-tag ${p.manual?'o':'y'}">${p.manual?'Manual':'💳 Stripe'}</span><button class="btn btn-ghost btn-sm" style="padding:2px 8px" onclick="brxPayDelete('${p.id}')">✕</button></span></div>`;
+  const row=p=>`<div class="brx-row"><span style="font-size:12.5px;min-width:0"><b>${escHtml(p.name)}</b> <span style="color:var(--mut)">· ${p.paidDate?fmtDate(p.paidDate):''}</span></span><span style="display:flex;gap:8px;align-items:center;flex-shrink:0"><b style="color:#5AC98E;font-variant-numeric:tabular-nums">${total(p)}</b><span class="brx-tag ${p.manual?'o':'y'}">${p.manual?'Manual':'Stripe'}</span><button class="btn btn-ghost btn-sm" style="padding:2px 8px" onclick="brxPayDelete('${p.id}')">✕</button></span></div>`;
   const sum=thisMonth.reduce((s,p)=>s+(p.amount||0),0);
   const body=`<div style="font-size:11.5px;color:var(--mut);margin-bottom:8px">${thisMonth.length?`<b style="color:#5AC98E">${thisMonth.length} payment${thisMonth.length>1?'s':''} this month · £${(sum/100).toLocaleString('en-GB')}</b>`:'No Boardroom payments logged this month yet.'} Stripe payments of £${(BRX_BOARDROOM_MIN_PENCE/100).toLocaleString('en-GB')}+ land here automatically; smaller ones stay with the events.</div>`
     +(pays.length?pays.slice(0,30).map(row).join(''):'<div style="font-size:12px;color:var(--mut)">Nothing yet. Boardroom Stripe payments appear here on their own, or log a bank transfer manually.</div>');
@@ -9212,8 +9209,8 @@ function brxMemberProfile(id){
         <h1 style="font-size:26px;margin-bottom:4px">${escHtml(m.name)}</h1>
         <div style="font-size:13px;color:var(--mut)">${escHtml(m.co||'')}</div>
         <div style="display:flex;gap:16px;flex-wrap:wrap;margin-top:12px;font-size:12.5px">
-          ${m.email?`<a href="mailto:${escAttr(m.email)}" style="color:var(--y)">✉️ ${escHtml(m.email)}</a>`:''}
-          ${m.phone?`<a href="tel:${escAttr(m.phone)}" style="color:#fff;text-decoration:none">📞 ${escHtml(m.phone)}</a>`:''}
+          ${m.email?`<a href="mailto:${escAttr(m.email)}" style="color:var(--y)">${escHtml(m.email)}</a>`:''}
+          ${m.phone?`<a href="tel:${escAttr(m.phone)}" style="color:#fff;text-decoration:none">${escHtml(m.phone)}</a>`:''}
           ${(!m.email&&!m.phone)?'<span style="color:#E8B33C">No contact details yet — Edit to add</span>':''}
         </div>
       </div>
@@ -9243,7 +9240,7 @@ function brxMemberProfile(id){
       </div>
       <div class="brx-card" style="margin-bottom:14px">
         ${sub('Boardroom payments')}
-        ${(()=>{const ps=brxPaymentsFor(m);return ps.length?ps.map(p=>`<div class="brx-row"><span style="font-size:12.5px">${p.paidDate?fmtDate(p.paidDate):''}</span><span style="display:flex;gap:8px;align-items:center"><b style="color:#5AC98E">£${((p.amount||0)/100).toLocaleString('en-GB')}</b><span class="brx-tag ${p.manual?'o':'y'}">${p.manual?'Manual':'💳 Stripe'}</span></span></div>`).join(''):'<div style="font-size:12px;color:var(--mut)">No Boardroom payments recorded yet. Stripe payments appear automatically.</div>';})()}
+        ${(()=>{const ps=brxPaymentsFor(m);return ps.length?ps.map(p=>`<div class="brx-row"><span style="font-size:12.5px">${p.paidDate?fmtDate(p.paidDate):''}</span><span style="display:flex;gap:8px;align-items:center"><b style="color:#5AC98E">£${((p.amount||0)/100).toLocaleString('en-GB')}</b><span class="brx-tag ${p.manual?'o':'y'}">${p.manual?'Manual':'Stripe'}</span></span></div>`).join(''):'<div style="font-size:12px;color:var(--mut)">No Boardroom payments recorded yet. Stripe payments appear automatically.</div>';})()}
       </div>
       ${brxActionsPanel(m)}
     </div>
@@ -9441,10 +9438,10 @@ function brxIPView(){
     const list=ip.filter(f=>(f.ipCat||'Other')===cat).sort((a,b)=>(b.updated||'').localeCompare(a.updated||''));
     return brxSec('ip-'+cat,cat+' ('+list.length+')',
       (list.length?list.map(row).join(''):'<div style="font-size:12px;color:var(--mut)">Nothing here yet.</div>'),
-      `<button class="btn btn-ghost btn-sm" onclick="brxIPUploadModal('${cat}')">⬆</button><button class="btn btn-ghost btn-sm" onclick="brxIPLinkModal('${cat}')">+ Link</button><button class="btn btn-ghost btn-sm" onclick="brxIPAttachModal('${cat}')">Attach</button>`);
+      `<button class="btn btn-ghost btn-sm" onclick="brxIPUploadModal('${cat}')">Add</button><button class="btn btn-ghost btn-sm" onclick="brxIPLinkModal('${cat}')">+ Link</button><button class="btn btn-ghost btn-sm" onclick="brxIPAttachModal('${cat}')">Attach</button>`);
   };
   const prepN=forms.filter(f=>f.formType==='prep').length, fbN=forms.filter(f=>f.formType==='feedback').length;
-  const formsBody=forms.length?forms.slice().sort((a,b)=>(b.updated||'').localeCompare(a.updated||'')).map(f=>`<div class="brx-row"><span style="font-size:12.5px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">📝 <b>${escHtml(f.memberName||'')}</b> <span style="color:var(--mut)">· ${escHtml(f.name)}</span></span><button class="btn btn-ghost btn-sm" onclick="memberFormOpen('${f.id}')">Open</button></div>`).join(''):'<div style="font-size:12px;color:var(--mut)">No forms filed yet.</div>';
+  const formsBody=forms.length?forms.slice().sort((a,b)=>(b.updated||'').localeCompare(a.updated||'')).map(f=>`<div class="brx-row"><span style="font-size:12.5px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"><b>${escHtml(f.memberName||'')}</b> <span style="color:var(--mut)">· ${escHtml(f.name)}</span></span><button class="btn btn-ghost btn-sm" onclick="memberFormOpen('${f.id}')">Open</button></div>`).join(''):'<div style="font-size:12px;color:var(--mut)">No forms filed yet.</div>';
   return `
   <div class="brx-sec">Boardroom IP · the important documents <span style="color:var(--mut);text-transform:none;letter-spacing:0;font-weight:600">Stored with the Documents hub, organised here</span></div>
   ${BRX_IP_CATS.map(group).join('')}
@@ -9488,7 +9485,7 @@ async function brxIPUpload(cat){
     const list=ls.get('tuf_files',[])||[];
     list.push({id:uid(),name:f.name,cat:'Boardroom Reports',type:docType(f.name),kind:'upload',path,size:f.size,by:CURRENT_USER,updated:new Date().toISOString().slice(0,10),ip:true,ipCat:cat});
     ls.set('tuf_files',list);
-    addNotif('📄 Added to Boardroom IP: '+f.name);
+    addNotif('Added to Boardroom IP: '+f.name);
     closeModal(); renderBoardroom();
   }catch(e){
     const msg=String((e&&e.message)||e);
@@ -9535,10 +9532,10 @@ function renderBoardroomChecklist(){
       <span class="chk-text" style="flex:1;font-size:13px" onclick="toggleBoardroomTask('${i.id}')">${escHtml(i.text)}</span>
       ${i.date?`<span style="font-size:9px;font-weight:700;color:${overdue?'var(--red)':'var(--mut)'}">${fmtShort(i.date)}</span>`:''}
       ${i.owner?`<span class="tag tag-${(i.owner||'').toLowerCase()}" style="font-size:9px">${escHtml(i.owner)}</span>`:''}
-      <button class="btn btn-ghost btn-sm" style="padding:2px 8px" title="Edit" onclick="editBoardroomTask('${i.id}')">✏️</button>
+      <button class="btn btn-ghost btn-sm" style="padding:2px 8px" title="Edit" onclick="editBoardroomTask('${i.id}')">Edit</button>
       <button class="btn btn-ghost btn-sm" style="padding:2px 8px" title="Delete" onclick="deleteBoardroomTask('${i.id}')">✕</button>
     </div>`;
-  }).join(''):'<div class="empty" style="padding:20px"><div class="ico">✅</div>No items yet. Add the first task for the Boardroom event below.</div>';
+  }).join(''):'<div class="empty" style="padding:20px">No items yet. Add the first task for the Boardroom event below.</div>';
   el.innerHTML=`
     <div class="sec-hdr">Boardroom Event Checklist</div>
     <div class="card">
@@ -9793,7 +9790,7 @@ function renderKPIs(){
     <div class="sec-hdr">Commercial</div>
     <div class="grid-4" style="margin-bottom:20px">
       ${stat(boardroom.length+'/20','Boardroom Members','y')}
-      ${stat('£'+totalMRR.toLocaleString(),'Total MRR','g')}
+      ${stat('£'+totalMRR.toLocaleString(),'Total MRR','y')}
       ${stat(priv.length,'Private 121 Clients · £'+privMRR.toLocaleString(),'')}
       ${stat(((totalMRR/20000)*100).toFixed(0)+'%','To £20k MRR Target','g')}
     </div>
@@ -9849,7 +9846,7 @@ function renderBuildRequests(){
     <div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start">
       <div style="flex:1"><div style="font-weight:700;font-size:13px">${escHtml(r.title)}</div>${r.detail?`<div style="font-size:12px;color:var(--mut);margin-top:3px;white-space:pre-wrap">${escHtml(r.detail)}</div>`:''}<div style="font-size:10px;color:var(--mut);margin-top:6px">By ${escHtml(r.by||'')} · ${escHtml(r.date||'')}</div></div>
       <div style="display:flex;gap:6px;align-items:flex-start"><select class="form-select" style="font-size:11px;padding:3px 6px;width:auto" onchange="setBuildReqStatus('${r.id}',this.value)">${statuses.map(s=>`<option${s===(r.status||'New')?' selected':''}>${s}</option>`).join('')}</select><button class="btn btn-ghost btn-sm" onclick="deleteBuildReq('${r.id}')">✕</button></div>
-    </div></div>`).join(''):'<div class="empty"><div class="ico">🛠</div>No build requests yet. Add one, or ask HQ.</div>');
+    </div></div>`).join(''):'<div class="empty">No build requests yet. Add one, or ask HQ.</div>');
   updateBuildReqBadge();
 }
 function addBuildReqModal(){ showModal('Add Build Request',`<div class="form-row"><label class="form-label">What do you want the app to do?</label><input class="form-input" id="br-title" placeholder="Short title"></div><div class="form-row"><label class="form-label">Detail</label><textarea class="form-textarea" id="br-detail" placeholder="Describe it. What, where, and why."></textarea></div>`,`<button class="btn btn-ghost" onclick="closeModal()">Cancel</button><button class="btn btn-k" onclick="saveBuildReq()">Add</button>`); }
@@ -9887,7 +9884,7 @@ function renderAIDump(){
           <button class="btn btn-red btn-sm" onclick="deleteAI('${item.id}')">Delete</button>
         </div>
       </div>
-    </div>`).join(''):'<div class="empty"><div class="ico">🤖</div>Nothing saved yet. Dump useful prompts, workflows and AI tools here as you discover them.</div>';
+    </div>`).join(''):'<div class="empty">Nothing saved yet. Dump useful prompts, workflows and AI tools here as you discover them.</div>';
   document.getElementById('topbar-actions').innerHTML=`<button class="btn btn-k btn-sm" onclick="addAIModal()">+ Add to Dump</button>`;
 }
 function setAIFilter(f){aiDumpFilter=f;renderAIDump();}
@@ -9918,7 +9915,7 @@ const WA_CATS = ['Welcome','Event Invite','Follow-up','Retention','Boardroom','C
 function seedWATemplates(){
   if(ls.get('tuf_wa_templates')) return;
   ls.set('tuf_wa_templates',[
-    {id:uid(),name:'New Member Welcome',cat:'Welcome',owner:'Joe',text:"Hi {name}, welcome to The Ultimate Founder Boardroom! 🎉 I'm Joe from the TUF team. We're genuinely excited to have you join us. You'll receive your full onboarding details shortly. In the meantime, if you have any questions at all, I'm here. Looking forward to seeing you soon. Joe"},
+    {id:uid(),name:'New Member Welcome',cat:'Welcome',owner:'Joe',text:"Hi {name}, welcome to The Ultimate Founder Boardroom! I'm Joe from the TUF team. We're genuinely excited to have you join us. You'll receive your full onboarding details shortly. In the meantime, if you have any questions at all, I'm here. Looking forward to seeing you soon. Joe"},
     {id:uid(),name:'Boardroom Day Reminder',cat:'Boardroom',owner:'Joe',text:"Hi {name}, just a reminder that your next Boardroom Day is coming up. Details have been sent to your email. If you have any questions about the day or need anything beforehand, just shout. Looking forward to it! Joe"},
     {id:uid(),name:'Post-Padel Follow-up',cat:'Follow-up',owner:'Jasper',text:"Hi {name}, great to meet you at the Padel event today! Really enjoyed the conversation. I'd love to stay in touch — would be great to catch up properly at one of our upcoming events. Let me know if I can help with anything. Jasper"},
     {id:uid(),name:'Post-Event Thank You',cat:'Follow-up',owner:'Jasper',text:"Hi {name}, thank you so much for joining us today. It was brilliant having you there. We'd love to get your feedback — what was the biggest thing you took away? Always helps us make the next one even better. Jasper"},
@@ -9926,7 +9923,7 @@ function seedWATemplates(){
     {id:uid(),name:'Padel Event Invite',cat:'Event Invite',owner:'Jasper',text:"Hi {name}! We're running an exclusive Padel event on 25 June — it's a great mix of founders and business leaders. Would love to have you there if you fancy it. Limited spots. Let me know and I'll get you on the list. Jasper"},
     {id:uid(),name:'S2 Boardroom Invite',cat:'Boardroom',owner:'Danny',text:"Hi {name}, our next Boardroom Day is on 2 July and I wanted to personally invite you. Following on from what we discussed, I think this is the right environment for where you're at right now. Let me know if you'd like to join us. Danny"},
     {id:uid(),name:'Implementation Session Reminder',cat:'Boardroom',owner:'Joe',text:"Hi {name}, just a reminder your Implementation Session is coming up. Please take 10 minutes beforehand to note down your biggest challenge since the last session and one win. Looking forward to it. Joe"},
-    {id:uid(),name:'Community Welcome (WhatsApp Group)',cat:'Community',owner:'Jasper',text:"Welcome to The Ultimate Founder Boardroom group, {name}! 👋 Quick reminder of the group rules: Chatham House rules apply, business-focused conversations only, and please keep it professional. Really glad to have you here. Jasper"},
+    {id:uid(),name:'Community Welcome (WhatsApp Group)',cat:'Community',owner:'Jasper',text:"Welcome to The Ultimate Founder Boardroom group, {name}! Quick reminder of the group rules: Chatham House rules apply, business-focused conversations only, and please keep it professional. Really glad to have you here. Jasper"},
     {id:uid(),name:'Warm Prospect First Outreach',cat:'Follow-up',owner:'Danny',text:"Hi {name}, Danny here from The Ultimate Founder. I've been meaning to reach out — I think what we're building with the Boardroom would be genuinely useful for where you're at right now. Worth a quick conversation? Danny"},
   ]);
 }
@@ -9958,7 +9955,7 @@ function renderWATemplates(){
       <div style="background:#F5F5F5;border-radius:6px;padding:10px 12px;font-size:12px;line-height:1.5;color:var(--txt);white-space:pre-wrap">${escHtml(t.text)}</div>
       <div style="font-size:10px;color:var(--mut);margin-top:6px">Tip: replace {name} with the recipient's first name before sending</div>
     </div>`).join('')
-    : '<div class="empty"><div class="ico">💬</div>No templates in this category.</div>';
+    : '<div class="empty">No templates in this category.</div>';
   document.getElementById('topbar-actions').innerHTML=`<button class="btn btn-k btn-sm" onclick="addWAModal()">+ Add Template</button>`;
 }
 function setWAFilter(f){waFilter=f;renderWATemplates();}
@@ -10216,7 +10213,7 @@ function hqConfirm(pid){
   }
   delete HQ_PENDING[pid];
   const card=document.getElementById('card-'+pid);
-  if(card) card.outerHTML=`<div style="font-size:11.5px;color:var(--grn);font-weight:600">✅ ${msg}</div>`;
+  if(card) card.outerHTML=`<div style="font-size:11.5px;color:var(--grn);font-weight:600">${msg}</div>`;
 }
 
 function hqDismiss(pid){
@@ -10591,7 +10588,7 @@ function renderHomeEOD(){
   const mine=eod[CURRENT_USER];
   el.innerHTML=`
     <div class="card" style="border:2px solid var(--y);margin-bottom:8px">
-      <div style="font-size:11px;font-weight:700;margin-bottom:6px">☀️ Your update today, ${escHtml(CURRENT_USER||'')}</div>
+      <div style="font-size:11px;font-weight:700;margin-bottom:6px">Your update today, ${escHtml(CURRENT_USER||'')}</div>
       <textarea class="form-textarea" id="eod-home-text" style="min-height:54px" placeholder="What did you achieve today?">${mine?escHtml(mine.text):''}</textarea>
       <div style="display:flex;align-items:center;gap:8px;margin-top:6px">
         <button class="btn btn-y btn-sm" onclick="dailySaveUpdate('eod-home-text')">${mine?'Update':'Post'}</button>
@@ -10629,7 +10626,7 @@ function renderTeamOverview(){
     ].filter(Boolean).join(' ');
     const body=active.length
       ? `<div style="border-radius:8px;overflow:hidden;border:1px solid var(--bdr);border-top:none">${renderTaskRows(active,today)}</div>`
-      : `<div class="empty" style="padding:18px"><div class="ico">✅</div>All clear — nothing open.</div>`;
+      : `<div class="empty" style="padding:18px">All clear — nothing open.</div>`;
     return `<div class="card" style="border-left:4px solid ${colour}">
       <div onclick="goPersonTasks('${p}')" title="Open ${p}'s tasks" style="display:flex;align-items:center;gap:9px;margin-bottom:12px;flex-wrap:wrap;cursor:pointer">
         <div style="width:11px;height:11px;border-radius:50%;background:${colour};flex-shrink:0"></div>
@@ -10676,7 +10673,7 @@ function renderDaily(){
       </div>
     </div>
     ${isToday?`<div class="card" style="border:2px solid var(--y)">
-      <div class="card-title">☀️ Your update for today, ${CURRENT_USER}</div>
+      <div class="card-title">Your update for today, ${CURRENT_USER}</div>
       <textarea class="form-textarea" id="eod-text" placeholder="What did you achieve today? Wins, progress, anything blocked.">${mine?escHtml(mine.text):''}</textarea>
       <div style="display:flex;align-items:center;gap:10px;margin-top:8px">
         <button class="btn btn-y" onclick="dailySaveUpdate()">${mine?'Update':'Post update'}</button>
@@ -10769,8 +10766,8 @@ function renderHolidays(){
   document.getElementById('topbar-actions').innerHTML=`<button class="btn btn-y btn-sm" onclick="holAddModal()">+ Add Holiday</button>`;
   el.innerHTML=`
     <div class="card" style="display:flex;gap:24px;flex-wrap:wrap;align-items:center">
-      <div><span style="font-weight:700">🏝 Off today:</span> ${offNow.length?offNow.map(e=>`<span class="tag tag-${(e.person||'').toLowerCase()}" style="margin-left:4px">${escHtml(e.person)} until ${fmtShort(e.to)}</span>`).join(''):'<span style="color:var(--mut)"> nobody</span>'}</div>
-      <div><span style="font-weight:700">📅 Next 14 days:</span> ${offSoon.length?offSoon.map(e=>`<span class="tag tag-${(e.person||'').toLowerCase()}" style="margin-left:4px">${escHtml(e.person)} ${fmtShort(e.from)} to ${fmtShort(e.to)}</span>`).join(''):'<span style="color:var(--mut)"> nobody booked off</span>'}</div>
+      <div><span style="font-weight:700">Off today:</span> ${offNow.length?offNow.map(e=>`<span class="tag tag-${(e.person||'').toLowerCase()}" style="margin-left:4px">${escHtml(e.person)} until ${fmtShort(e.to)}</span>`).join(''):'<span style="color:var(--mut)"> nobody</span>'}</div>
+      <div><span style="font-weight:700">Next 14 days:</span> ${offSoon.length?offSoon.map(e=>`<span class="tag tag-${(e.person||'').toLowerCase()}" style="margin-left:4px">${escHtml(e.person)} ${fmtShort(e.from)} to ${fmtShort(e.to)}</span>`).join(''):'<span style="color:var(--mut)"> nobody booked off</span>'}</div>
     </div>
     <div class="sec">
       <div class="sec-hdr">Allowances · ${holYear} <select class="form-select" style="width:auto;font-size:11px;margin-left:8px" onchange="holYear=parseInt(this.value);renderHolidays()">${years.map(y=>`<option${y===holYear?' selected':''}>${y}</option>`).join('')}</select> <button class="btn btn-ghost btn-sm" style="margin-left:auto" onclick="holAllowanceModal()">Edit allowances</button></div>
@@ -10881,10 +10878,10 @@ function holSaveAllowances(){
 // ═══ C-SUITE AI AGENTS ═══════════════════════════════════════════════════════
 let csuiteRole='CEO';
 const CSUITE_ROLES={
-  CEO:{icon:'👑',title:'Chief Executive Officer',remit:'Reviews all department outputs and synthesises them into a weekly executive summary with a prioritised action list aligned to overall business strategy and vision.'},
-  CMO:{icon:'📣',title:'Chief Marketing Officer',remit:'Reviews all marketing activity, content output, lead generation and brand actions across the marketing section.'},
-  CFO:{icon:'💷',title:'Chief Financial Officer',remit:'Reviews commercial plans, capability investments and resource allocation logic. Advises on financial efficiency and future planning decisions. Works from plans and models only, no live financial data.'},
-  COO:{icon:'⚙️',title:'Chief Operating Officer',remit:'Reviews all operational functions, systems, processes and delivery standards across the ops and team sections.'},
+  CEO:{icon:'',title:'Chief Executive Officer',remit:'Reviews all department outputs and synthesises them into a weekly executive summary with a prioritised action list aligned to overall business strategy and vision.'},
+  CMO:{icon:'',title:'Chief Marketing Officer',remit:'Reviews all marketing activity, content output, lead generation and brand actions across the marketing section.'},
+  CFO:{icon:'',title:'Chief Financial Officer',remit:'Reviews commercial plans, capability investments and resource allocation logic. Advises on financial efficiency and future planning decisions. Works from plans and models only, no live financial data.'},
+  COO:{icon:'',title:'Chief Operating Officer',remit:'Reviews all operational functions, systems, processes and delivery standards across the ops and team sections.'},
 };
 
 function csuiteNav(role,el){ csuiteRole=role; nav('csuite',el); }
@@ -10998,7 +10995,7 @@ function csuiteReportHtml(role,entry){
     if(r.actions&&r.actions.length) h+=`<div class="sec"><div class="sec-hdr">Prioritised Action List</div>${r.actions.sort((a,b)=>(a.priority||9)-(b.priority||9)).map(a=>`<div class="card" style="display:flex;gap:14px;align-items:flex-start"><div style="font-family:'Montserrat',sans-serif;font-size:22px;font-weight:800;color:var(--y);background:var(--k);border-radius:8px;width:36px;height:36px;display:flex;align-items:center;justify-content:center;flex-shrink:0">${a.priority||'·'}</div><div><div style="font-weight:700">${escHtml(a.title||'')} ${a.owner?`<span class="tag tag-${(a.owner||'').toLowerCase()}" style="margin-left:6px">${escHtml(a.owner)}</span>`:''}</div><div style="font-size:12px;color:var(--mut);margin-top:4px">${escHtml(a.detail||'')}</div></div></div>`).join('')}</div>`;
   } else {
     if(r.observations&&r.observations.length) h+=`<div class="sec"><div class="sec-hdr">Key Observations</div><div class="card"><ul style="margin-left:18px;line-height:1.9">${r.observations.map(o=>`<li>${escHtml(o)}</li>`).join('')}</ul></div></div>`;
-    if(r.recommendations&&r.recommendations.length) h+=`<div class="sec"><div class="sec-hdr">Top 3 Recommendations</div>${r.recommendations.sort((a,b)=>(a.priority||9)-(b.priority||9)).map(rec=>`<div class="card" style="display:flex;gap:14px;align-items:flex-start"><div style="font-family:'Montserrat',sans-serif;font-size:22px;font-weight:800;color:var(--y);background:var(--k);border-radius:8px;width:36px;height:36px;display:flex;align-items:center;justify-content:center;flex-shrink:0">${rec.priority||'·'}</div><div><div style="font-weight:700">${escHtml(rec.title||'')}</div><div style="font-size:12px;margin-top:4px">${escHtml(rec.detail||'')}</div>${rec.okr?`<div style="font-size:11px;color:var(--mut);margin-top:4px">🎯 ${escHtml(rec.okr)}</div>`:''}</div></div>`).join('')}</div>`;
+    if(r.recommendations&&r.recommendations.length) h+=`<div class="sec"><div class="sec-hdr">Top 3 Recommendations</div>${r.recommendations.sort((a,b)=>(a.priority||9)-(b.priority||9)).map(rec=>`<div class="card" style="display:flex;gap:14px;align-items:flex-start"><div style="font-family:'Montserrat',sans-serif;font-size:22px;font-weight:800;color:var(--y);background:var(--k);border-radius:8px;width:36px;height:36px;display:flex;align-items:center;justify-content:center;flex-shrink:0">${rec.priority||'·'}</div><div><div style="font-weight:700">${escHtml(rec.title||'')}</div><div style="font-size:12px;margin-top:4px">${escHtml(rec.detail||'')}</div>${rec.okr?`<div style="font-size:11px;color:var(--mut);margin-top:4px">${escHtml(rec.okr)}</div>`:''}</div></div>`).join('')}</div>`;
   }
   h+=csuiteGapsTable(r.gaps);
   return h;
@@ -11037,7 +11034,7 @@ function renderCSuite(){
         <div style="font-family:'Montserrat',sans-serif;font-size:16px;font-weight:700">AI ${info.title}</div>
         <div style="font-size:12px;color:var(--mut);margin-top:4px">${info.remit}</div>
         <div style="margin-top:8px">${freshness}</div>
-        ${missingDepts.length?`<div style="font-size:11px;color:var(--amb);margin-top:6px">⚠ No reports yet from: ${missingDepts.join(', ')}. The CEO synthesis is stronger if you run those first.</div>`:''}
+        ${missingDepts.length?`<div style="font-size:11px;color:var(--amb);margin-top:6px">No reports yet from: ${missingDepts.join(', ')}. The CEO synthesis is stronger if you run those first.</div>`:''}
       </div>
       <div style="display:flex;flex-direction:column;gap:8px;align-items:flex-end">
         <button class="btn btn-y" id="cs-run" onclick="runCSuiteReview()">Run weekly review</button>
