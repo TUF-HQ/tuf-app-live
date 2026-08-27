@@ -5616,7 +5616,11 @@ async function proofDraftAsk(id){
   const first=(r.name||'').split(' ')[0];
   let text=`Hi ${first}, Danny here. I have loved the work we are doing together and the progress you are making. Quick favour: would you send me two or three sentences on what The Ultimate Founder has done for you and your business, in your own words? It genuinely helps other founders decide if this is for them. No rush, whenever suits.`;
   try{
-    const data=await claudeCall({model:'claude-haiku-4-5-20251001',max_tokens:300,messages:[{role:'user',content:`Write a short WhatsApp message from Danny, founder of The Ultimate Founder (a boardroom and coaching community for ambitious founders), to ${r.name}${r.co?' of '+r.co:''}, asking for a short written testimonial. Context on why now: ${r.reason||'a valued member doing great work'}. Danny's voice: direct, warm, ambitious, energetic, jargon free. Rules: 60 to 90 words, greet by first name (${first}), one clear ask (two or three sentences in their own words on what TUF has done for them and their business), mention it helps other founders, never use hyphens or double dashes, no emojis, no sign off. Return only the message text.`}]});
+    let data=null;
+    for(let attempt=0;attempt<2&&!data;attempt++){
+      try{ data=await claudeCall({model:'claude-haiku-4-5-20251001',max_tokens:300,messages:[{role:'user',content:`Write a short WhatsApp message from Danny, founder of The Ultimate Founder (a boardroom and coaching community for ambitious founders), to ${r.name}${r.co?' of '+r.co:''}, asking for a short written testimonial. Context on why now: ${r.reason||'a valued member doing great work'}. Danny's voice: direct, warm, ambitious, energetic, jargon free. Rules: 60 to 90 words, greet by first name (${first}), one clear ask (two or three sentences in their own words on what TUF has done for them and their business), mention it helps other founders, never use hyphens or double dashes, no emojis, no sign off. Return only the message text.`}]}); }
+      catch(e){ if(attempt===1) throw e; await new Promise(r2=>setTimeout(r2,1500)); }
+    }
     const t=data&&data.content&&data.content[0]&&data.content[0].text; if(t) text=t.trim();
   }catch(e){}
   window.__proofDraft=text;
