@@ -1018,6 +1018,43 @@ function patchLocalTask(id, patch){
   const a=ls.get('tuf_tasks',[]); const i=a.findIndex(t=>t.id===id); if(i<0) return;
   Object.assign(a[i], patch); localStorage.setItem('tuf_tasks', JSON.stringify(a));
 }
+// v60 one-task-system helpers: board items have no scope (or 'board'); personal
+// period items and repeat templates are scope:'personal'.
+function utIsBoard(t){ return !t.scope || t.scope==='board'; }
+function utSlug(x){ return String(x||'').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'').slice(0,40); }
+// Pure mapping from the old tuf_commitments shape to unified items (unit-tested).
+function unitaskMigrateMap(cm){
+  const out=[];
+  Object.entries(cm||{}).forEach(([person,pd])=>{
+    ['daily','weekly','monthly'].forEach(cad=>{
+      Object.entries((pd&&pd[cad])||{}).forEach(([period,items])=>{
+        (items||[]).forEach(it=>{ if(it&&it.id) out.push({id:'ut_'+it.id,title:it.text||'',owner:person,status:it.done?'Done':'To Do',scope:'personal',cadence:cad,period,src:'cm'}); });
+      });
+      (((pd&&pd.repeat)||{})[cad]||[]).filter(Boolean).forEach(text=>out.push({id:'utr_'+utSlug(person)+'_'+cad+'_'+utSlug(text),title:text,owner:person,scope:'personal',template:cad,src:'cm'}));
+    });
+  });
+  return out;
+}
+// One-shot ledger-guarded migration of tuf_commitments into tuf_tasks. The old
+// store is left untouched as an archive. Deterministic ids make re-runs no-ops.
+function unitaskMigrate(){
+  try{
+    if(!sbLoadOK) return;
+    if(ls.get('tuf_unitask_migrated',null)) return;
+    const cm=ls.get('tuf_commitments',null);
+    const add=unitaskMigrateMap(cm);
+    const seeded={};
+    Object.entries(cm||{}).forEach(([person,pd])=>{ if(pd&&pd.repeatSeeded) seeded[person]=Object.assign({},pd.repeatSeeded); });
+    const done=()=>{
+      const cur=ls.get('tuf_ut_seeded',{})||{};
+      ls.set('tuf_ut_seeded',Object.assign({},seeded,cur));
+      ls.set('tuf_unitask_migrated',{at:new Date().toISOString(),by:CURRENT_USER,items:add.length});
+      if(add.length) addNotif('Task lists unified: '+add.length+' items moved into the one task system');
+    };
+    if(!add.length){ done(); return; }
+    utCommit(list=>{ const have=new Set(list.map(t=>t.id)); add.forEach(a=>{ if(!have.has(a.id)) list.push(a); }); }).then(done);
+  }catch(e){ console.warn('unitaskMigrate failed',e); }
+}
 
 // Coaching tables are row-per-record; when the recap agent (or a teammate)
 // writes one, just re-render the Coaching page if it is open.
@@ -1399,6 +1436,7 @@ function initApp(user){
   stripeSyncToCRM();
   crmSegmentMigrate();
   crmSegmentFixV2();
+  unitaskMigrate();
   updateInboundBadge();
   renderHome();
   renderCapSidebar();
@@ -1746,13 +1784,16 @@ function mdListCard(kind,title,items,doneCount){
 }
 function renderMyDay(){
   const el=document.getElementById('myday-render'); if(!el) return;
+  mdMigrateGoals();
+  cmSeedRepeats();
   const d=mdGet();
   const today=new Date().toISOString().slice(0,10);
   const first=CURRENT_USER||'there';
   const ev=(ls.get('tuf_events',[])||[]).filter(e=>e&&e.date).map(e=>({...e,du:daysUntil(e.date)})).filter(e=>e.du>=0&&e.du<=7).sort((a,b)=>a.date.localeCompare(b.date));
-  const goalsDone=d.goals.filter(g=>g.done).length;
+  const todayList=cmGet(CURRENT_USER,'daily',cmDailyKey(0));
+  const goalsDone=todayList.filter(g=>g.done).length;
   // Tasks come from the shared team task board (real dates + owners), filtered to this person's open items.
-  const myTasks=(ls.get('tuf_tasks',[])||[]).filter(t=>t.owner===CURRENT_USER && t.status!=='Done').sort((a,b)=>{ if(!a.dueDate&&!b.dueDate)return 0; if(!a.dueDate)return 1; if(!b.dueDate)return -1; return a.dueDate.localeCompare(b.dueDate); });
+  const myTasks=(ls.get('tuf_tasks',[])||[]).filter(t=>utIsBoard(t) && t.owner===CURRENT_USER && t.status!=='Done').sort((a,b)=>{ if(!a.dueDate&&!b.dueDate)return 0; if(!a.dueDate)return 1; if(!b.dueDate)return -1; return a.dueDate.localeCompare(b.dueDate); });
   const tOverdue=myTasks.filter(t=>t.dueDate&&t.dueDate<today).length;
   el.innerHTML=`
     <div class="card" style="margin-bottom:14px;border-left:4px solid var(--y)">
@@ -1769,7 +1810,7 @@ function renderMyDay(){
         <span style="display:flex;gap:6px">${micBtnHtml('md-focus')}<button class="btn btn-k btn-sm" onclick="mdSaveFocus()">Save focus</button></span>
       </div>
     </div>
-    ${mdListCard('goals','Goals for today',d.goals,goalsDone)}
+    ${mdTodayCard(todayList,goalsDone)}
     <div class="card" style="margin-top:14px">
       <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:6px">
         <div class="card-title" style="margin:0">My tasks ${tOverdue?`<span class="tag tag-r" style="font-size:10px">${tOverdue} overdue</span>`:''}</div>
@@ -1795,6 +1836,45 @@ function renderMyDay(){
 }
 function mdSaveFocus(){ const inp=document.getElementById('md-focus'); if(!inp)return; const d=mdGet(); d.focus=inp.value.trim(); mdSet(d); mdFocusDirty=false; const n=document.getElementById('md-focus-note'); if(n){ n.textContent='Saved'; setTimeout(()=>{ const x=document.getElementById('md-focus-note'); if(x)x.textContent=''; },1500); } }
 function mdAdd(kind){ const inp=document.getElementById('md-add-'+kind); if(!inp)return; const v=(inp.value||'').trim(); if(!v)return; const d=mdGet(); d[kind].push({id:uid(),text:v,done:false}); mdSet(d); renderMyDay(); }
+// v60: Today's list is the unified personal daily list — the same one Team
+// Tasks shows, stored in tuf_tasks. Old private goals migrate once per user.
+function mdTodayCard(items,done){
+  return `<div class="card" style="margin-top:14px">
+    <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap">
+      <div class="card-title" style="margin:0">Today's list</div>
+      <span style="font-size:11px;color:var(--mut)">${items.length?done+'/'+items.length+' done':''}</span>
+    </div>
+    <div style="font-size:11px;color:var(--mut);margin:2px 0 10px">One list everywhere: this is the same Today list as Team Tasks, visible to the team.</div>
+    <div style="display:flex;gap:6px;margin-bottom:10px">
+      <input class="form-input" id="md-ut-add" placeholder="Add to today…" style="flex:1" onkeydown="if(event.key==='Enter')mdUtAdd()">
+      <button class="btn btn-k btn-sm" onclick="mdUtAdd()">+</button>
+    </div>
+    ${items.map(it=>`<div class="chk-row${it.done?' done':''}">
+      <div class="chk-box" onclick="mdUtToggle('${it.id}')">${it.done?'✓':''}</div>
+      <span class="chk-text" style="flex:1;cursor:pointer" onclick="mdUtToggle('${it.id}')">${escHtml(it.text)}</span>
+      <button class="btn btn-ghost btn-sm" style="padding:2px 8px" onclick="mdUtDelete('${it.id}')">✕</button>
+    </div>`).join('')||'<div style="font-size:12px;color:var(--mut);padding:6px 0">Nothing yet. What are the wins for today?</div>'}
+  </div>`;
+}
+function mdUtAdd(){ const inp=document.getElementById('md-ut-add'); const v=(inp?.value||'').trim(); if(!v) return; cmMutate(CURRENT_USER,'daily',cmDailyKey(0),l=>{ l.push({id:uid(),text:v,done:false}); return l; }); renderMyDay(); const again=document.getElementById('md-ut-add'); if(again) again.focus(); }
+function mdUtToggle(id){ cmMutate(CURRENT_USER,'daily',cmDailyKey(0),l=>{ const i=l.findIndex(x=>x.id===id); if(i>=0) l[i].done=!l[i].done; return l; }); renderMyDay(); }
+function mdUtDelete(id){ cmMutate(CURRENT_USER,'daily',cmDailyKey(0),l=>l.filter(x=>x.id!==id)); renderMyDay(); }
+function mdMigrateGoals(){
+  try{
+    if(!sbLoadOK) return; // retry next login; never migrate onto an unloaded board
+    const raw=localStorage.getItem(mdKey()); const o=raw?JSON.parse(raw):null;
+    if(!o||o.goalsMigrated) return;
+    const gs=Array.isArray(o.goals)?o.goals.filter(g=>g&&g.text):[];
+    if(gs.length){
+      cmMutate(CURRENT_USER,'daily',cmDailyKey(0),l=>{
+        const have=new Set(l.map(x=>(x.text||'').trim().toLowerCase()));
+        gs.forEach(g=>{ const k=(g.text||'').trim().toLowerCase(); if(k&&!have.has(k)) l.push({id:'md_'+g.id,text:g.text,done:!!g.done}); });
+        return l;
+      });
+    }
+    o.goalsMigrated=true; localStorage.setItem(mdKey(),JSON.stringify(o));
+  }catch(e){}
+}
 function mdToggle(kind,id){ const d=mdGet(); const it=d[kind].find(x=>x.id===id); if(!it)return; it.done=!it.done; mdSet(d); renderMyDay(); }
 function mdEdit(kind,id){ const d=mdGet(); const it=d[kind].find(x=>x.id===id); if(!it)return; const v=prompt('Edit:',it.text); if(v===null)return; const t=v.trim(); if(!t)return; it.text=t; mdSet(d); renderMyDay(); }
 function mdDelete(kind,id){ const d=mdGet(); d[kind]=d[kind].filter(x=>x.id!==id); mdSet(d); renderMyDay(); }
@@ -2216,7 +2296,7 @@ function removeExtracted(idx){
 
 function confirmExtractedTasks(){
   if(!extractedTasks.length) return;
-  const existing = ls.get('tuf_tasks',[]);
+  const existing = ls.get('tuf_tasks',[]).filter(utIsBoard);
   // A task with multiple people becomes one task per person, so everyone has
   // their own accountable copy. A shared group id links them.
   const newTasks = [];
@@ -2277,7 +2357,7 @@ function setBriefWho(w){ briefWho=w; renderBriefTasks(); }
 function setBriefScope(s){ briefScope=s; renderBriefTasks(); }
 function renderBriefTasks(){
   const today = new Date().toISOString().slice(0,10);
-  let tasks = ls.get('tuf_tasks',[]);
+  let tasks = ls.get('tuf_tasks',[]).filter(utIsBoard);
   // Defaults are seeded once at login (seedTasksOnce); never auto-rebuild here.
   tasks = tasks.map(t=>({...t, section: inferTaskSection(t)}));
   const wk=weekKey(); const we=new Date(wk+'T00:00:00'); we.setDate(we.getDate()+6); const weStr=we.toISOString().slice(0,10);
@@ -2362,7 +2442,7 @@ async function quickCompleteTask(id){
 
 function updateTaskBadge(){
   const today = new Date().toISOString().slice(0,10);
-  const tasks = ls.get('tuf_tasks',[]);
+  const tasks = ls.get('tuf_tasks',[]).filter(utIsBoard);
   const open = tasks.filter(t => t.owner===CURRENT_USER && t.status!=='Done' && (!t.dueDate||t.dueDate<=today)).length;
   const b = document.getElementById('sb-tasks');
   if(b){ b.textContent=open; b.style.display=open?'inline':'none'; }
@@ -2421,7 +2501,7 @@ function inferTaskSection(task){
 
 function renderTasks(){
   const today=new Date().toISOString().slice(0,10);
-  let all=ls.get('tuf_tasks',[]);
+  let all=ls.get('tuf_tasks',[]).filter(utIsBoard);
   // Note: defaults are seeded once at login (seedTasksOnce). Never auto-rebuild here — that wiped completions.
   const done=all.filter(a=>a.status==='Done').length;
   const prog=all.filter(a=>a.status==='In Progress').length;
@@ -3865,7 +3945,7 @@ function renderDailyControl(){
   const paidCount=(snap.payments||[]).filter(p=>!hidden.includes(p.charge||((p.created||0)+'_'+(p.amount||0)))).length;
   const confirmed=padelLeadsAll.filter(l=>l.attendance==='Confirmed'||l.attendance==='Attended').length;
   const notConfirmed=padelLeadsAll.filter(l=>!l.attendance||l.attendance==='Invited').length;
-  const tasksOpen=(ls.get('tuf_tasks',[])||[]).filter(t=>t.status!=='Done');
+  const tasksOpen=(ls.get('tuf_tasks',[])||[]).filter(t=>utIsBoard(t)&&t.status!=='Done');
   const overdueTasks=tasksOpen.filter(t=>t.dueDate&&t.dueDate<today).length;
   const staleProspects=(ls.get('tuf_prospects',[])||[]).filter(p=>prospectActive(p)&&p.lastContact&&daysUntil(p.lastContact)<=-crmSettings().staleDays).length;
   const followUps=overdueTasks+staleProspects;
@@ -4205,7 +4285,7 @@ function profileFind(name){
     lead:(ls.get('tuf_event_leads',[])||[]).find(p=>eq(p.name)),
     member:(ls.get('tuf_members',[])||[]).find(p=>eq(p.name)),
     tests:(ls.get('tuf_testimonials',[])||[]).filter(p=>eq(p.name)),
-    tasks:(ls.get('tuf_tasks',[])||[]).filter(t=>t.status!=='Done'&&k.length>2&&(((t.title||'')+' '+(t.notes||'')).toLowerCase().indexOf(k)>=0)),
+    tasks:(ls.get('tuf_tasks',[])||[]).filter(t=>utIsBoard(t)&&t.status!=='Done'&&k.length>2&&(((t.title||'')+' '+(t.notes||'')).toLowerCase().indexOf(k)>=0)),
   };
 }
 function openProfile(name,company){
@@ -7955,7 +8035,7 @@ function caFootprintHtml(m){
   const pm=(name,company)=>{const a=(name||'').toLowerCase(),b=(company||'').toLowerCase();return (nm&&a&&(a.includes(nm)||nm.includes(a)))||(co&&co.length>2&&b&&(b.includes(co)||co.includes(b)));};
   const prospects=ls.get('tuf_prospects',[]).filter(p=>(prospectActive(p)||!p.auto)&&pm(p.name,p.co));
   const leads=ls.get('tuf_event_leads',[]).filter(l=>pm(l.name,l.co));
-  const tasks=ls.get('tuf_tasks',[]).filter(t=>t.status!=='Done'&&hit((t.title||'')+' '+(t.notes||'')));
+  const tasks=ls.get('tuf_tasks',[]).filter(t=>utIsBoard(t)&&t.status!=='Done'&&hit((t.title||'')+' '+(t.notes||'')));
   const tests=ls.get('tuf_testimonials',[]).filter(t=>pm(t.name,t.co));
   const memberType=m.type==='boardroom'?'Boardroom member':m.type==='existing_client'?'Private client':(m.type||'Member');
   const row=(label,val)=>`<tr><td style="color:var(--mut);font-size:11px;white-space:nowrap;padding-right:12px;vertical-align:top">${label}</td><td style="font-size:12px">${val}</td></tr>`;
@@ -8018,7 +8098,7 @@ Be direct, warm and commercially grounded.`;
 
 
 async function loadDefaultTasks(force){
-  const existing=ls.get('tuf_tasks',[]);
+  const existing=ls.get('tuf_tasks',[]).filter(utIsBoard);
   if(!force && existing && existing.length>0){
     if(!confirm('Tasks already exist. Replace with the default task list?')) return;
   }
@@ -10005,7 +10085,7 @@ function renderKPIs(){
   const activeP=prospects.filter(prospectActive);
   const won=prospects.filter(p=>p.stage==='Won').length;
   const dueP=activeP.filter(p=>prospectDue(p,today)).length;
-  const tasks=ls.get('tuf_tasks',[])||[];
+  const tasks=(ls.get('tuf_tasks',[])||[]).filter(utIsBoard);
   const openT=tasks.filter(t=>t.status!=='Done');
   const overdueT=openT.filter(t=>t.dueDate&&t.dueDate<today).length;
   const eps=ls.get('tuf_episodes',[])||[];
@@ -10488,7 +10568,7 @@ function hqFormat(t){
 
 function buildHQContext(){
   const today=new Date().toISOString().slice(0,10);
-  const tasks=(ls.get('tuf_tasks',[])||[]);
+  const tasks=(ls.get('tuf_tasks',[])||[]).filter(utIsBoard);
   const open=tasks.filter(t=>t.status!=='Done');
   const overdue=open.filter(t=>t.dueDate&&t.dueDate<today);
   const members=(ls.get('tuf_members',[])||[]);
@@ -10618,12 +10698,89 @@ function cmDailyKey(off){ const d=new Date(); d.setDate(d.getDate()+(off||0)); r
 function cmWeekKey(off){ const m=mondayOf(new Date()); m.setDate(m.getDate()+7*(off||0)); return ymdLocal(m); }
 function cmMonthKey(off){ const d=new Date(); const x=new Date(d.getFullYear(),d.getMonth()+(off||0),1); return x.getFullYear()+'-'+String(x.getMonth()+1).padStart(2,'0'); }
 function cmKeysAt(off){ const d=new Date(); d.setDate(d.getDate()+(off||0)); const m=mondayOf(d); return {daily:ymdLocal(d),weekly:ymdLocal(m),monthly:d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'),label:fmtDate(ymdLocal(d))}; }
-function cmGet(person,cad,key){ const s=ls.get('tuf_commitments',{})||{}; return (((s[person]||{})[cad]||{})[key]||[]).slice(); }
+// ═══ ONE TASK SYSTEM (v60) ═══════════════════════════════════════════════════
+// Personal period lists (the old tuf_commitments + My Day goals) now live INSIDE
+// tuf_tasks as scope:'personal' items: {id,title,owner,status,scope:'personal',
+// cadence:'daily'|'weekly'|'monthly',period:<key>} plus repeat templates
+// {template:<cadence>} with no period. Board items have no scope (or 'board').
+// The cm* API below keeps its old signatures so every view reads the ONE store.
+// All personal writes go through utCommit (a serialised commitTasks) so rapid
+// clicks cannot interleave and clobber each other.
+let utQueue=Promise.resolve();
+function utCommit(apply){ utQueue=utQueue.then(()=>commitTasks(apply)).catch(()=>{}); return utQueue; }
+function utApplyLocal(apply){ const local=ls.get('tuf_tasks',[]); apply(local); localStorage.setItem('tuf_tasks',JSON.stringify(local)); }
+function utPersonalSlot(t,person,cad,key){ return t.scope==='personal'&&!t.template&&t.owner===person&&t.cadence===cad&&t.period===key; }
+function cmGet(person,cad,key){
+  return (ls.get('tuf_tasks',[])||[]).filter(t=>utPersonalSlot(t,person,cad,key))
+    .map(t=>({id:t.id,text:t.title,done:t.status==='Done'}));
+}
 function cmMutate(person,cad,key,fn){
-  const s=ls.get('tuf_commitments',{})||{};
-  s[person]=s[person]||{}; s[person][cad]=s[person][cad]||{};
-  s[person][cad][key]=fn((s[person][cad][key]||[]).slice());
-  ls.set('tuf_commitments',s);
+  const after=fn(cmGet(person,cad,key));
+  const apply=list=>{
+    const keep=new Set(after.map(x=>x.id));
+    for(let i=list.length-1;i>=0;i--){ if(utPersonalSlot(list[i],person,cad,key)&&!keep.has(list[i].id)) list.splice(i,1); }
+    after.forEach(x=>{
+      const ex=list.find(t=>t.id===x.id&&utPersonalSlot(t,person,cad,key));
+      const st=x.done?'Done':'To Do';
+      if(ex){ ex.title=x.text; if(ex.status!==st){ ex.status=st; ex.doneAt=x.done?new Date().toISOString():null; } }
+      else list.push({id:x.id,title:x.text,owner:person,status:st,scope:'personal',cadence:cad,period:key,createdAt:new Date().toISOString(),createdBy:(typeof CURRENT_USER!=='undefined'?CURRENT_USER:'')});
+    });
+  };
+  utApplyLocal(apply);   // instant UI
+  utCommit(apply);       // authoritative, server-safe
+}
+function cmTemplates(person){ return (ls.get('tuf_tasks',[])||[]).filter(t=>t.scope==='personal'&&t.template&&t.owner===person); }
+function cmRepeatArr(cad){ return cmTemplates(CURRENT_USER).filter(t=>t.template===cad).map(t=>t.title); }
+function cmIsRepeat(cad,text){ const k=(text||'').trim().toLowerCase(); return cmRepeatArr(cad).some(x=>(x||'').trim().toLowerCase()===k); }
+// Repeats: template items seeded into the current period's list once per period
+// (marker in tuf_ut_seeded), so deleting today's copy sticks today but it comes
+// back next day/week/month. Unpinning removes the template, instances stay.
+function cmSeedRepeats(){
+  try{
+    if(typeof CURRENT_USER==='undefined'||!CURRENT_USER) return;
+    // One-time: WhatsApp cadence template for the group owner. Seeded once ever
+    // (tuf_wa_status.repeatSeeded) so unpinning later sticks.
+    try{
+      const w=waStatus();
+      if(w.launched&&!w.repeatSeeded&&CURRENT_USER===w.owner){
+        const title='Send Boardroom WhatsApp messages ('+Math.max(1,Number(w.cadence)||2)+' this week)';
+        const id='utr_'+utSlug(CURRENT_USER)+'_weekly_'+utSlug(title);
+        const seed=list=>{ if(!list.some(t=>t.id===id)) list.push({id,title,owner:CURRENT_USER,scope:'personal',template:'weekly',src:'wa'}); };
+        utApplyLocal(seed); utCommit(seed);
+        const sd0=ls.get('tuf_ut_seeded',{})||{}; sd0[CURRENT_USER]=sd0[CURRENT_USER]||{}; sd0[CURRENT_USER].weekly=''; ls.set('tuf_ut_seeded',sd0);
+        const ws=ls.get('tuf_wa_status',null)||{}; ws.repeatSeeded=true; ls.set('tuf_wa_status',ws);
+      }
+    }catch(e){}
+    const keys={daily:cmDailyKey(0),weekly:cmWeekKey(0),monthly:cmMonthKey(0)};
+    const sd=ls.get('tuf_ut_seeded',{})||{}; const mine=Object.assign({},sd[CURRENT_USER]||{});
+    let ch=false;
+    ['daily','weekly','monthly'].forEach(cad=>{
+      const texts=cmRepeatArr(cad).filter(Boolean);
+      if(!texts.length) return;
+      if(mine[cad]===keys[cad]) return;
+      cmMutate(CURRENT_USER,cad,keys[cad],l=>{
+        const have=new Set(l.map(x=>(x.text||'').trim().toLowerCase()));
+        texts.forEach(t=>{ const k=t.trim().toLowerCase(); if(k&&!have.has(k)){ l.push({id:uid(),text:t,done:false}); have.add(k); } });
+        return l;
+      });
+      mine[cad]=keys[cad]; ch=true;
+    });
+    if(ch){ sd[CURRENT_USER]=mine; ls.set('tuf_ut_seeded',sd); }
+  }catch(e){ console.warn('cmSeedRepeats failed',e); }
+}
+function cmToggleRepeat(cad,key,id){
+  const item=cmGet(CURRENT_USER,cad,key).find(x=>x.id===id); if(!item) return;
+  const t=(item.text||'').trim(); if(!t) return;
+  const tid='utr_'+utSlug(CURRENT_USER)+'_'+cad+'_'+utSlug(t);
+  const had=cmIsRepeat(cad,t);
+  const word=cad==='daily'?'day':cad==='weekly'?'week':'month';
+  const apply=list=>{
+    if(had){ for(let i=list.length-1;i>=0;i--){ const x=list[i]; if(x.scope==='personal'&&x.template===cad&&x.owner===CURRENT_USER&&(x.title||'').trim().toLowerCase()===t.toLowerCase()) list.splice(i,1); } }
+    else if(!list.some(x=>x.id===tid)) list.push({id:tid,title:t,owner:CURRENT_USER,scope:'personal',template:cad,createdBy:CURRENT_USER});
+  };
+  utApplyLocal(apply); utCommit(apply);
+  addNotif(had?('No longer repeats: '+t):('Repeats every '+word+': '+t));
+  renderTeamTasks();
 }
 function cmAdd(cad,key){
   const inp=document.getElementById('cm-add-'+cad); const v=(inp?.value||'').trim(); if(!v) return;
@@ -10668,59 +10825,6 @@ function cmDots(person){
 // Repeating tasks: texts stored per person per cadence; seeded into the current
 // period's list once per period (marker repeatSeeded), so deleting today's copy
 // sticks today but it comes back next day/week/month.
-function cmRepeatArr(cad){ const s=ls.get('tuf_commitments',{})||{}; return ((((s[CURRENT_USER]||{}).repeat)||{})[cad]||[]).slice(); }
-function cmIsRepeat(cad,text){ const k=(text||'').trim().toLowerCase(); return cmRepeatArr(cad).some(x=>(x||'').trim().toLowerCase()===k); }
-function cmSeedRepeats(){
-  try{
-    if(typeof CURRENT_USER==='undefined'||!CURRENT_USER) return;
-    const s=ls.get('tuf_commitments',{})||{};
-    const me=s[CURRENT_USER]=s[CURRENT_USER]||{};
-    // One-time: put the WhatsApp cadence task into the group owner's weekly
-    // repeats. Seeded once ever (tuf_wa_status.repeatSeeded), so if the owner
-    // later unpins it with the repeat toggle, their choice sticks.
-    try{
-      const w=waStatus();
-      if(w.launched&&!w.repeatSeeded&&CURRENT_USER===w.owner){
-        me.repeat=me.repeat||{daily:[],weekly:[],monthly:[]};
-        me.repeat.weekly=me.repeat.weekly||[];
-        me.repeat.weekly.push('Send Boardroom WhatsApp messages ('+Math.max(1,Number(w.cadence)||2)+' this week)');
-        if(me.repeatSeeded) me.repeatSeeded.weekly=''; // let it seed into this week too
-        const ws=ls.get('tuf_wa_status',null)||{}; ws.repeatSeeded=true; ls.set('tuf_wa_status',ws);
-        ls.set('tuf_commitments',s);
-      }
-    }catch(e){}
-    const repT=me.repeat||{};
-    const seeded=me.repeatSeeded||{};
-    const keys={daily:cmDailyKey(0),weekly:cmWeekKey(0),monthly:cmMonthKey(0)};
-    let ch=false;
-    ['daily','weekly','monthly'].forEach(cad=>{
-      const texts=(repT[cad]||[]).filter(Boolean);
-      if(!texts.length) return;
-      if(seeded[cad]===keys[cad]) return;
-      me[cad]=me[cad]||{}; const list=me[cad][keys[cad]]||[];
-      const have=new Set(list.map(x=>(x.text||'').trim().toLowerCase()));
-      texts.forEach(t=>{ const k=t.trim().toLowerCase(); if(k&&!have.has(k)){ list.push({id:uid(),text:t,done:false}); have.add(k); } });
-      me[cad][keys[cad]]=list;
-      me.repeatSeeded=me.repeatSeeded||{}; me.repeatSeeded[cad]=keys[cad];
-      ch=true;
-    });
-    if(ch) ls.set('tuf_commitments',s);
-  }catch(e){ console.warn('cmSeedRepeats failed',e); }
-}
-function cmToggleRepeat(cad,key,id){
-  const item=cmGet(CURRENT_USER,cad,key).find(x=>x.id===id); if(!item) return;
-  const t=(item.text||'').trim(); if(!t) return;
-  const s=ls.get('tuf_commitments',{})||{};
-  const me=s[CURRENT_USER]=s[CURRENT_USER]||{};
-  me.repeat=me.repeat||{daily:[],weekly:[],monthly:[]};
-  const arr=me.repeat[cad]=me.repeat[cad]||[];
-  const i=arr.findIndex(x=>(x||'').trim().toLowerCase()===t.toLowerCase());
-  const word=cad==='daily'?'day':cad==='weekly'?'week':'month';
-  if(i>=0){ arr.splice(i,1); addNotif('No longer repeats: '+t); }
-  else { arr.push(t); addNotif('Repeats every '+word+': '+t); }
-  ls.set('tuf_commitments',s);
-  renderTeamTasks();
-}
 function renderTeamTasks(){
   cmSeedRepeats();
   const host=document.getElementById('teamtasks-render'); if(!host) return;
@@ -10734,7 +10838,7 @@ function renderTeamTasks(){
 function cmMineView(){
   const monthLabel=new Date().toLocaleDateString('en-GB',{month:'long',year:'numeric'});
   const cols=[['daily','Today',cmDailyKey(0),fmtDate(cmDailyKey(0))],['weekly','This Week',cmWeekKey(0),'Week of '+fmtShort(cmWeekKey(0))],['monthly','This Month',cmMonthKey(0),monthLabel]];
-  return `<div style="font-size:12px;color:var(--mut);margin-bottom:12px">Your working lists — the whole team (including Danny) can see them on the Whole team view. Fill Today each morning. Tap ↻ on a task to make it come back automatically every day, week or month.</div>
+  return `<div style="font-size:12px;color:var(--mut);margin-bottom:12px">One task system: these are the same lists as My Day's Today, visible to the whole team (including Danny) on the Whole team view. Fill Today each morning. Tap ↻ on a task to make it come back automatically every day, week or month.</div>
   <div class="grid-3">`+cols.map(c=>{
     const cad=c[0],label=c[1],key=c[2],sub=c[3];
     const list=cmGet(CURRENT_USER,cad,key);
@@ -10758,7 +10862,7 @@ function cmMineView(){
 }
 function cmTeamView(){
   const K=cmKeysAt(cmOffset);
-  const tasks=ls.get('tuf_tasks',[])||[];
+  const tasks=(ls.get('tuf_tasks',[])||[]).filter(utIsBoard);
   const today=new Date().toISOString().slice(0,10);
   const row=i=>`<div style="display:flex;gap:8px;align-items:flex-start;padding:4px 0;border-bottom:1px solid var(--bdr);font-size:12.5px"><span style="color:${i.done?'var(--grn)':'var(--mut)'};font-weight:800;flex-shrink:0">${i.done?'✓':'○'}</span><span style="${i.done?'text-decoration:line-through;color:var(--mut)':''}">${escHtml(i.text)}</span></div>`;
   const sec=(t,extra)=>`<div style="font-size:10px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--mut);margin:12px 0 4px">${t}${extra?' <span style="font-weight:600;text-transform:none;letter-spacing:0">· '+extra+'</span>':''}</div>`;
@@ -10843,7 +10947,7 @@ function renderHomeEOD(){
 function renderTeamOverview(){
   const el=document.getElementById('teamoverview-render'); if(!el) return;
   const today=new Date().toISOString().slice(0,10);
-  const tasks=ls.get('tuf_tasks',[])||[];
+  const tasks=(ls.get('tuf_tasks',[])||[]).filter(utIsBoard);
   const sortActive=(a,b)=>{ if(!a.dueDate&&!b.dueDate) return 0; if(!a.dueDate) return 1; if(!b.dueDate) return -1; return a.dueDate.localeCompare(b.dueDate); };
   let totalOpen=0, totalOverdue=0, totalDoneToday=0;
   const cards=HOL_TEAM.map(p=>{
@@ -10888,7 +10992,7 @@ function renderDaily(){
   const el=document.getElementById('daily-render'); if(!el) return;
   const today=new Date().toISOString().slice(0,10);
   const isToday=dailyDate===today;
-  const tasks=ls.get('tuf_tasks',[])||[];
+  const tasks=(ls.get('tuf_tasks',[])||[]).filter(utIsBoard);
   const eod=(ls.get('tuf_eod',{})||{})[dailyDate]||{};
   const doneOn=(p)=>tasks.filter(t=>t.status==='Done'&&t.completedAt&&t.completedAt.slice(0,10)===dailyDate&&t.owner===p);
   const inProg=(p)=>tasks.filter(t=>t.status==='In Progress'&&t.owner===p);
