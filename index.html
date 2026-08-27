@@ -3374,7 +3374,8 @@ function coSendModal(id){
     <div class="form-row"><label class="form-label">Client email (Danny forwards to this)</label><input class="form-input" id="cosnd-to" value="${escHtml(to)}" placeholder="client@company.com"></div>
     <div class="form-row"><label class="form-label">Subject</label><input class="form-input" id="cosnd-subj" value="${escHtml('Your coaching session recap · '+fmtDate(sess.session_date))}"></div>
     <div class="form-row"><label class="form-label">Email</label><textarea class="form-textarea" id="cosnd-body" style="min-height:200px">${escHtml(coSendBody(sess,p))}</textarea></div>
-    <div style="font-size:11px;color:var(--mut);margin-bottom:8px">One tap emails Danny this text with the recap PDF attached, ready to forward to the client. ${pdf?'':'<span style="color:var(--amb)">No recap PDF on this session yet — the email goes without an attachment.</span>'}</div>
+    <div class="form-row"><label class="form-label">Email the forward-ready recap to</label><select class="form-select" id="cosnd-who">${HOL_TEAM.map(n=>`<option${n===(ls.str('tuf_recap_send_to')||'James')?' selected':''}>${n}</option>`).join('')}</select></div>
+    <div style="font-size:11px;color:var(--mut);margin-bottom:8px">One tap emails them this text with the recap PDF attached, ready to forward to the client. ${pdf?'':'<span style="color:var(--amb)">No recap PDF on this session yet — the email goes without an attachment.</span>'}</div>
     <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px">
       ${pdf?`<button class="btn btn-ghost btn-sm" onclick="coFileOpen('${pdf.id}')">Download recap PDF</button>`:''}
       <button class="btn btn-ghost btn-sm" id="cosnd-copy" onclick="coCopyEmail()">Copy email text</button>
@@ -3382,7 +3383,7 @@ function coSendModal(id){
       <button class="btn btn-ghost btn-sm" onclick="coMarkSent('${id}')">Mark as sent</button>
     </div>
     <div id="cosnd-status" style="font-size:12px;margin-top:6px"></div>
-  `,`<button class="btn btn-ghost" onclick="closeModal()">Cancel</button><button class="btn btn-k" id="cosnd-send" onclick="coSendToDanny('${id}')">Email it to Danny to forward</button>`);
+  `,`<button class="btn btn-ghost" onclick="closeModal()">Cancel</button><button class="btn btn-k" id="cosnd-send" onclick="coSendToDanny('${id}')">Send the forward-ready email</button>`);
 }
 async function coSendToDanny(id){
   const sess=coData.sessions.find(x=>x.id===id); if(!sess) return;
@@ -3392,8 +3393,11 @@ async function coSendToDanny(id){
   const bodyTxt=document.getElementById('cosnd-body').value;
   const st=document.getElementById('cosnd-status');
   const say=(m,ok)=>{ if(st) st.innerHTML='<span style="color:'+(ok?'var(--grn)':'var(--red)')+'">'+m+'</span>'; };
-  const danny=((ls.get('tuf_team_emails',{})||{}).Danny)||TEAM_EMAIL_DEFAULTS.Danny;
-  if(!danny){ say("No email address for Danny in Team Email Settings."); return; }
+  const whoEl=document.getElementById('cosnd-who');
+  const who=(whoEl&&whoEl.value)||ls.str('tuf_recap_send_to')||'James';
+  ls.setStr('tuf_recap_send_to',who);
+  const danny=((ls.get('tuf_team_emails',{})||{})[who])||TEAM_EMAIL_DEFAULTS[who];
+  if(!danny){ say('No email address for '+who+' in Team Email Settings.'); return; }
   const btn=document.getElementById('cosnd-send'); if(btn){ btn.disabled=true; btn.textContent='Sending…'; }
   say('Sending to Danny…',true);
   try{
@@ -3401,10 +3405,10 @@ async function coSendToDanny(id){
     if(error){ let m=error.message||'send failed'; try{ const t=await error.context.text(); const j=JSON.parse(t); if(j&&j.error) m=j.error; }catch(_){} throw new Error(m); }
     if(data&&data.error) throw new Error(data.error);
     await coUpd('coaching_sessions',id,{status:'sent',sent_at:new Date().toISOString(),sent_to:forwardTo?[forwardTo.toLowerCase()]:[]});
-    addNotif('Recap emailed to Danny to forward'+(p&&p.name?' to '+p.name:'')+(data&&data.attached===false?' (no PDF attached)':''));
+    addNotif('Recap emailed to '+who+' to forward'+(p&&p.name?' to '+p.name:'')+(data&&data.attached===false?' (no PDF attached)':''));
     closeModal(); coRefresh();
   }catch(e){
-    if(btn){ btn.disabled=false; btn.textContent='Email it to Danny to forward'; }
+    if(btn){ btn.disabled=false; btn.textContent='Send the forward-ready email'; }
     say('Could not send: '+escHtml(String((e&&e.message)||e))+' The recap stays in Ready to send.');
   }
 }
