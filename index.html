@@ -494,14 +494,7 @@ details>summary::-webkit-details-marker{display:none}
     <div class="sb-item" data-page="transcript" onclick="nav('transcript',this)">Meeting Notes</div>
 
     <div class="sb-section">CRM</div>
-    <div class="sb-item" data-page="people" data-filter="network" onclick="navPeople('network',this)">Network</div>
-    <div class="sb-item" data-page="people" data-filter="introducers" onclick="navPeople('introducers',this)">Introducers</div>
-    <div class="sb-item" data-page="pipeline" onclick="nav('pipeline',this)">Pipeline</div>
-    <div class="sb-item" data-page="members" data-filter="boardroom" onclick="navMembers('boardroom',this)">Boardroom Members</div>
-    <div class="sb-item" data-page="members" data-filter="private121" onclick="navMembers('private121',this)">Private 121s</div>
-    <div class="sb-item" data-page="inbound" onclick="nav('inbound',this)">Inbound <span class="sb-badge amb" id="sb-inbound" style="display:none">0</span></div>
-    <div class="sb-sub" data-page="onboarding" onclick="nav('onboarding',this)">Onboarding</div>
-    <div class="sb-sub" data-page="clientanalysis" onclick="nav('clientanalysis',this)">Client Analysis</div>
+    <div class="sb-item" data-page="crmhub" onclick="nav('crmhub',this)">CRM <span class="sb-badge" id="sb-followup" style="background:var(--red);display:none">0</span> <span class="sb-badge amb" id="sb-inbound" style="display:none">0</span></div>
     <div class="sb-item" data-page="coaching" onclick="nav('coaching',this)">Coaching</div>
 
     <div class="sb-section">Products</div>
@@ -718,6 +711,11 @@ details>summary::-webkit-details-marker{display:none}
     <!-- ═══ TESTIMONIALS ═══ -->
     <div class="page" id="page-testimonials">
       <div id="testimonials-list"></div>
+    </div>
+
+    <!-- ═══ CRM HUB ═══ -->
+    <div class="page" id="page-crmhub">
+      <div id="crmhub-render"></div>
     </div>
 
     <!-- ═══ ONBOARDING ═══ -->
@@ -1443,6 +1441,8 @@ function initApp(user){
   crmSegmentMigrate();
   crmSegmentFixV2();
   unitaskMigrate();
+  crmOnboardingMigrate();
+  updateFollowupBadge();
   setTimeout(()=>{ try{ csuiteAutoRun(); }catch(e){} },8000);
   updateInboundBadge();
   renderHome();
@@ -1714,8 +1714,8 @@ function seedDefaultData(){
 const PAGE_TITLES = {
   myday:'My Day',
   home:'Morning Brief',teamoverview:'Team Overview',tasks:'Tasks',transcript:'Meeting Notes → Tasks',
-  people:'Network',members:'Boardroom Members',pipeline:'Pipeline',inbound:'Inbound Leads',dannycal:"Danny's Calendar",
-  boardroom:'Boardroom',content:'Content Calendar',social:'Social Media',kpis:'KPIs',aidump:'AI Tool (Dump)',buildreq:'Build Requests',clientanalysis:'Client Analysis',emaillist:'Email List',watemplates:'WhatsApp Templates',
+  people:'Network',members:'Boardroom Members',pipeline:'Leads',inbound:'Inbound Leads',dannycal:"Danny's Calendar",
+  boardroom:'Boardroom',crmhub:'CRM',content:'Content Calendar',social:'Social Media',kpis:'KPIs',aidump:'AI Tool (Dump)',buildreq:'Build Requests',clientanalysis:'Client Analysis',emaillist:'Email List',watemplates:'WhatsApp Templates',
   testimonials:'Testimonials',
   onboarding:'Onboarding',sessions:'Session Planner',padel:'Padel Event',
   podcast:'Podcast Pipeline',coaching:'Coaching',growthplan:'Growth Plan',ip:'IP Register',files:'Documents',
@@ -1735,6 +1735,7 @@ function nav(page, el){
   document.querySelectorAll('.sb-item,.sb-sub').forEach(i=>i.classList.remove('active'));
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   if(page==='members') memberFilter='all';
+  if(!el&&typeof CRM_PAGES!=='undefined'&&CRM_PAGES.includes(page)) el=document.querySelector('[data-page=crmhub]');
   if(el) el.classList.add('active');
   const pg = document.getElementById('page-'+page);
   if(pg) pg.classList.add('active');
@@ -1751,7 +1752,7 @@ function renderPage(page){
   const fns = {
     home:renderHome, tasks:renderTasks, transcript:renderTranscript,
     people:renderPeople, members:renderMembers, pipeline:renderPipeline, inbound:renderInbound, dannycal:renderDannyCal,
-    boardroom:renderBoardroom, content:renderContent, social:renderSocial, kpis:renderKPIs, aidump:renderAIDump, buildreq:renderBuildRequests, clientanalysis:renderClientAnalysis, emaillist:renderEmailList, watemplates:renderWATemplates,
+    boardroom:renderBoardroom, crmhub:renderCRMHub, content:renderContent, social:renderSocial, kpis:renderKPIs, aidump:renderAIDump, buildreq:renderBuildRequests, clientanalysis:renderClientAnalysis, emaillist:renderEmailList, watemplates:renderWATemplates,
     testimonials:renderTestimonials,
     onboarding:renderOnboarding, sessions:renderSessions, padel:renderPadel,
     podcast:renderPodcast, coaching:renderCoaching, growthplan:renderGrowthPlan, ip:renderIP, files:renderFiles,
@@ -4034,6 +4035,7 @@ function renderDailyControl(){
 
 // ═══ MEMBERS CRM ════════════════════════════════════════════════════════════
 function renderMembers(){
+  crmTabsMount(memberFilter==='boardroom'?'boardroom':memberFilter==='private121'?'private121':'');
   const members = ls.get('tuf_members',[]);
   const boardroom = members.filter(m=>m.status==='active'&&(!m.type||m.type==='boardroom'));
   const existing = members.filter(m=>m.status==='active'&&m.type==='existing_client');
@@ -4402,12 +4404,13 @@ const PEOPLE_LINK_STORES=['tuf_members','tuf_prospects','tuf_warm','tuf_boardroo
 const SEGMENTS=[
   {id:'network',label:'Network'},
   {id:'introducers',label:'Introducers'},
-  {id:'pipeline',label:'Pipeline'},
+  {id:'pipeline',label:'Leads'},
+  {id:'onboarding',label:'Onboarding'},
   {id:'boardroom',label:'Boardroom Members'},
-  {id:'private121',label:'Private 121s'}
+  {id:'private121',label:'121 Clients'}
 ];
 const SEG_LABEL=Object.fromEntries(SEGMENTS.map(s=>[s.id,s.label]));
-function crmSettings(){ return {nudgeDays:7,staleDays:14,...(ls.get('tuf_crm_settings',{})||{})}; }
+function crmSettings(){ return {nudgeDays:7,staleDays:14,followUpWarnDays:14,followUpDays:21,...(ls.get('tuf_crm_settings',{})||{})}; }
 function personSegment(p){ return (p&&p.segment)||'network'; }
 // A prospect row is "in the pipeline" only while open: Won/Lost rows are kept history, archived rows are the old auto pool.
 function prospectActive(p){ return !!p && !p.archived && p.stage!=='Won' && p.stage!=='Lost'; }
@@ -4443,12 +4446,17 @@ function crmSettingsModal(){
     <div style="font-size:12px;color:var(--mut);margin-bottom:12px">How many days without contact before a prospect gets flagged. Tune these once you see real data.</div>
     <div class="form-row"><label class="form-label">Nudge after (days, amber)</label><input class="form-input" type="number" id="crm-nudge" min="1" max="60" value="${s.nudgeDays}"></div>
     <div class="form-row"><label class="form-label">Stale after (days, red)</label><input class="form-input" type="number" id="crm-stale" min="2" max="120" value="${s.staleDays}"></div>
+    <div style="font-size:12px;color:var(--mut);margin:14px 0 10px;border-top:1px solid var(--bdr);padding-top:12px">The CRM hub follow up window (Introducers, Leads, Onboarding).</div>
+    <div class="form-row"><label class="form-label">Approaching after (days, amber)</label><input class="form-input" type="number" id="crm-fuwarn" min="1" max="60" value="${s.followUpWarnDays}"></div>
+    <div class="form-row"><label class="form-label">Needs follow up after (days, red)</label><input class="form-input" type="number" id="crm-fudays" min="2" max="120" value="${s.followUpDays}"></div>
   `,`<button class="btn btn-ghost" onclick="closeModal()">Cancel</button><button class="btn btn-k" onclick="crmSettingsSave()">Save</button>`);
 }
 function crmSettingsSave(){
   const nudge=Math.max(1,parseInt(document.getElementById('crm-nudge').value)||7);
   const stale=Math.max(nudge+1,parseInt(document.getElementById('crm-stale').value)||14);
-  ls.set('tuf_crm_settings',{nudgeDays:nudge,staleDays:stale});
+  const fuWarn=Math.max(1,parseInt(document.getElementById('crm-fuwarn')?.value)||14);
+  const fuDays=Math.max(fuWarn+1,parseInt(document.getElementById('crm-fudays')?.value)||21);
+  ls.set('tuf_crm_settings',{nudgeDays:nudge,staleDays:stale,followUpWarnDays:fuWarn,followUpDays:fuDays});
   closeModal(); renderPage(document.querySelector('.page.active')?.id?.replace('page-','')||'pipeline');
 }
 function peopleAll(){ return ls.get('tuf_people',[])||[]; }
@@ -4569,6 +4577,7 @@ function personSectionChips(p){
 }
 function renderPeople(){
   const host=document.getElementById('people-render'); if(!host) return;
+  crmTabsMount(peopleSegFilter==='introducers'?'introducers':peopleSegFilter==='network'?'network':'');
   if(personSelId){ renderPersonProfile(personSelId); return; }
   const ppl=peopleAll().slice().sort((a,b)=>(a.name||'').localeCompare(b.name||''));
   const counts={all:ppl.length};
@@ -4798,7 +4807,16 @@ function renderPersonProfile(id){
     !L.members.length?`<button class="btn btn-ghost btn-sm" onclick="profileAddTo('${na}','member');renderPeople()">+ Boardroom member</button>`:'',
     !L.bleads.length?`<button class="btn btn-ghost btn-sm" onclick="profileAddTo('${na}','blead');renderPeople()">+ Boardroom lead</button>`:'',
     !L.ea.length?`<button class="btn btn-ghost btn-sm" onclick="profileAddTo('${na}','event');renderPeople()">+ Event CRM</button>`:'',
+    !L.members.length?`<button class="btn btn-ghost btn-sm" onclick="profileAddTo('${na}','onboarding');renderPeople()">+ Onboarding</button>`:'',
   ].filter(Boolean).join('');
+  let caPanel='';
+  const caMem=(L.members||[])[0];
+  if(caMem){
+    const ca=ls.get('tuf_ca_'+caMem.id,null);
+    if(ca) caPanel=panel('Client analysis','',
+      `${kv('Health',ca.healthScore?ca.healthScore+'/10':'')}${kv('Renewal',ca.renewalDate?fmtDate(ca.renewalDate):'')}${kv('Next meeting',ca.nextMeetingDate?fmtDate(ca.nextMeetingDate):'')}${kv('Referral likelihood',escHtml(ca.referral||''))}${ca.healthNotes?`<div style="font-size:11.5px;color:var(--mut);white-space:pre-wrap;margin-top:6px">${escHtml(ca.healthNotes)}</div>`:''}`,
+      'Full analysis',`nav('clientanalysis',crmEl());selectCAClient('${caMem.id}')`);
+  }
   host.innerHTML=`
   <span style="display:inline-block;font-size:12px;font-weight:700;color:var(--mut);cursor:pointer;margin-bottom:12px" onclick="personSelId=null;renderPeople()">← All people</span>
   <div class="grid-2" style="align-items:start">
@@ -4825,6 +4843,11 @@ function renderPersonProfile(id){
         <div style="font-size:10px;color:var(--mut);margin-top:8px">Saving syncs the name and contact details to every section this person sits in.</div>
       </div>
       <div class="card" style="margin-bottom:12px">
+        <div class="card-title">Segment <span class="tag tag-k" style="font-size:9px;margin-left:4px">${SEG_LABEL[personSegment(p)]||''}</span></div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap">${SEGMENTS.map(sg=>`<button class="btn ${personSegment(p)===sg.id?'btn-k':'btn-ghost'} btn-sm" onclick="setPersonSegment('${p.id}','${sg.id}','moved from profile');renderPeople()">${sg.label}</button>`).join('')}</div>
+        <div style="font-size:10px;color:var(--mut);margin-top:8px">One tap moves them. Moving into or out of Leads opens or closes a pipeline row automatically.</div>
+      </div>
+      <div class="card" style="margin-bottom:12px">
         <div class="card-title">Journey</div>
         ${journeyGet(p.name).length?journeyHtml(p.name).replace('<div class="card-title" style="margin-top:14px">Journey</div>',''):'<div style="font-size:12px;color:var(--mut)">No journey entries yet.</div>'}
       </div>
@@ -4837,6 +4860,7 @@ function renderPersonProfile(id){
     <div>
       <div class="sec-hdr" style="margin-top:0">Sections (${personSectionChips(p).length||0})</div>
       ${panels||'<div class="card"><div style="font-size:12px;color:var(--mut)">Not in any section yet. Add them below.</div></div>'}
+      ${caPanel}
       ${addBtns?`<div class="card"><div class="card-title">Add to a section</div><div style="display:flex;gap:6px;flex-wrap:wrap">${addBtns}</div><div style="font-size:10px;color:var(--mut);margin-top:8px">They keep this same core record wherever they sit.</div></div>`:''}
     </div>
   </div>`;
@@ -5010,6 +5034,7 @@ function crmSegmentFixV2(){
   }catch(e){ console.warn('crmSegmentFixV2 failed',e); }
 }
 function renderPipeline(){
+  crmTabsMount('leads');
   const tabBar = document.getElementById('pipeline-tabs');
   const tabContent = document.getElementById('pipeline-tab-content');
   if(!tabBar || !tabContent) return;
@@ -5660,14 +5685,15 @@ function prospectWonSave(id){
   members.push({id:newId,name:p.name,co:p.co||'',email:p.email||'',phone:p.phone||'',stage:3,
     notes:`Converted from sales pipeline.${p.sourceEvent?' Originally an event lead from '+p.sourceEvent+'.':''} ${p.notes||''}`.trim(),
     status:'active',type:to==='private121'?'existing_client':'boardroom',clientFee:to==='private121'?fee:0,
-    sessions:[],touchpoint:new Date().toISOString().slice(0,10),retention:null,fromProspectId:id,sourceEvent:p.sourceEvent||''});
+    sessions:[],touchpoint:new Date().toISOString().slice(0,10),retention:null,fromProspectId:id,sourceEvent:p.sourceEvent||'',
+    onboardingComplete:false,onboardingType:'new'});
   personTag(members);
   ls.set('tuf_members',members);
   const today=new Date().toISOString().slice(0,10);
   list[i].convertedToMemberId=newId; list[i].stage='Won'; list[i].wonTo=to; list[i].closedAt=today;
   ls.set('tuf_prospects',list);
-  const per=personOf(p); if(per) setPersonSegment(per.id,to,'Won');
-  addNotif(`${p.name} converted: pipeline → ${to==='private121'?'Private 121s':'Boardroom Members'}`);
+  const per=personOf(p); if(per) setPersonSegment(per.id,'onboarding','Won, onboarding started');
+  addNotif(`${p.name} converted: Leads → Onboarding${to==='private121'?' (121 client)':''}`);
   journeyLog(p.name,'Sales Pipeline → '+(to==='private121'?'Private 121 client':'Boardroom member')+' (Won)');
   closeModal();renderPipeline();
 }
@@ -5893,6 +5919,7 @@ function deleteTest(id){if(!confirm('Delete?'))return;ls.set('tuf_testimonials',
 
 // ═══ ONBOARDING ══════════════════════════════════════════════════════════════
 function renderOnboarding(){
+  crmTabsMount('onboarding');
   const members=ls.get('tuf_members',[]).filter(m=>m.status==='active'&&!m.onboardingComplete&&m.type!=='guest');
   const topBar = document.getElementById('topbar-actions');
   if(topBar) topBar.innerHTML=`<button class="btn btn-k btn-sm" onclick="addMemberModal('boardroom')">+ New Member</button>`;
@@ -5996,6 +6023,7 @@ function completeOnboarding(memberId){
   else if(t==='bespoke'){ if(!members[i].type) members[i].type='boardroom'; outcome='onboarded'; }
   else { members[i].type='boardroom'; outcome='an active Boardroom member'; }
   ls.set('tuf_members',members);
+  try{ const per=personOf(members[i]); if(per) setPersonSegment(per.id,members[i].type==='existing_client'?'private121':'boardroom','Onboarding complete'); }catch(e){}
   addNotif(`${name} onboarding complete — ${outcome}`);
   document.getElementById('ob-detail').innerHTML=`<div class="pi good" style="border-radius:8px;padding:16px"><span class="pi-tag good">DONE</span><span style="flex:1;font-size:13px;margin-left:10px">${escHtml(name)} is now ${outcome}. </span></div>`;
   renderOnboarding();
@@ -10801,6 +10829,167 @@ function renderMarket(){
     ${MARKET_VALIDATION.map(mvRow).join('')}
     <div style="font-size:10px;color:var(--mut);margin-top:14px">Sources: DBT Business Population Estimates 2025, ERC State of Small Business Britain 2025, ScaleUp Institute Annual Review 2025, Bank of England 2025, Exit Factor 2026, NatWest and Beauhurst Startup Index 2026. Full references in the report.</div>
   `;
+}
+
+// ═══ CRM HUB (v69, Jasper's spec) ═════════════════════════════════════════════
+// One CRM nav item opens a hub dashboard; segment tabs run across every CRM page.
+// The follow-up list and health score cover Introducers, Leads and Onboarding
+// only: Jasper's remit as CRM manager. Thresholds live in crmSettings.
+const CRM_PAGES=['crmhub','people','pipeline','members','inbound','onboarding','clientanalysis'];
+const CRM_TABS=[
+  ['crmhub','Hub'],['network','Network'],['introducers','Introducers'],['leads','Leads'],
+  ['onboarding','Onboarding'],['boardroom','Boardroom Members'],['private121','121 Clients']];
+function crmEl(){ return document.querySelector('[data-page=crmhub]'); }
+function crmTabGo(key){
+  if(key==='crmhub') return nav('crmhub',crmEl());
+  if(key==='network') return navPeople('network',crmEl());
+  if(key==='introducers') return navPeople('introducers',crmEl());
+  if(key==='leads') return nav('pipeline',crmEl());
+  if(key==='onboarding') return nav('onboarding',crmEl());
+  if(key==='boardroom') return navMembers('boardroom',crmEl());
+  if(key==='private121') return navMembers('private121',crmEl());
+}
+// The strip lives in one floating node moved to the top of whichever CRM page is
+// active, so no page markup changes and it never appears outside the CRM.
+function crmTabsMount(active){
+  const page=document.querySelector('.page.active'); if(!page) return;
+  let el=document.getElementById('crm-strip');
+  if(!el){ el=document.createElement('div'); el.id='crm-strip'; }
+  if(page.firstChild!==el) page.insertBefore(el,page.firstChild);
+  el.style.cssText='display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px';
+  el.innerHTML=CRM_TABS.map(([k,l])=>`<button class="btn ${k===active?'btn-k':'btn-ghost'} btn-sm" onclick="crmTabGo('${k}')">${l}</button>`).join('');
+}
+// Follow-up signal detection over free text notes and next actions.
+function crmNoteSignal(text){
+  const m=String(text||'').match(/(follow ?up|chase|call (?:them |him |her )?back|book (?:a )?(?:call|meeting)|waiting (?:on|for)|no reply|not heard|didn'?t hear|circle back|check in|come back to|need to (?:send|call|ask))[^.\n]{0,40}/i);
+  return m?m[0].trim():null;
+}
+function crmDaysSince(d){
+  if(!d) return null;
+  const t=new Date(String(d).slice(0,10)+'T00:00:00'); if(isNaN(t)) return null;
+  const now=new Date(); now.setHours(0,0,0,0);
+  return Math.floor((now-t)/86400000);
+}
+function crmObMembers(){ return (ls.get('tuf_members',[])||[]).filter(m=>m.status==='active'&&!m.onboardingComplete&&m.type!=='guest'); }
+// The ranked needs-follow-up list: Introducers, Leads and Onboarding only.
+function crmFollowups(){
+  const s=crmSettings(); const out=[]; const today=new Date().toISOString().slice(0,10);
+  (ls.get('tuf_prospects',[])||[]).filter(prospectActive).forEach(pr=>{
+    if(pr.auto&&!pr.nextAction) return; // legacy pool rows stay quiet, same as the brief nudges
+    const days=crmDaysSince(pr.lastContact);
+    const due=prospectDue(pr,today);
+    const sig=crmNoteSignal((pr.notes||'')+' '+(pr.nextAction||''));
+    const stale=days===null||days>s.followUpDays;
+    if(!due&&!sig&&!stale) return;
+    const per=personOf(pr);
+    out.push({seg:'leads',label:'Leads',name:pr.name,personId:per?per.id:null,days,
+      reason:due==='overdue'?('Next action overdue'+(pr.nextAction?': '+pr.nextAction:'')):due==='today'?('Next action due today'+(pr.nextAction?': '+pr.nextAction:'')):sig?('Note: "'+sig+'"'):days===null?'No contact logged':days+' days since contact'});
+  });
+  const obKeys=new Set(crmObMembers().map(m=>profileKey(m.name)));
+  peopleAll().forEach(p=>{
+    const seg=personSegment(p);
+    const isOb=seg==='onboarding'||obKeys.has(profileKey(p.name));
+    if(seg!=='introducers'&&!isOb) return;
+    if(seg==='pipeline') return; // leads path above already covers them
+    const days=crmDaysSince(p.lastContact);
+    const obRec=isOb?(crmObMembers().find(m=>profileKey(m.name)===profileKey(p.name))||{}):{};
+    const sig=crmNoteSignal(profileNotesGet(p.name)+' '+(obRec.notes||''));
+    if(!sig&&!(days===null||days>s.followUpDays)) return;
+    out.push({seg:isOb?'onboarding':'introducers',label:isOb?'Onboarding':'Introducers',name:p.name,personId:p.id,days,
+      reason:sig?('Note: "'+sig+'"'):days===null?'No contact logged yet':days+' days since contact'});
+  });
+  out.sort((a,b)=>((b.days===null?9999:b.days)-(a.days===null?9999:a.days)));
+  return out;
+}
+// Blended RAG over the three time sensitive segments.
+function crmHealth(){
+  const s=crmSettings(); const rows=crmFollowups();
+  if(rows.length) return {rag:'red',detail:rows.length+' contact'+(rows.length!==1?'s':'')+' need following up'};
+  let approaching=0;
+  (ls.get('tuf_prospects',[])||[]).filter(prospectActive).forEach(pr=>{ if(pr.auto&&!pr.nextAction) return; const d=crmDaysSince(pr.lastContact); if(d!==null&&d>s.followUpWarnDays&&d<=s.followUpDays) approaching++; });
+  peopleAll().forEach(p=>{ const seg=personSegment(p); if(seg!=='introducers'&&seg!=='onboarding') return; const d=crmDaysSince(p.lastContact); if(d!==null&&d>s.followUpWarnDays&&d<=s.followUpDays) approaching++; });
+  return approaching?{rag:'amber',detail:approaching+' approaching the '+s.followUpDays+' day limit'}:{rag:'green',detail:'Everyone followed up inside '+s.followUpWarnDays+' days'};
+}
+function crmLogContact(personId){
+  const ppl=peopleAll(); const p=ppl.find(x=>x.id===personId); if(!p) return;
+  const today=new Date().toISOString().slice(0,10);
+  p.lastContact=today; ls.set('tuf_people',ppl);
+  const pros=ls.get('tuf_prospects',[])||[];
+  const open=pros.find(r=>prospectActive(r)&&(r.personId===personId||profileKey(r.name)===profileKey(p.name)));
+  if(open){ open.lastContact=today; ls.set('tuf_prospects',pros); }
+  journeyLog(p.name,'Contact logged');
+  addNotif('Contact logged: '+p.name);
+  const a=document.querySelector('.page.active');
+  if(a&&a.id==='page-crmhub') renderCRMHub(); else if(a&&a.id==='page-people') renderPeople();
+  updateFollowupBadge();
+}
+function updateFollowupBadge(){
+  try{
+    const n=crmFollowups().length;
+    const b=document.getElementById('sb-followup');
+    if(b){ b.textContent=n; b.style.display=n?'inline':'none'; }
+  }catch(e){}
+}
+function renderCRMHub(){
+  const host=document.getElementById('crmhub-render'); if(!host) return;
+  crmTabsMount('crmhub');
+  const s=crmSettings();
+  document.getElementById('topbar-actions').innerHTML=`<button class="btn btn-ghost btn-sm" onclick="crmSettingsModal()">Thresholds: ${s.followUpWarnDays}d / ${s.followUpDays}d</button><button class="btn btn-k btn-sm" onclick="personAddModal()">+ Add person</button>`;
+  const ppl=peopleAll();
+  const counts={}; SEGMENTS.forEach(sg=>counts[sg.id]=ppl.filter(p=>personSegment(p)===sg.id).length);
+  const circleGo={network:"crmTabGo('network')",introducers:"crmTabGo('introducers')",pipeline:"crmTabGo('leads')",onboarding:"crmTabGo('onboarding')",boardroom:"crmTabGo('boardroom')",private121:"crmTabGo('private121')"};
+  const circles=SEGMENTS.map(sg=>`<div onclick="${circleGo[sg.id]}" style="cursor:pointer;text-align:center;flex:1;min-width:100px">
+    <div style="width:78px;height:78px;border-radius:50%;margin:0 auto;display:flex;align-items:center;justify-content:center;background:${['introducers','pipeline','onboarding'].includes(sg.id)?'var(--k)':'var(--card)'};color:${['introducers','pipeline','onboarding'].includes(sg.id)?'var(--y)':'var(--txt)'};border:1px solid var(--bdr);font-family:var(--font-display);font-size:24px;font-weight:800">${counts[sg.id]}</div>
+    <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--mut);margin-top:7px">${sg.label}</div></div>`).join('');
+  const h=crmHealth();
+  const ragCol=h.rag==='green'?'var(--grn)':h.rag==='amber'?'var(--amb)':'var(--red)';
+  const fus=crmFollowups();
+  const inb=(ls.get('tuf_inbound_leads',[])||[]).filter(l=>l.status==='new');
+  const fuRow=f=>`<div class="card" style="margin-bottom:6px;padding:11px 15px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;border-left:4px solid ${f.days===null||f.days>crmSettings().followUpDays?'var(--red)':'var(--amb)'}">
+    <div style="flex:1;min-width:200px">
+      <span style="font-weight:700;font-size:13px">${escHtml(f.name)}</span>
+      <span class="tag ${f.seg==='leads'?'tag-a':f.seg==='onboarding'?'tag-b':'tag-g'}" style="font-size:9px;margin-left:6px">${f.label}</span>
+      <div style="font-size:11px;color:var(--mut);margin-top:2px">${escHtml(f.reason)}${f.days!==null?' · last contact '+f.days+'d ago':''}</div>
+    </div>
+    <div style="display:flex;gap:6px;flex-shrink:0">
+      ${f.personId?`<button class="btn btn-k btn-sm" onclick="crmLogContact('${f.personId}')">Log contact</button><button class="btn btn-ghost btn-sm" onclick="personOpen('${f.personId}');crmTabGo('network');personSelId='${f.personId}';renderPeople()">Open</button>`:`<button class="btn btn-ghost btn-sm" onclick="crmTabGo('leads')">Open Leads</button>`}
+    </div></div>`;
+  host.innerHTML=`
+    <div style="display:flex;gap:14px;align-items:stretch;flex-wrap:wrap;margin-bottom:20px">
+      <div class="card" style="flex:1;min-width:260px;margin-bottom:0;display:flex;align-items:center;gap:14px">
+        <div style="width:52px;height:52px;border-radius:50%;background:${ragCol};flex-shrink:0"></div>
+        <div><div style="font-weight:800;font-size:16px;text-transform:uppercase;letter-spacing:.04em">${h.rag}</div>
+        <div style="font-size:12px;color:var(--mut)">${escHtml(h.detail)}. Covers Introducers, Leads and Onboarding.</div></div>
+      </div>
+      <div class="card" style="flex:1;min-width:260px;margin-bottom:0;border-left:4px solid ${inb.length?'var(--amb)':'var(--bdr)'}">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
+          <div class="card-title" style="margin:0">Inbound from the website</div>
+          <button class="btn btn-ghost btn-sm" onclick="nav('inbound',crmEl())">Open Inbound</button>
+        </div>
+        ${inb.length?`<div style="font-size:12px;margin-top:6px"><b>${inb.length} new</b> waiting: ${inb.slice(0,3).map(l=>escHtml(l.name||l.email||'')).join(', ')}${inb.length>3?'…':''}</div>`:'<div style="font-size:12px;color:var(--mut);margin-top:6px">Quiet right now. New website signups and Scorecard leads will land here.</div>'}
+      </div>
+    </div>
+    <div class="sec-hdr">The Network At A Glance</div>
+    <div class="card" style="margin-bottom:20px"><div style="display:flex;gap:8px;flex-wrap:wrap">${circles}</div>
+    <div style="font-size:10px;color:var(--mut);margin-top:10px">Black circles are the three followed up segments. Tap any circle to open that list.</div></div>
+    <div class="sec-hdr">Needs Follow Up <span style="font-weight:400;font-size:11px;color:var(--mut);text-transform:none;letter-spacing:0">${fus.length?fus.length+' to work, worst first':''}</span></div>
+    ${fus.length?fus.map(fuRow).join(''):'<div class="card"><div style="font-size:12.5px;color:var(--mut)">Nobody needs chasing. Log contacts as you make them and this list stays honest.</div></div>'}
+  `;
+  updateFollowupBadge();
+}
+// One shot: people whose active member record is mid onboarding move to the new
+// Onboarding segment (ledger tuf_segment_onb_v1, safe to re-run).
+function crmOnboardingMigrate(){
+  try{
+    if(!sbLoadOK) return;
+    if(ls.get('tuf_segment_onb_v1',null)) return;
+    const ppl=peopleAll(); if(!ppl.length) return;
+    const obKeys=new Set(crmObMembers().map(m=>profileKey(m.name)));
+    let n=0;
+    ppl.forEach(p=>{ if(obKeys.has(profileKey(p.name))&&personSegment(p)!=='onboarding'){ if(setPersonSegment(p.id,'onboarding','Onboarding in progress (one time sweep)')) n++; } });
+    ls.set('tuf_segment_onb_v1',{at:new Date().toISOString(),by:CURRENT_USER,moved:n});
+    if(n) addNotif('CRM: '+n+' mid onboarding '+(n===1?'person':'people')+' moved to the Onboarding segment');
+  }catch(e){ console.warn('crmOnboardingMigrate failed',e); }
 }
 
 // ═══ FOUNDER TO CEO POSITIONING (Playbook v3.1, 25 Aug 2026) ═════════════════
