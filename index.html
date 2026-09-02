@@ -3373,6 +3373,21 @@ function coSendBody(sess,p){
   lines.push('Any questions before next time, just reply here.','','Danny');
   return lines.join('\n');
 }
+// Dispatch ledger (v70): emailing the forwarder does NOT mark a session sent.
+// The forwarder (Chloe) archives it with 'Sent to client' once forwarded, so her
+// queue always shows exactly who she has and has not sent to.
+function coDispatchGet(){ return ls.get('tuf_recap_dispatch',{})||{}; }
+function coDispatched(id){ return coDispatchGet()[id]||null; }
+async function coMarkSentClient(id){
+  const sess=coData.sessions.find(x=>x.id===id); if(!sess) return;
+  const p=coPerson(sess.person_id);
+  const d=coDispatched(id);
+  const to=(d&&d.forward_to)||((sess.sent_to&&sess.sent_to[0])||(p&&p.email)||'');
+  if(await coUpd('coaching_sessions',id,{status:'sent',sent_at:new Date().toISOString(),sent_to:to?[String(to).toLowerCase()]:[]})){
+    addNotif('Recap sent to '+((p&&p.name)||'client')+' — archived');
+    coRefresh();
+  }
+}
 function coSendModal(id){
   const sess=coData.sessions.find(x=>x.id===id); if(!sess) return;
   const p=coPerson(sess.person_id);
@@ -3382,7 +3397,7 @@ function coSendModal(id){
     <div class="form-row"><label class="form-label">Client email (Danny forwards to this)</label><input class="form-input" id="cosnd-to" value="${escHtml(to)}" placeholder="client@company.com"></div>
     <div class="form-row"><label class="form-label">Subject</label><input class="form-input" id="cosnd-subj" value="${escHtml('Your coaching session recap · '+fmtDate(sess.session_date))}"></div>
     <div class="form-row"><label class="form-label">Email</label><textarea class="form-textarea" id="cosnd-body" style="min-height:200px">${escHtml(coSendBody(sess,p))}</textarea></div>
-    <div class="form-row"><label class="form-label">Email the forward-ready recap to</label><select class="form-select" id="cosnd-who">${HOL_TEAM.map(n=>`<option${n===(ls.str('tuf_recap_send_to')||'James')?' selected':''}>${n}</option>`).join('')}</select></div>
+    <div class="form-row"><label class="form-label">Email the forward-ready recap to</label><select class="form-select" id="cosnd-who">${HOL_TEAM.map(n=>`<option${n===(ls.str('tuf_recap_send_to')||'Chloe')?' selected':''}>${n}</option>`).join('')}</select></div>
     <div style="font-size:11px;color:var(--mut);margin-bottom:8px">One tap emails them this text with the recap PDF attached, ready to forward to the client. ${pdf?'':'<span style="color:var(--amb)">No recap PDF on this session yet — the email goes without an attachment.</span>'}</div>
     <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px">
       ${pdf?`<button class="btn btn-ghost btn-sm" onclick="coFileOpen('${pdf.id}')">Download recap PDF</button>`:''}
@@ -3390,6 +3405,7 @@ function coSendModal(id){
       <button class="btn btn-ghost btn-sm" onclick="coMailto()">Open in Mail</button>
       <button class="btn btn-ghost btn-sm" onclick="coMarkSent('${id}')">Mark as sent</button>
     </div>
+    ${(()=>{const d=coDispatched(id);return d?`<div style="font-size:11px;background:var(--bbg);border-radius:6px;padding:7px 10px;margin-bottom:6px">Already emailed to ${escHtml(d.to)} on ${fmtDate(d.at)}. Sending again is fine; archive it with Sent to client once forwarded.</div>`:'';})()}
     <div id="cosnd-status" style="font-size:12px;margin-top:6px"></div>
   `,`<button class="btn btn-ghost" onclick="closeModal()">Cancel</button><button class="btn btn-k" id="cosnd-send" onclick="coSendToDanny('${id}')">Send the forward-ready email</button>`);
 }
@@ -3402,17 +3418,19 @@ async function coSendToDanny(id){
   const st=document.getElementById('cosnd-status');
   const say=(m,ok)=>{ if(st) st.innerHTML='<span style="color:'+(ok?'var(--grn)':'var(--red)')+'">'+m+'</span>'; };
   const whoEl=document.getElementById('cosnd-who');
-  const who=(whoEl&&whoEl.value)||ls.str('tuf_recap_send_to')||'James';
+  const who=(whoEl&&whoEl.value)||ls.str('tuf_recap_send_to')||'Chloe';
   ls.setStr('tuf_recap_send_to',who);
   const danny=((ls.get('tuf_team_emails',{})||{})[who])||TEAM_EMAIL_DEFAULTS[who];
   if(!danny){ say('No email address for '+who+' in Team Email Settings.'); return; }
   const btn=document.getElementById('cosnd-send'); if(btn){ btn.disabled=true; btn.textContent='Sending…'; }
-  say('Sending to Danny…',true);
+  say('Sending to '+who+'…',true);
   try{
     const {data,error}=await sb.functions.invoke('send-recap',{body:{session_id:id,to:danny,forward_to:forwardTo,subject,body:bodyTxt,client_name:(p&&p.name)||''}});
     if(error){ let m=error.message||'send failed'; try{ const t=await error.context.text(); const j=JSON.parse(t); if(j&&j.error) m=j.error; }catch(_){} throw new Error(m); }
     if(data&&data.error) throw new Error(data.error);
-    await coUpd('coaching_sessions',id,{status:'sent',sent_at:new Date().toISOString(),sent_to:forwardTo?[forwardTo.toLowerCase()]:[]});
+    const disp=ls.get('tuf_recap_dispatch',{})||{};
+    disp[id]={to:who,forward_to:forwardTo,at:new Date().toISOString().slice(0,10),by:CURRENT_USER};
+    ls.set('tuf_recap_dispatch',disp);
     addNotif('Recap emailed to '+who+' to forward'+(p&&p.name?' to '+p.name:'')+(data&&data.attached===false?' (no PDF attached)':''));
     closeModal(); coRefresh();
   }catch(e){
@@ -3821,13 +3839,23 @@ function coDannyView(){
         <button class="btn btn-ghost btn-sm" onclick="coOpenPerson('${s.person_id}')">Open</button>
       </div>
     </div>`;}).join(''):'';})()}
-  ${(()=>{const ready=coData.sessions.filter(s=>s.status==='approved').slice().sort((a,b)=>(b.session_date||'').localeCompare(a.session_date||''));
-    return ready.length?`<div class="sec-hdr">Ready to send (${ready.length})</div>`+ready.map(s=>{const p=coPerson(s.person_id);
+  ${(()=>{const ready=coData.sessions.filter(s=>s.status==='approved'&&!coDispatched(s.id)).slice().sort((a,b)=>(b.session_date||'').localeCompare(a.session_date||''));
+    return ready.length?`<div class="sec-hdr">Ready to email out (${ready.length})</div>`+ready.map(s=>{const p=coPerson(s.person_id);
     return `<div class="card" style="margin-bottom:8px;border-left:4px solid var(--grn)">
       <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
         <div style="flex:1;min-width:200px"><div style="font-weight:700">${escHtml(p?p.name:'')} <span style="color:var(--mut);font-weight:500">· Session ${s.session_no||'?'} · ${fmtDate(s.session_date)}</span></div></div>
         <button class="btn btn-k btn-sm" onclick="coSendModal('${s.id}')">Send recap</button>
         <button class="btn btn-ghost btn-sm" onclick="coOpenPerson('${s.person_id}')">Open</button>
+      </div>
+    </div>`;}).join(''):'';})()}
+  ${(()=>{const withF=coData.sessions.filter(s=>s.status==='approved'&&coDispatched(s.id)).slice().sort((a,b)=>((coDispatched(a.id)||{}).at||'').localeCompare((coDispatched(b.id)||{}).at||''));
+    return withF.length?`<div class="sec-hdr">With ${escHtml((coDispatched(withF[0].id)||{}).to||'Chloe')} to forward (${withF.length})</div>`+withF.map(s=>{const p=coPerson(s.person_id);const d=coDispatched(s.id)||{};
+    return `<div class="card" style="margin-bottom:8px;border-left:4px solid var(--amb)">
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+        <div style="flex:1;min-width:200px"><div style="font-weight:700">${escHtml(p?p.name:'')} <span style="color:var(--mut);font-weight:500">· Session ${s.session_no||'?'} · ${fmtDate(s.session_date)}</span></div>
+        <div style="font-size:11px;color:var(--mut)">Emailed to ${escHtml(d.to||'')} ${d.at?fmtDate(d.at):''}${d.forward_to?' · for '+escHtml(d.forward_to):''}</div></div>
+        <button class="btn btn-k btn-sm" onclick="coMarkSentClient('${s.id}')">✓ Sent to client</button>
+        <button class="btn btn-ghost btn-sm" onclick="coSendModal('${s.id}')">Email again</button>
       </div>
     </div>`;}).join(''):'';})()}
   <div class="sec-hdr">Actions carried more than once</div>
@@ -3862,8 +3890,14 @@ async function coBriefNudges(){
     let html='';
     if(todays.length) html+=mk('info',`Coaching today: ${todays.map(p=>escHtml(p.name)).join(', ')}. Prep brief${todays.length!==1?'s':''} ready in Coaching ().`);
     const drafts=coData.sessions.filter(s=>s.status==='draft');
-    const ready=coData.sessions.filter(s=>s.status==='approved');
-    if(ready.length) html+=mk('soon',`${ready.length} approved coaching recap${ready.length!==1?'s':''} ready to send: ${ready.slice(0,3).map(s=>escHtml((coPerson(s.person_id)||{}).name||'')).join(', ')}.`);
+    const ready=coData.sessions.filter(s=>s.status==='approved'&&!coDispatched(s.id));
+    if(ready.length) html+=mk('soon',`${ready.length} approved coaching recap${ready.length!==1?'s':''} ready to email out: ${ready.slice(0,3).map(s=>escHtml((coPerson(s.person_id)||{}).name||'')).join(', ')}.`);
+    const withF=coData.sessions.filter(s=>s.status==='approved'&&coDispatched(s.id));
+    if(withF.length){
+      const fwName=(coDispatched(withF[0].id)||{}).to||'Chloe';
+      const mkF=(text)=>`<div class="pi soon"><span class="pi-tag soon">RECAPS</span><span style="font-size:10px;font-weight:700;background:var(--k);color:var(--w);border-radius:20px;padding:2px 9px;flex-shrink:0;margin-top:1px">${escHtml(fwName)}</span><span style="flex:1;font-size:12.5px;line-height:1.45;margin-left:4px">${text}</span></div>`;
+      briefAppend(mkF(`${withF.length} recap${withF.length!==1?'s':''} in your inbox to forward: ${withF.slice(0,3).map(s=>escHtml((coPerson(s.person_id)||{}).name||'')).join(', ')}. Archive each with Sent to client in Coaching once forwarded.`),fwName);
+    }
     if(drafts.length) html+=mk('urgent',`${drafts.length} coaching recap${drafts.length!==1?'s':''} awaiting approval: ${drafts.slice(0,3).map(s=>escHtml((coPerson(s.person_id)||{}).name||'')).join(', ')}${drafts.length>3?'…':''}. Review and approve in Coaching.`);
     if(stuck.length) html+=mk('soon',`${stuck.length} coaching action${stuck.length!==1?'s':''} carried more than once: ${stuck.slice(0,3).map(a=>escHtml(((coPerson(a.person_id)||{}).name||'')+': '+String(a.text||'').slice(0,40))).join(' · ')}${stuck.length>3?'…':''}`);
     if(stale.length) html+=mk('soon',`No coaching session for ${CO_STALE_DAYS}+ days: ${stale.slice(0,4).map(x=>escHtml(x.p.name)+' ('+x.days+'d)').join(', ')}${stale.length>4?'…':''}`);
