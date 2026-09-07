@@ -11780,12 +11780,16 @@ function pkPaint(){
     const dirs=Array.isArray(r.directors)?r.directors:[];
     const reasons=Array.isArray(r.reasons)?r.reasons:[];
     const yr=(r.incorporated_on||'').slice(0,4);
+    const founder=dirs.length===0?escHtml(r.company_name)
+      :dirs.length===1?escHtml(dirs[0].name)
+      :dirs.length===2?escHtml(dirs[0].name)+' &amp; '+escHtml(dirs[1].name)
+      :escHtml(dirs[0].name)+' + '+(dirs.length-1)+' others';
     return '<div class="card" style="margin-bottom:10px;padding:14px 18px">'+
       '<div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">'+
         '<span style="background:var(--k);color:var(--y);font-weight:800;border-radius:8px;padding:4px 10px;font-size:13px">'+(r.score||0)+'</span>'+
-        '<div style="flex:1;min-width:200px"><b style="font-size:14px">'+escHtml(r.company_name)+'</b>'+
+        '<div style="flex:1;min-width:200px"><b style="font-size:14px">'+founder+'</b>'+
           '<div style="font-size:11.5px;color:var(--mut);margin-top:2px">'+
-            [r.locality?escHtml(r.locality):'',yr?'since '+yr:'',accLabel(r.accounts_type||''),dirs.length?dirs.map(d=>escHtml(d.name)).join(', '):''].filter(Boolean).join(' · ')+
+            [escHtml(r.company_name),r.locality?escHtml(r.locality):'',yr?'since '+yr:'',accLabel(r.accounts_type||'')].filter(Boolean).join(' · ')+
           '</div></div>'+
         (pkTab==='new'?'<button class="btn btn-y btn-sm" onclick="pkPromote(\''+r.id+'\')">Promote to CRM Leads</button>'+
           '<button class="btn btn-ghost btn-sm" onclick="pkSetStatus(\''+r.id+'\',\'dismissed\')">Dismiss</button>':'')+
