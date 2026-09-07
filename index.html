@@ -1461,6 +1461,7 @@ function initApp(user){
   unitaskMigrate();
   crmOnboardingMigrate();
   cxMigrate();
+  cxV80Migrate();
   updateFollowupBadge();
   setTimeout(()=>{ try{ csuiteAutoRun(); }catch(e){} },8000);
   updateInboundBadge();
@@ -4428,15 +4429,20 @@ function dupCheckWarn(name,email){
 // ═══ PEOPLE MASTER DATABASE — one core record per person, linked across every section ═══
 const PEOPLE_LINK_STORES=['tuf_members','tuf_prospects','tuf_warm','tuf_boardroom_attendees','tuf_event_attendees','tuf_event_leads','tuf_inbound_leads','tuf_boardroom_leads'];
 // ═══ CRM SEGMENTS — every person sits in exactly one of five segments ═══
+// JJ's journey order (v80): Network is the starting point, then forward to
+// Introducers, Leads, Onboarding. 121 sits outside the journey. Boardroom is
+// no longer a CRM segment (Joe's remit under Products) but stays a VALID
+// stored value: members keep segment 'boardroom' and setPersonSegment still
+// accepts it for the sign-on handoff.
 const SEGMENTS=[
+  {id:'network',label:'Network'},
   {id:'introducers',label:'Introducers'},
   {id:'pipeline',label:'Leads'},
   {id:'onboarding',label:'Onboarding'},
-  {id:'boardroom',label:'Boardroom Members'},
-  {id:'private121',label:'121 Clients'},
-  {id:'network',label:'Network'}
+  {id:'private121',label:'121 Clients'}
 ];
 const SEG_LABEL=Object.fromEntries(SEGMENTS.map(s=>[s.id,s.label]));
+SEG_LABEL.boardroom='Boardroom Members';
 function crmSettings(){ return {nudgeDays:7,staleDays:14,followUpWarnDays:14,followUpDays:21,...(ls.get('tuf_crm_settings',{})||{})}; }
 function personSegment(p){ return (p&&p.segment)||'network'; }
 // A prospect row is "in the pipeline" only while open: Won/Lost rows are kept history, archived rows are the old auto pool.
@@ -4719,22 +4725,43 @@ function rcBulkAssign(){
   renderReclassify();
 }
 function personAddModal(){
+  // Default the segment to the list being viewed so the person lands where
+  // they were added (the Jane Aylwin bug: no segment meant Network, and they
+  // vanished from the tab in front of you).
+  const active=document.querySelector('.page.active');
+  const onPeople=active&&active.id==='page-people';
+  const dflt=(onPeople&&typeof peopleSegFilter==='string'&&SEGMENTS.some(s=>s.id===peopleSegFilter))?peopleSegFilter:'network';
   showModal('Add a person to the core database',`
     <div class="grid-2"><div class="form-row"><label class="form-label">Name</label><input class="form-input" id="pp-name"></div><div class="form-row"><label class="form-label">Business</label><input class="form-input" id="pp-co"></div></div>
     <div class="grid-2"><div class="form-row"><label class="form-label">Email</label><input class="form-input" type="email" id="pp-email"></div><div class="form-row"><label class="form-label">Phone</label><input class="form-input" type="tel" id="pp-phone"></div></div>
     <div class="grid-2"><div class="form-row"><label class="form-label">Annual revenue</label><input class="form-input" id="pp-revenue" placeholder="e.g. £2m"></div><div class="form-row"><label class="form-label">Website</label><input class="form-input" id="pp-website"></div></div>
     <div class="form-row"><label class="form-label">Business description</label><textarea class="form-textarea" id="pp-desc" style="min-height:60px"></textarea></div>
-    <div style="font-size:11px;color:var(--mut)">This creates the core record only. Add them to sections (Pipeline, Boardroom, Padel…) from their profile.</div>
+    <div class="form-row"><label class="form-label">Segment</label><select class="form-select" id="pp-seg">${SEGMENTS.map(s=>`<option value="${s.id}"${s.id===dflt?' selected':''}>${s.label}</option>`).join('')}</select></div>
+    <div style="font-size:11px;color:var(--mut)">One person, one record. If they already exist their record opens instead of a duplicate being created.</div>
   `,`<button class="btn btn-ghost" onclick="closeModal()">Cancel</button><button class="btn btn-k" onclick="personSaveNew()">Add person</button>`);
 }
 function personSaveNew(){
   const name=document.getElementById('pp-name').value.trim(); if(!name){ alert('Add a name.'); return; }
   const email=document.getElementById('pp-email').value.trim();
+  const seg=document.getElementById('pp-seg')?.value||'network';
+  // Existing person: open their record, never a dead-end alert or a duplicate.
+  const em=email.toLowerCase();
+  const existing=peopleAll().find(p=>profileKey(p.name)===profileKey(name))||(em?peopleAll().find(p=>(p.email||'').trim().toLowerCase()===em):null);
+  if(existing){
+    closeModal();
+    addNotif(existing.name+' already exists, so their record was opened instead');
+    navPeople(personSegment(existing),crmEl?crmEl():null);
+    personSelId=existing.id; renderPeople();
+    return;
+  }
   if(!dupCheckWarn(name,email)) return;
-  if(peopleAll().some(p=>profileKey(p.name)===profileKey(name))){ alert(name+' is already in the People database.'); return; }
   const p=personEnsure(name,{co:document.getElementById('pp-co').value.trim(),email,phone:document.getElementById('pp-phone').value.trim(),revenue:document.getElementById('pp-revenue').value.trim(),website:document.getElementById('pp-website').value.trim(),businessDesc:document.getElementById('pp-desc').value.trim()});
-  journeyLog(name,'Added to the People database');
-  closeModal(); personSelId=p?p.id:null; renderPeople();
+  if(p&&seg!=='network') setPersonSegment(p.id,seg,'added manually');
+  journeyLog(name,'Added to the People database'+(seg!=='network'?' ('+(SEG_LABEL[seg]||seg)+')':''));
+  closeModal(); personSelId=p?p.id:null;
+  const active=document.querySelector('.page.active');
+  if(active&&active.id==='page-people'){ peopleSegFilter=seg; }
+  renderPeople();
 }
 function personCoreSave(id){
   const g=x=>document.getElementById(x)?.value.trim()||'';
@@ -11095,17 +11122,15 @@ function cleanMergeGo(aId,bId){
 // only: Jasper's remit as CRM manager. Thresholds live in crmSettings.
 const CRM_PAGES=['crmhub','crmclean','people','pipeline','members','inbound','onboarding','clientanalysis'];
 const CRM_TABS=[
-  ['crmhub','Hub'],['introducers','Introducers'],['leads','Leads'],['onboarding','Onboarding'],
-  ['boardroom','Boardroom Members'],['private121','121 Clients'],['network','Network']];
+  ['crmhub','Hub'],['network','Network'],['introducers','Introducers'],['leads','Leads'],
+  ['onboarding','Onboarding'],['private121','121 Clients']];
 function crmEl(){ return document.querySelector('[data-page=crmhub]'); }
+// Every tab routes into the one unified dark list. The old pipeline kanban,
+// members and onboarding pages still exist for deep links, off the CRM nav.
 function crmTabGo(key){
   if(key==='crmhub') return nav('crmhub',crmEl());
-  if(key==='network') return navPeople('network',crmEl());
-  if(key==='introducers') return navPeople('introducers',crmEl());
-  if(key==='leads') return nav('pipeline',crmEl());
-  if(key==='onboarding') return nav('onboarding',crmEl());
-  if(key==='boardroom') return navMembers('boardroom',crmEl());
-  if(key==='private121') return navMembers('private121',crmEl());
+  if(key==='leads') return navPeople('pipeline',crmEl());
+  return navPeople(key,crmEl());
 }
 // The strip lives in one floating node moved to the top of whichever CRM page is
 // active, so no page markup changes and it never appears outside the CRM.
@@ -11284,6 +11309,7 @@ async function cxLoadRemote(force){
     const ppl=peopleAll(); const idSet={}; const byKey={};
     ppl.forEach(p=>{ idSet[p.id]=1; byKey[profileKey(p.name)]=p.id; });
     const map={};
+    const actsAll=cxActionsAll(); let actsTouched=false;
     data.forEach(r=>{
       const pid=(r.person_id&&idSet[r.person_id])?r.person_id:byKey[profileKey(r.person_key||'')];
       if(!pid) return;
@@ -11291,7 +11317,18 @@ async function cxLoadRemote(force){
       const acts=Array.isArray(r.actions)?r.actions:[];
       if(acts.length) text+='\n\nSuggested actions: '+acts.map(a=>String((a&&a.text)||a||'')).filter(Boolean).join('; ');
       (map[pid]=map[pid]||[]).push({id:'r_'+r.id,date:r.note_date||'',src:r.src||'readai',text,by:r.created_by||'agent',remote:true});
+      // Agent-extracted actions become real Next Actions once, keyed by the
+      // remote row id, so completing or re-loading never duplicates them.
+      acts.forEach((a,i)=>{
+        const aid='ra_'+r.id+'_'+i;
+        const arr=actsAll[pid]=actsAll[pid]||[];
+        if(arr.some(x=>x.id===aid)) return;
+        const txt=String((a&&a.text)||a||'').trim(); if(!txt) return;
+        arr.push({id:aid,text:txt.slice(0,200),due:(a&&/^\d{4}-\d{2}-\d{2}$/.test(a.due||''))?a.due:null,createdAt:r.note_date||new Date().toISOString().slice(0,10),createdBy:'recap-agent',done:false});
+        actsTouched=true;
+      });
     });
+    if(actsTouched) ls.set('tuf_crm_actions',actsAll);
     const changed=JSON.stringify(map)!==JSON.stringify(window.__cxRemoteNotes||{});
     window.__cxRemoteNotes=map;
     __cxRemoteAt=Date.now();
@@ -11343,33 +11380,35 @@ function cxCadence(p){
 }
 // The hub's Next Actions feed: explicit actions plus staleness suggestions,
 // grouped Overdue / Due Today / Upcoming. Names appear here and nowhere else.
+// Grouped by segment first (JJ's journey order), then urgency within each.
+// One row per PERSON with a count of outstanding actions; the action detail
+// lives on their profile. Network and 121 are never on this panel.
 function cxNextActions(){
   const today=new Date().toISOString().slice(0,10);
-  const out={overdue:[],today:[],upcoming:[]};
-  const ppl=peopleAll();
-  const withAction=new Set();
-  ppl.forEach(p=>{
-    cxActions(p.id).forEach(a=>{
-      withAction.add(p.id);
-      const row={personId:p.id,name:p.name,seg:personSegment(p),text:a.text,actionId:a.id,dot:a.due&&a.due<today?'red':a.due===today?'amber':'green'};
-      if(a.due&&a.due<today) out.overdue.push(row);
-      else if(a.due===today) out.today.push(row);
-      else out.upcoming.push(row);
-    });
+  const groups={introducers:[],pipeline:[],onboarding:[]};
+  const rank={red:0,amber:1,green:2};
+  peopleAll().forEach(p=>{
+    const seg=personSegment(p); if(!groups[seg]) return;
+    const acts=cxActions(p.id);
+    let dot=null;
+    acts.forEach(a=>{ const d=a.due&&a.due<today?'red':a.due===today?'amber':'green'; if(dot===null||rank[d]<rank[dot]) dot=d; });
+    const c=cxCadence(p);
+    let hint='';
+    if(c&&c.dot!=='green'){
+      if(!acts.length) hint=c.zero?'Make first contact, nothing logged yet':('Get back in touch, '+c.days+' days since contact'+(c.archive?' (consider archiving)':''));
+      if(dot===null||rank[c.dot]<rank[dot]) dot=c.dot;
+    }
+    if(!acts.length&&!hint) return;
+    groups[seg].push({personId:p.id,name:p.name,seg,count:acts.length,dot:dot||'green',hint});
   });
-  ppl.forEach(p=>{
-    if(withAction.has(p.id)) return;
-    const c=cxCadence(p); if(!c) return;
-    if(c.dot==='green') return;
-    const row={personId:p.id,name:p.name,seg:personSegment(p),actionId:null,dot:c.dot,
-      text:c.zero?'Make first contact, nothing logged yet':('Get back in touch, '+c.days+' days since contact'+(c.archive?' (consider archiving)':''))};
-    if(c.dot==='red') out.overdue.push(row);
-    else out.today.push(row);
-  });
-  const byDays=(a,b)=>0; out.overdue.sort(byDays);
-  return out;
+  Object.keys(groups).forEach(k=>groups[k].sort((a,b)=>rank[a.dot]-rank[b.dot]||b.count-a.count||String(a.name).localeCompare(String(b.name))));
+  return groups;
 }
-function cxBadgeCount(){ const na=cxNextActions(); return na.overdue.length+na.today.length; }
+function cxBadgeCount(){
+  const g=cxNextActions(); let n=0;
+  Object.keys(g).forEach(k=>g[k].forEach(r=>{ if(r.dot!=='green') n++; }));
+  return n;
+}
 // Cross product duplication: the same name also lives in another product area.
 function cxCrossProduct(p){
   const k=profileKey(p.name); const hits=[];
@@ -11411,7 +11450,7 @@ async function cxParsePaste(personId){
   const say=m=>{ if(st) st.textContent=m; };
   say('Reading the notes…');
   try{
-    const data=await claudeCall({model:'claude-haiku-4-5-20251001',max_tokens:900,messages:[{role:'user',content:'Today is '+new Date().toISOString().slice(0,10)+'. Convert this raw meeting text (a Read.ai summary, email or notes) into structured CRM entries. Respond with ONLY JSON, no fences: {"notes":[{"date":"YYYY-MM-DD or empty if unknown","text":"a clean note in plain UK English, no hyphens"}],"actions":[{"text":"a specific next action in words","due":"YYYY-MM-DD or empty"}]}. Dates without a year are recent: resolve them against today, never to an earlier year. Keep every substantive point; one note per topic; only real committed actions.\n\nRAW TEXT:\n'+raw.slice(0,6000)}]});
+    const data=await claudeCall({model:'claude-haiku-4-5-20251001',max_tokens:900,messages:[{role:'user',content:'Today is '+new Date().toISOString().slice(0,10)+'. Convert this raw meeting text (a Read.ai summary, email or notes) into structured CRM entries. Respond with ONLY JSON, no fences: {"notes":[{"date":"YYYY-MM-DD or empty if unknown","text":"a clean note in plain UK English, no hyphens"}],"actions":[{"text":"a specific next action in words","due":"YYYY-MM-DD or empty"}]}. Dates without a year are recent: resolve them against today, never to an earlier year. Keep every substantive point; one note per topic; only real committed actions. If an action involves a third party who is not the person these notes are about, keep the action on this person and phrase it around making the introduction or receiving the thing.\n\nRAW TEXT:\n'+raw.slice(0,6000)}]});
     let t=(data.content&&data.content[0]&&data.content[0].text||'').replace(/```json/gi,'').replace(/```/g,'').trim();
     const s2=t.indexOf('{'); const e2=t.lastIndexOf('}');
     if(s2<0||e2<0) throw new Error('no json');
@@ -11476,6 +11515,65 @@ function cxMigrate(){
     addNotif('CRM v2 migration done: '+imported+' note histories imported'+(julies.length===2?', Julie Donoghue duplicate merged':''));
   }catch(e){ console.warn('cxMigrate failed',e); }
 }
+// ── One shot data pass for JJ's round 2 brief (ledger tuf_crmv3_migrated) ──
+// Segment corrections + Ben Weinberg / Oliver James updates, 7 Sept 2026.
+// Bulk pattern: mutate in memory, ONE ls.set per store (sync race law).
+function cxV80Migrate(){
+  try{
+    if(!sbLoadOK) return;
+    if(ls.get('tuf_crmv3_migrated',null)) return;
+    const ppl=peopleAll(); if(!ppl.length) return;
+    const now=new Date().toISOString();
+    const byId={}; ppl.forEach(p=>byId[p.id]=p);
+    const moved=[];
+    const setSeg=(id,expectName,seg)=>{
+      const p=byId[id];
+      if(!p||profileKey(p.name)!==profileKey(expectName)) return false;
+      if(personSegment(p)===seg) return true;
+      p.segment=seg; p.segmentAt=now; moved.push(p.name+' → '+(SEG_LABEL[seg]||seg));
+      return true;
+    };
+    setSeg('mtrapdatfs9s','Jane Aylwin','introducers');
+    setSeg('mrjc5k1rtr4d','Ed Senior','private121');
+    setSeg('mrjc5k1rr1bf','Barry Whelan','private121');
+    setSeg('mrjc5k1r5t7w','USG','private121');
+    const toNetwork=[['mrjc5k1r2o9h','Liam Willingham'],['mrjc5k1rdnuv','Michael Miller'],['mrjc5k1r5fjl','Simon Edwards'],['mrjc5k1rcthm','Nick Hay'],["mrjc5k1rn86l","Shane O'Hallaran"]];
+    toNetwork.forEach(([id,nm])=>setSeg(id,nm,'network'));
+    setSeg('mrjf08pfyipg','Oliver James','pipeline');
+    setSeg('mrjf08p7uyf4','Ben Weinberg','introducers');
+    const ben=byId['mrjf08p7uyf4'], oli=byId['mrjf08pfyipg'];
+    if(ben&&!ben.phone) ben.phone='07515482580';
+    const oliSummary='Property Branding (propertybranding.co.uk): UK marketing and branding agency for property developers and investors. Branding, marketing and digital assets including logo design, visual identity, websites, brochures and investor packs. Positioned around helping clients raise private investment finance, with a stated goal of £100M raised for clients in 2026. Established portfolio in the property sector. Team of nine plus a dog.';
+    if(oli&&!(oli.businessDesc||'').includes('propertybranding.co.uk')) oli.businessDesc=((oli.businessDesc||'').trim()?oli.businessDesc.trim()+'\n\n':'')+oliSummary;
+    ls.set('tuf_people',ppl);
+    // Prospects: remove Jane's empty stray fragment; archive the open rows of
+    // the five moved back to Network; reactivate Oliver's Lead row.
+    let pros=ls.get('tuf_prospects',[])||[];
+    pros=pros.filter(r=>r.id!=='mtraziq0efbr');
+    const netIds=new Set(toNetwork.map(x=>x[0]));
+    pros.forEach(r=>{
+      if(netIds.has(r.personId)&&prospectActive(r)&&r.stage!=='Won'&&r.stage!=='Lost'){ r.archived=true; r.closedAt=now.slice(0,10); }
+      if(r.id==='mrlu0exvnt8t'&&r.personId==='mrjf08pfyipg'){ r.archived=false; r.auto=false; r.lastContact=r.lastContact||'2026-09-07'; }
+    });
+    ls.set('tuf_prospects',pros);
+    // Notes and actions from JJ, dated 7 Sept 2026.
+    const notes=cxNotesAll();
+    const addN=(pid,text)=>{ (notes[pid]=notes[pid]||[]).push({id:uid(),date:'2026-09-07',src:'manual',text,by:'Jasper'}); };
+    if(ben) addN('mrjf08p7uyf4','From WhatsApp: attended a TUF padel event. Has just exited a large IT company, around 80 staff across multiple office locations. Asked Danny if he could help him into a non exec role. Likely to have strong connections, so he is valuable to the network as an Introducer rather than a Lead.');
+    if(oli) addN('mrjf08pfyipg','From WhatsApp: was due to attend the Thursday 10 Sept Boardroom but can no longer make it, clients confirmed in his office that day. Will instead come as a guest to the next one. Still very keen to join. Genuine personal affinity with Rave Coffee and Marchon (existing Boardroom connections) reconfirmed, not new.');
+    ls.set('tuf_crm_notes',notes);
+    if(ben){
+      const acts=cxActionsAll(); const arr=acts['mrjf08p7uyf4']=acts['mrjf08p7uyf4']||[];
+      arr.push({id:uid(),text:'Explore what Ben\'s non exec ambitions and network could offer TUF, and vice versa',due:null,createdAt:'2026-09-07',createdBy:'Jasper',done:false});
+      arr.push({id:uid(),text:'Keep the relationship warm: he reached back out after jury service and is due a response',due:null,createdAt:'2026-09-07',createdBy:'Jasper',done:false});
+      ls.set('tuf_crm_actions',acts);
+    }
+    ls.set('tuf_crmv3_migrated',{at:now,by:CURRENT_USER,moved});
+    addNotif('CRM v3 data pass done: '+moved.length+' segment moves, Ben and Oliver updated');
+    setTimeout(()=>{ try{ cxSummaryRegen('mrjf08p7uyf4'); }catch(e){} },1500);
+    setTimeout(()=>{ try{ cxSummaryRegen('mrjf08pfyipg'); }catch(e){} },12000);
+  }catch(e){ console.warn('cxV80Migrate failed',e); }
+}
 
 // ═══ CRM v2 UI (v74) — dark module: hub, unified lists, full profile ══════════
 function cxDot(c){ const col=c==='red'?'#E05252':c==='amber'?'#E6A23C':'#3FBF6F'; return `<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${col};flex-shrink:0"></span>`; }
@@ -11507,6 +11605,7 @@ function cxQuickAddSave(personId){
   const due=document.getElementById('qa-due').value;
   if(note) cxAddNote(id,note,'manual');
   if(action) cxAddAction(id,action,due||null);
+  if(note&&!action) cxExtractActions(id,note);
   if(!note&&!action){ closeModal(); return; }
   closeModal();
   const a=document.querySelector('.page.active');
@@ -11519,31 +11618,35 @@ function renderCRMHub(){
   cxLoadRemote();
   crmTabsMount('crmhub');
   const inb=(ls.get('tuf_inbound_leads',[])||[]).filter(l=>l.status==='new');
+  const bell='<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.7 21a2 2 0 0 1-3.4 0"></path></svg>';
   document.getElementById('topbar-actions').innerHTML=`
-    <button class="btn btn-ghost btn-sm" onclick="nav('inbound',crmEl())" title="Inbound website approaches" style="position:relative">Inbound${inb.length?`<span style="position:absolute;top:-6px;right:-6px;background:var(--y);color:var(--k);border-radius:10px;font-size:9px;font-weight:800;padding:1px 6px">${inb.length}</span>`:''}</button>
+    <button class="btn btn-ghost btn-sm" onclick="nav('inbound',crmEl())" title="Inbound website approaches" style="position:relative;padding:4px 10px">${bell}${inb.length?`<span style="position:absolute;top:-6px;right:-6px;background:var(--y);color:var(--k);border-radius:10px;font-size:9px;font-weight:800;padding:1px 6px">${inb.length}</span>`:''}</button>
     <button class="btn btn-ghost btn-sm" onclick="nav('crmclean',crmEl())">Cleanup</button>
     <button class="btn btn-y btn-sm" onclick="personAddModal()">+ Add person</button>`;
   const ppl=peopleAll();
   const counts={}; SEGMENTS.forEach(sg=>counts[sg.id]=ppl.filter(p=>personSegment(p)===sg.id).length);
-  const tileGo={introducers:"crmTabGo('introducers')",pipeline:"crmTabGo('leads')",onboarding:"crmTabGo('onboarding')",boardroom:"crmTabGo('boardroom')",private121:"crmTabGo('private121')",network:"crmTabGo('network')"};
-  const tiles=SEGMENTS.map(sg=>`<div onclick="${tileGo[sg.id]}" style="cursor:pointer;background:#141416;border:1px solid #26272B;border-radius:12px;padding:16px 18px;flex:1;min-width:130px">
+  const tiles=SEGMENTS.map(sg=>`<div onclick="crmTabGo('${sg.id==='pipeline'?'leads':sg.id}')" style="cursor:pointer;background:#141416;border:1px solid #26272B;border-radius:12px;padding:16px 18px;flex:1;min-width:130px">
     <div style="font-family:var(--font-display);font-size:30px;font-weight:800;color:${['introducers','pipeline','onboarding'].includes(sg.id)?'var(--y)':'#F2F2F4'}">${counts[sg.id]}</div>
     <div style="font-size:9.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#9BA0A8;margin-top:4px">${sg.label}</div></div>`).join('');
   const na=cxNextActions();
   const naRow=r=>`<div style="display:flex;gap:10px;align-items:center;padding:9px 4px;border-bottom:1px solid #202127">
     ${cxDot(r.dot)}
-    <span style="cursor:pointer;flex:1;min-width:0;font-size:12.5px" onclick="personSelId='${r.personId}';navPeople('${r.seg}',crmEl())"><b>${escHtml(r.name)}</b> <span style="color:#9BA0A8">— ${escHtml(r.text)}</span></span>
-    ${r.actionId?`<button class="btn btn-ghost btn-sm" style="padding:2px 9px" title="Mark done" onclick="cxCompleteAction('${r.personId}','${r.actionId}');renderCRMHub();updateFollowupBadge()">✓</button>`:''}
+    <span style="cursor:pointer;flex:1;min-width:0;font-size:12.5px" onclick="personSelId='${r.personId}';navPeople('${r.seg}',crmEl())"><b>${escHtml(r.name)}</b> <span style="color:#9BA0A8">— ${r.count?r.count+' action'+(r.count>1?'s':'')+' outstanding':escHtml(r.hint)}</span></span>
     <button class="btn btn-ghost btn-sm" style="padding:2px 9px" title="Add a note or action" onclick="cxQuickAddModal('${r.personId}')">+</button>
   </div>`;
-  const naGroup=(title,rows)=>rows.length?`<div style="font-size:10px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:#9BA0A8;margin:14px 0 2px;display:flex;align-items:center;gap:8px">${title} <span style="opacity:.6">${rows.length}</span><span style="flex:1"></span><button class="btn btn-ghost btn-sm" style="padding:1px 8px" title="Quick add" onclick="cxQuickAddModal('')">+</button></div>${rows.map(naRow).join('')}`:'';
+  const urgOrder={red:0,amber:1,green:2};
+  const naSeg=(segId,label)=>{
+    const rows=na[segId]||[]; if(!rows.length) return '';
+    return `<div style="font-size:10px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:var(--y);margin:16px 0 2px;display:flex;align-items:center;gap:8px">${label} <span style="opacity:.6;color:#9BA0A8">${rows.length}</span></div>${rows.map(naRow).join('')}`;
+  };
+  const naTotal=(na.introducers||[]).length+(na.pipeline||[]).length+(na.onboarding||[]).length;
   host.innerHTML=`
     <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:22px">${tiles}</div>
     <div class="sec-hdr">Next Actions</div>
     <div class="card" style="padding:8px 18px 14px">
-      ${(na.overdue.length+na.today.length+na.upcoming.length)?naGroup('Overdue',na.overdue)+naGroup('Due today',na.today)+naGroup('Upcoming',na.upcoming.slice(0,12)):'<div style="font-size:13px;color:#9BA0A8;padding:14px 0">All clear. Log notes and actions as you go and this becomes your working day.</div>'}
+      ${naTotal?naSeg('introducers','Introducers')+naSeg('pipeline','Leads')+naSeg('onboarding','Onboarding'):'<div style="font-size:13px;color:#9BA0A8;padding:14px 0">All clear. Log notes and actions as you go and this becomes your working day.</div>'}
     </div>
-    <div style="font-size:10.5px;color:#7C8089;margin-top:12px">Introducers and Leads are tracked daily. Onboarding joins them once Danny's team confirms the process. Network, Boardroom Members and 121 Clients run on a quarterly rhythm and stay off this panel.</div>
+    <div style="font-size:10.5px;color:#7C8089;margin-top:12px">Introducers and Leads are tracked daily. Onboarding joins them once Danny's team confirms the process. Network and 121 Clients run on a quarterly rhythm and stay off this panel. Open a name for the action detail.</div>
   `;
   updateFollowupBadge();
 }
@@ -11570,6 +11673,7 @@ function cxListRow(p){
     <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
       ${cxAvatar(p)}
       <span style="cursor:pointer;min-width:150px" onclick="personSelId='${p.id}';renderPeople()"><b style="font-size:13px">${escHtml(p.name)}</b>${p.co?`<span style="color:#9BA0A8;font-size:11.5px"> · ${escHtml(p.co)}</span>`:''}</span>
+      ${seg==='network'&&mem&&mem.type!=='existing_client'?'<span class="tag" style="background:#1E1F24;color:var(--y);border:1px solid #3A3B42;font-size:9px" title="Read only, managed by Joe under Products">Boardroom Member</span>':''}
       ${mid}
       <span style="flex:1;min-width:80px;font-size:11.5px;color:${nextA?'#F2F2F4':'#5A5D64'}">${nextA?escHtml(nextA):''}</span>
       <button class="btn btn-ghost btn-sm" style="padding:3px 10px" onclick="cxMoveOpenId=cxMoveOpenId==='${p.id}'?null:'${p.id}';renderPeople()">Move</button>
@@ -11621,10 +11725,24 @@ function renderPersonProfile(id){
   const related=(p.relatedIds||[]).map(rid=>personById(rid)).filter(Boolean);
   const chip=(l,v)=>`<span style="background:#1E1F24;border:1px solid #2E2F35;border-radius:8px;padding:6px 12px;font-size:11px"><span style="color:#9BA0A8">${l}</span> <b style="color:#F2F2F4">${v}</b></span>`;
   const ph=(v,placeholder)=>v?escHtml(v):`<span style="color:#5A5D64;font-style:italic">${placeholder}</span>`;
-  const noteRow=(n,full)=>`<div style="padding:9px 0;border-bottom:1px solid #202127">
-    <div style="font-size:9.5px;color:#7C8089;margin-bottom:3px">${fmtDate(n.date)} · ${n.src==='readai'?'Read.ai':n.src==='parsed'?'parsed notes':n.src==='imported'?'imported history':n.src==='action'?'action done':'manual'}${n.by&&n.src==='manual'?' · '+escHtml(n.by):''}</div>
-    <div style="font-size:12px;line-height:1.55;white-space:pre-wrap;${full?'':'max-height:200px;overflow:hidden'}">${escHtml(full?n.text:n.text.slice(0,900))}</div></div>`;
-  let cxShowAll=window.__cxShowAllNotes===p.id;
+  // Collapsed rows per JJ's spec: "Meeting — 3 Sept 2026", click to expand.
+  const srcLabel=n=>n.src==='readai'?'Read.ai meeting':n.src==='parsed'?'Meeting notes':n.src==='imported'?'Imported history':n.src==='action'?'Action done':'Note';
+  const noteTitle=n=>{
+    if(n.src!=='manual') return srcLabel(n);
+    const first=(n.text||'').split('\n')[0].trim(); if(!first) return 'Note';
+    const w=first.split(/\s+/); return w.slice(0,7).join(' ')+(w.length>7?'…':'');
+  };
+  const noteRow=n=>{
+    const open=!!(window.__cxOpenNotes&&window.__cxOpenNotes[n.id]);
+    return `<div style="border-bottom:1px solid #202127">
+      <div style="display:flex;gap:8px;align-items:center;padding:9px 0;cursor:pointer" onclick="window.__cxOpenNotes=window.__cxOpenNotes||{};window.__cxOpenNotes['${n.id}']=!window.__cxOpenNotes['${n.id}'];renderPeople()">
+        <span style="font-size:9px;color:#7C8089;display:inline-block;transform:rotate(${open?'90deg':'0deg'})">▸</span>
+        <span style="flex:1;min-width:0;font-size:12px;color:#F2F2F4;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escHtml(noteTitle(n))}</span>
+        <span style="font-size:10px;color:#7C8089;flex-shrink:0">${fmtShort(n.date)}</span>
+      </div>
+      ${open?`<div style="font-size:12px;line-height:1.55;white-space:pre-wrap;padding:0 0 10px 17px;color:#D9DBDF">${escHtml(n.text)}<div style="font-size:9.5px;color:#7C8089;margin-top:6px">${fmtDate(n.date)} · ${srcLabel(n)}${n.by?' · '+escHtml(n.by):''}</div></div>`:''}
+    </div>`;
+  };
   host.innerHTML=`
     <span style="display:inline-block;font-size:12px;font-weight:700;color:#9BA0A8;cursor:pointer;margin-bottom:14px" onclick="personSelId=null;window.__cxShowAllNotes=null;renderPeople()">← ${SEG_LABEL[seg]||'List'}</span>
     <div style="display:flex;gap:14px;align-items:center;flex-wrap:wrap;margin-bottom:14px">
@@ -11633,9 +11751,12 @@ function renderPersonProfile(id){
         <div style="font-family:var(--font-display);font-size:22px;font-weight:800;color:#fff">${escHtml(p.name)}${p.recordType==='company'?' <span class="tag" style="background:#1E1F24;color:var(--y);font-size:9px;border:1px solid #2E2F35">COMPANY ACCOUNT</span>':''}</div>
         <div style="font-size:12px;color:#9BA0A8">${escHtml(p.co||'')}${mem?` · £${(mem.type==='existing_client'?(mem.clientFee||0):bFee(mem)).toLocaleString()}/mo`:''}${related.length?` · linked: ${related.map(r=>`<span style="color:var(--y);cursor:pointer" onclick="personSelId='${r.id}';renderPeople()">${escHtml(r.name)}</span>`).join(', ')}`:''}</div>
       </div>
+      ${seg==='network'&&mem&&mem.type!=='existing_client'?'<span class="tag" style="background:#1E1F24;color:var(--y);border:1px solid #3A3B42;font-size:10px" title="Read only, managed by Joe under Products">Boardroom Member</span>':''}
       ${cross.length?`<span class="tag" style="background:#2A2416;color:#E6A23C;border:1px solid #4A3C1A;font-size:10px">Duplication detected: also in ${cross.join(', ')}</span>`:''}
     </div>
-    <div style="margin-bottom:14px">${cxSegPills(p,'profile')}</div>
+    <div style="margin-bottom:14px;display:flex;gap:10px;align-items:center;flex-wrap:wrap">${cxSegPills(p,'profile')}
+      ${seg!=='boardroom'?`<button class="btn btn-ghost btn-sm" style="border-color:var(--y);color:var(--y);font-size:10px;padding:3px 10px" title="Signed on: fee, member record, handed to Joe under Products" onclick="cxSignOn('${p.id}')">Signed → Boardroom</button>`:''}
+    </div>
     <div class="card" style="border-left:4px solid var(--y);margin-bottom:16px">
       <div style="display:flex;gap:10px;align-items:baseline;flex-wrap:wrap;margin-bottom:8px">
         <span style="font-size:10px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:var(--y)">Where this stands</span>
@@ -11667,7 +11788,7 @@ function renderPersonProfile(id){
           <button class="btn btn-ghost btn-sm" onclick="cxParsePaste('${p.id}')">Paste and structure</button>
           <span id="cx-paste-status" style="font-size:10.5px;color:#9BA0A8;align-self:center"></span>
         </div>
-        ${notes.length?noteRow(notes[0],true)+(notes.length>1?(cxShowAll?notes.slice(1).map(n=>noteRow(n,false)).join(''):`<button class="btn btn-ghost btn-sm" style="margin-top:8px" onclick="window.__cxShowAllNotes='${p.id}';renderPeople()">See all notes (${notes.length})</button>`):''):'<div style="font-size:11.5px;color:#5A5D64;padding:8px 0;font-style:italic">No notes yet.</div>'}
+        ${notes.length?notes.map(noteRow).join(''):'<div style="font-size:11.5px;color:#5A5D64;padding:8px 0;font-style:italic">No notes yet.</div>'}
       </div>
       <div class="card" style="margin-bottom:0">
         <div class="card-title" style="color:#fff">Next actions</div>
@@ -11683,7 +11804,42 @@ function renderPersonProfile(id){
         </div>
       </div>
     </div>
+    ${seg==='onboarding'?cxObCard(p,mem):''}
   `;
+}
+// Onboarding checklist card shown alongside Next Actions on onboarding profiles.
+function cxObCard(p,mem){
+  if(!mem) return `<div class="card" style="margin-top:14px"><div class="card-title" style="color:#fff">Onboarding</div><div style="font-size:11.5px;color:#9BA0A8">The step by step onboarding process is being finalised with Danny's team. Once ${escHtml((p.name||'').split(' ')[0])} has a member record the checklist appears here.</div></div>`;
+  const steps=obSteps(mem); const prog=ls.get('tuf_ob_'+mem.id,{});
+  const done=steps.filter(s=>prog[s.id]).length;
+  return `<div class="card" style="margin-top:14px">
+    <div style="display:flex;gap:10px;align-items:baseline;flex-wrap:wrap">
+      <div class="card-title" style="color:#fff;margin-bottom:0">Onboarding checklist</div>
+      <span style="font-size:10.5px;color:#9BA0A8">${done} of ${steps.length} done</span>
+      <span style="flex:1"></span>
+      <button class="btn btn-ghost btn-sm" onclick="nav('onboarding',crmEl())">Open full onboarding</button>
+    </div>
+    <div style="margin-top:10px">${steps.map(s=>`<div style="display:flex;gap:8px;align-items:center;padding:5px 0;border-bottom:1px solid #202127;font-size:11.5px;color:${prog[s.id]?'#7C8089':'#F2F2F4'}">
+      <span style="width:14px;flex-shrink:0;color:${prog[s.id]?'var(--y)':'#3A3B42'}">${prog[s.id]?'✓':'·'}</span>
+      <span style="flex:1;${prog[s.id]?'text-decoration:line-through':''}">${escHtml((s.t||'').replace('{name}',(p.name||'').split(' ')[0]))}</span>
+      <span style="font-size:9.5px;color:#7C8089">${escHtml(s.o||'')}</span>
+    </div>`).join('')}</div>
+  </div>`;
+}
+// Sign-on handoff: fee captured, member record created for Joe, out of JJ's CRM.
+function cxSignOn(personId){
+  const p=personById(personId); if(!p) return;
+  const pros=ls.get('tuf_prospects',[])||[];
+  const row=pros.find(r=>prospectActive(r)&&(r.personId===personId||(!r.personId&&profileKey(r.name)===profileKey(p.name))));
+  if(row){ prospectWonModal(row.id); return; }
+  if(!confirm(p.name+' has signed on and moves to Boardroom under Products, handing the relationship to Joe. Nothing is deleted. Continue?')) return;
+  const m=ls.get('tuf_members',[]);
+  m.push({id:uid(),name:p.name,co:p.co||'',email:p.email||'',phone:p.phone||'',stage:3,notes:'',status:'active',type:'boardroom',clientFee:0,boardroomFee:1000,sessions:[],touchpoint:new Date().toISOString().slice(0,10),retention:null,onboardingComplete:false,onboardingType:'new'});
+  personTag(m); ls.set('tuf_members',m);
+  setPersonSegment(personId,'boardroom','signed on, handed to Joe');
+  addNotif(p.name+' is now a Boardroom Member under Products. Joe owns the relationship from here.');
+  try{ journeyLog(p.name,'Signed on: handed from Partnership Network to Boardroom'); }catch(e){}
+  personSelId=null; renderPeople();
 }
 function cxDetailsSave(id){
   const g=k=>document.getElementById('cx-'+k);
@@ -11695,7 +11851,27 @@ function cxManualNote(id){
   const box=document.getElementById('cx-paste'); if(!box) return;
   const t=box.value.trim(); if(!t) return;
   cxAddNote(id,t,'manual');
+  cxExtractActions(id,t);
   renderPeople(); updateFollowupBadge();
+}
+// Every notes path pulls the next actions out automatically (JJ's rule): most
+// notes state or imply the next step. Async and silent on failure; the note
+// itself is already saved before this runs.
+async function cxExtractActions(personId,text){
+  try{
+    const data=await claudeCall({model:'claude-haiku-4-5-20251001',max_tokens:400,messages:[{role:'user',content:'Today is '+new Date().toISOString().slice(0,10)+'. Read this CRM note and pull out ONLY the concrete next actions it states or implies (for example "Dan is sending his investor deck" implies "Receive Dan\'s investor deck"). If an action involves a third party who is not the person this note is about, keep the action on this person and phrase it around making the introduction or receiving the thing; never invent records for third parties. Respond with ONLY JSON, no fences: {"actions":[{"text":"a specific next action in words","due":"YYYY-MM-DD or empty"}]}. Dates without a year resolve against today, never an earlier year. If there are no real actions respond {"actions":[]}.\n\nNOTE:\n'+String(text).slice(0,3000)}]});
+    let t=(data.content&&data.content[0]&&data.content[0].text||'').replace(/```json/gi,'').replace(/```/g,'').trim();
+    const s=t.indexOf('{'); const e=t.lastIndexOf('}'); if(s<0||e<0) return;
+    const j=JSON.parse(t.slice(s,e+1));
+    let n=0;
+    (j.actions||[]).forEach(a=>{ if(a&&a.text){ cxAddAction(personId,String(a.text).slice(0,200),/^\d{4}-\d{2}-\d{2}$/.test(a.due||'')?a.due:null); n++; } });
+    if(n){
+      addNotif(n+' next action'+(n>1?'s':'')+' picked out of the note');
+      const ac=document.querySelector('.page.active');
+      if(ac&&ac.id==='page-people') renderPeople(); else if(ac&&ac.id==='page-crmhub') renderCRMHub();
+      updateFollowupBadge();
+    }
+  }catch(e){}
 }
 function cxNewAction(id){
   const t=document.getElementById('cx-newact').value.trim(); if(!t) return;
