@@ -526,6 +526,7 @@ details>summary::-webkit-details-marker{display:none}
     <div class="sb-item" data-page="capmap" onclick="nav('capmap',this)">Capability Map <span class="sb-badge" id="sb-red" style="display:none">—</span></div>
     <div class="sb-item" data-page="goals" onclick="nav('goals',this)">Goals & OKRs</div>
     <div class="sb-item" data-page="market" onclick="nav('market',this)">Market Intel</div>
+    <div class="sb-item" data-page="prospecting" onclick="nav('prospecting',this)">Prospecting</div>
 
     <div class="sb-section">Team</div>
     <div class="sb-item" data-page="dannycal" onclick="nav('dannycal',this)">Danny's Calendar</div>
@@ -818,6 +819,7 @@ details>summary::-webkit-details-marker{display:none}
     <!-- ═══ KNOWLEDGE BASE ═══ -->
 
     <!-- ═══ MARKET INTEL ═══ -->
+    <div class="page" id="page-prospecting"><div id="prospecting-render"></div></div>
     <div class="page" id="page-market">
       <div id="market-render"></div>
     </div>
@@ -1736,7 +1738,7 @@ const PAGE_TITLES = {
   testimonials:'Testimonials',
   onboarding:'Onboarding',sessions:'Session Planner',padel:'Padel Event',
   podcast:'Podcast Pipeline',coaching:'Coaching',growthplan:'Growth Plan',ip:'IP Register',files:'Documents',
-  capmap:'Capability Map',goals:'Goals & OKRs',market:'Market Intel',fourbox:'The 4 Box Model',budget:'Budget',
+  capmap:'Capability Map',goals:'Goals & OKRs',market:'Market Intel',prospecting:'Prospecting',fourbox:'The 4 Box Model',budget:'Budget',
   teamtasks:'Team Tasks',roles:'Roles',reviews:'Weekly Review',notifs:'Notifications',
   csuite:'C-Suite',holidays:'Holidays',daily:'Daily Progress',
 };
@@ -1773,7 +1775,7 @@ function renderPage(page){
     testimonials:renderTestimonials,
     onboarding:renderOnboarding, sessions:renderSessions, padel:renderPadel,
     podcast:renderPodcast, coaching:renderCoaching, growthplan:renderGrowthPlan, ip:renderIP, files:renderFiles,
-    capmap:renderCapMap, goals:renderGoals, market:renderMarket, fourbox:renderFourBox, budget:renderBudget,
+    capmap:renderCapMap, goals:renderGoals, market:renderMarket, prospecting:renderProspecting, fourbox:renderFourBox, budget:renderBudget,
     teamtasks:renderTeamTasks, roles:renderRoles, reviews:renderReviews, notifs:renderNotifs,
     csuite:renderCSuite, holidays:renderHolidays, daily:renderDaily, teamoverview:renderTeamOverview, myday:renderMyDay,
   };
@@ -11708,6 +11710,113 @@ function updateFollowupBadge(){
     const b=document.getElementById('sb-followup');
     if(b){ b.textContent=n; b.style.display=n?'inline':'none'; }
   }catch(e){}
+}
+
+// ═══ PROSPECTING (v78) — Companies House miner review queue ═══════════════════
+// Deliberately OUTSIDE the CRM so its lists stay clean: leads live in the
+// prospect_leads table and only become people when Promote is pressed.
+// The miner runs on James's Mac: python3 tuf-prospecting/miner.py
+let pkRows=null, pkLoadedAt=0, pkTab='new', pkBusy=false;
+async function pkLoad(force){
+  if(pkBusy) return;
+  if(!force && pkRows && (Date.now()-pkLoadedAt)<2*60*1000) return;
+  pkBusy=true;
+  try{
+    const {data,error}=await sb.from('prospect_leads').select('*').order('score',{ascending:false}).order('created_at',{ascending:false}).limit(400);
+    if(!error&&Array.isArray(data)){ pkRows=data; pkLoadedAt=Date.now(); }
+  }catch(e){}
+  finally{ pkBusy=false; }
+}
+function pkSettings(){ return Object.assign({regions:[],sic_prefixes:[],min_age_years:4,max_age_years:15}, ls.get('tuf_prospecting_settings',{})||{}); }
+function pkSettingsSave(){
+  const g=x=>(document.getElementById(x)?.value||'').trim();
+  const list=v=>v?v.split(',').map(s=>s.trim()).filter(Boolean):[];
+  ls.set('tuf_prospecting_settings',{regions:list(g('pk-regions')),sic_prefixes:list(g('pk-sics')),min_age_years:+g('pk-min')||4,max_age_years:+g('pk-max')||15});
+  addNotif('Prospecting settings saved. The next miner run uses them.');
+}
+async function pkSetStatus(id,status){
+  try{
+    const {error}=await sb.from('prospect_leads').update({status,reviewed_by:CURRENT_USER,reviewed_at:new Date().toISOString()}).eq('id',id);
+    if(error) throw error;
+    const r=(pkRows||[]).find(x=>x.id===id); if(r) r.status=status;
+    renderProspecting();
+  }catch(e){ alert('Could not update that lead. Check the connection and try again.'); }
+}
+function pkPromote(id){
+  const r=(pkRows||[]).find(x=>x.id===id); if(!r) return;
+  const dirs=Array.isArray(r.directors)?r.directors:[];
+  const dname=((dirs[0]&&dirs[0].name)||r.company_name||'').trim(); if(!dname) return;
+  let p=peopleAll().find(x=>profileKey(x.name)===profileKey(dname));
+  if(!p) p=personEnsure(dname,{co:r.company_name});
+  const info='Found by the Companies House miner (score '+(r.score||0)+'). '+r.company_name+
+    (r.incorporated_on?', incorporated '+fmtDate(r.incorporated_on):'')+
+    (r.locality?', based in '+r.locality:'')+'. '+
+    (Array.isArray(r.reasons)&&r.reasons.length?r.reasons.join('; ')+'.':'')+
+    (dirs.length>1?' Directors: '+dirs.map(d=>d.name).join(', ')+'.':'')+
+    ' Companies House number '+r.company_number+'.';
+  cxAddNote(p.id,info,'imported');
+  setPersonSegment(p.id,'pipeline','Promoted from Prospecting');
+  addNotif(dname+' added to CRM Leads');
+  pkSetStatus(id,'promoted');
+}
+function renderProspecting(){
+  const host=document.getElementById('prospecting-render'); if(!host) return;
+  const wasNull=pkRows===null;
+  pkLoad().then(()=>{ const a=document.getElementById('page-prospecting'); if(wasNull&&a&&a.classList.contains('active')) pkPaint(); });
+  pkPaint();
+}
+function pkPaint(){
+  const host=document.getElementById('prospecting-render'); if(!host) return;
+  const ta=document.getElementById('topbar-actions');
+  if(ta) ta.innerHTML='<button class="btn btn-ghost btn-sm" onclick="pkLoad(true).then(pkPaint)">Refresh</button>';
+  const rows=pkRows||[];
+  const counts={new:0,promoted:0,dismissed:0};
+  rows.forEach(r=>{ if(counts[r.status]!==undefined) counts[r.status]++; });
+  const s=pkSettings();
+  const tab=(id,label,n)=>'<button class="btn btn-sm '+(pkTab===id?'btn-k':'btn-ghost')+'" onclick="pkTab=\''+id+'\';pkPaint()">'+label+' ('+n+')</button>';
+  const accLabel=a=>({'full':'full accounts','group':'group accounts','medium':'medium accounts','small':'small accounts','total-exemption-full':'small accounts','total-exemption-small':'small accounts'}[a]||a);
+  const list=rows.filter(r=>r.status===pkTab);
+  const rowHtml=r=>{
+    const dirs=Array.isArray(r.directors)?r.directors:[];
+    const reasons=Array.isArray(r.reasons)?r.reasons:[];
+    const yr=(r.incorporated_on||'').slice(0,4);
+    return '<div class="card" style="margin-bottom:10px;padding:14px 18px">'+
+      '<div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">'+
+        '<span style="background:var(--k);color:var(--y);font-weight:800;border-radius:8px;padding:4px 10px;font-size:13px">'+(r.score||0)+'</span>'+
+        '<div style="flex:1;min-width:200px"><b style="font-size:14px">'+escHtml(r.company_name)+'</b>'+
+          '<div style="font-size:11.5px;color:var(--mut);margin-top:2px">'+
+            [r.locality?escHtml(r.locality):'',yr?'since '+yr:'',accLabel(r.accounts_type||''),dirs.length?dirs.map(d=>escHtml(d.name)).join(', '):''].filter(Boolean).join(' · ')+
+          '</div></div>'+
+        (pkTab==='new'?'<button class="btn btn-y btn-sm" onclick="pkPromote(\''+r.id+'\')">Promote to CRM Leads</button>'+
+          '<button class="btn btn-ghost btn-sm" onclick="pkSetStatus(\''+r.id+'\',\'dismissed\')">Dismiss</button>':'')+
+        (pkTab==='dismissed'?'<button class="btn btn-ghost btn-sm" onclick="pkSetStatus(\''+r.id+'\',\'new\')">Restore</button>':'')+
+        (pkTab==='promoted'&&r.reviewed_by?'<span style="font-size:11px;color:var(--mut)">by '+escHtml(r.reviewed_by)+'</span>':'')+
+      '</div>'+
+      (reasons.length?'<div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap">'+reasons.map(x=>'<span style="font-size:10.5px;background:var(--bg);border:1px solid var(--bdr);border-radius:20px;padding:2px 10px;color:var(--mut)">'+escHtml(x)+'</span>').join('')+'</div>':'')+
+    '</div>';
+  };
+  host.innerHTML=
+    '<div class="card" style="margin-bottom:14px;padding:14px 18px"><div style="font-size:12px;color:var(--mut);line-height:1.6">'+
+      'Potential Boardroom leads mined from Companies House: active, established, founder led companies. '+
+      'Nothing here touches the CRM until you press Promote, which creates the person in CRM Leads with the company story attached. '+
+      'Companies House holds no emails or phone numbers, so contact details are found from the director names.'+
+    '</div></div>'+
+    '<div style="display:flex;gap:8px;margin-bottom:14px">'+tab('new','To review',counts.new)+tab('promoted','Promoted',counts.promoted)+tab('dismissed','Dismissed',counts.dismissed)+'</div>'+
+    (pkRows===null?'<div class="card" style="padding:20px;color:var(--mut)">Loading leads…</div>'
+      :list.length?list.map(rowHtml).join('')
+      :'<div class="card" style="padding:20px;color:var(--mut)">'+(pkTab==='new'?'Nothing waiting for review. Run the miner for a fresh batch.':'Nothing here yet.')+'</div>')+
+    '<div class="card" style="margin-top:18px;padding:16px 18px"><div class="card-title">Miner settings</div>'+
+      '<div class="grid-2">'+
+        '<div class="form-row"><label class="form-label">Regions or towns (comma separated, blank = all UK)</label><input class="form-input" id="pk-regions" value="'+escHtml((s.regions||[]).join(', '))+'" placeholder="e.g. Manchester, Cheshire"></div>'+
+        '<div class="form-row"><label class="form-label">SIC code prefixes (comma separated, blank = all sectors)</label><input class="form-input" id="pk-sics" value="'+escHtml((s.sic_prefixes||[]).join(', '))+'" placeholder="e.g. 62, 43, 70"></div>'+
+      '</div>'+
+      '<div class="grid-2">'+
+        '<div class="form-row"><label class="form-label">Minimum company age (years)</label><input class="form-input" id="pk-min" type="number" value="'+(+s.min_age_years||4)+'"></div>'+
+        '<div class="form-row"><label class="form-label">Maximum company age (years)</label><input class="form-input" id="pk-max" type="number" value="'+(+s.max_age_years||15)+'"></div>'+
+      '</div>'+
+      '<button class="btn btn-k btn-sm" onclick="pkSettingsSave()">Save settings</button>'+
+      '<div style="font-size:11px;color:var(--mut);margin-top:10px">The miner runs on James’s Mac: <code>python3 tuf-prospecting/miner.py</code>. Each run examines around 120 companies and files the best scorers here.</div>'+
+    '</div>';
 }
 
 // ═══ FOUNDER TO CEO POSITIONING (Playbook v3.1, 25 Aug 2026) ═════════════════
