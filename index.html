@@ -718,6 +718,11 @@ details>summary::-webkit-details-marker{display:none}
       <div id="crmhub-render"></div>
     </div>
 
+    <!-- ═══ CRM CLEANUP ═══ -->
+    <div class="page" id="page-crmclean">
+      <div id="crmclean-render"></div>
+    </div>
+
     <!-- ═══ ONBOARDING ═══ -->
     <div class="page" id="page-onboarding">
       <div class="grid-2">
@@ -1715,7 +1720,7 @@ const PAGE_TITLES = {
   myday:'My Day',
   home:'Morning Brief',teamoverview:'Team Overview',tasks:'Tasks',transcript:'Meeting Notes → Tasks',
   people:'Network',members:'Boardroom Members',pipeline:'Leads',inbound:'Inbound Leads',dannycal:"Danny's Calendar",
-  boardroom:'Boardroom',crmhub:'CRM',content:'Content Calendar',social:'Social Media',kpis:'KPIs',aidump:'AI Tool (Dump)',buildreq:'Build Requests',clientanalysis:'Client Analysis',emaillist:'Email List',watemplates:'WhatsApp Templates',
+  boardroom:'Boardroom',crmhub:'CRM',crmclean:'CRM Cleanup',content:'Content Calendar',social:'Social Media',kpis:'KPIs',aidump:'AI Tool (Dump)',buildreq:'Build Requests',clientanalysis:'Client Analysis',emaillist:'Email List',watemplates:'WhatsApp Templates',
   testimonials:'Testimonials',
   onboarding:'Onboarding',sessions:'Session Planner',padel:'Padel Event',
   podcast:'Podcast Pipeline',coaching:'Coaching',growthplan:'Growth Plan',ip:'IP Register',files:'Documents',
@@ -1752,7 +1757,7 @@ function renderPage(page){
   const fns = {
     home:renderHome, tasks:renderTasks, transcript:renderTranscript,
     people:renderPeople, members:renderMembers, pipeline:renderPipeline, inbound:renderInbound, dannycal:renderDannyCal,
-    boardroom:renderBoardroom, crmhub:renderCRMHub, content:renderContent, social:renderSocial, kpis:renderKPIs, aidump:renderAIDump, buildreq:renderBuildRequests, clientanalysis:renderClientAnalysis, emaillist:renderEmailList, watemplates:renderWATemplates,
+    boardroom:renderBoardroom, crmhub:renderCRMHub, crmclean:renderCleanup, content:renderContent, social:renderSocial, kpis:renderKPIs, aidump:renderAIDump, buildreq:renderBuildRequests, clientanalysis:renderClientAnalysis, emaillist:renderEmailList, watemplates:renderWATemplates,
     testimonials:renderTestimonials,
     onboarding:renderOnboarding, sessions:renderSessions, padel:renderPadel,
     podcast:renderPodcast, coaching:renderCoaching, growthplan:renderGrowthPlan, ip:renderIP, files:renderFiles,
@@ -4537,7 +4542,10 @@ function personTag(arr){ const r=arr&&arr[arr.length-1]; if(!r||!r.name) return;
 // Update the core record and propagate identity fields to every linked section record.
 function personSync(personId,fields){
   const ppl=peopleAll(); const p=ppl.find(x=>x.id===personId); if(!p) return;
+  const _oldKey=profileKey(p.name);
   Object.assign(p,fields||{}); ls.set('tuf_people',ppl);
+  const _newKey=profileKey(p.name);
+  if(_newKey!==_oldKey){ try{ profileMergeInto(_newKey,_oldKey); }catch(e){} } // notes and journey follow the rename (v72 fix)
   PEOPLE_LINK_STORES.forEach(st=>{
     const arr=ls.get(st,[])||[]; let ch=false;
     arr.forEach(r=>{ if(r.personId===personId){
@@ -4724,10 +4732,12 @@ function personCoreSave(id){
 }
 function personDelete(id){
   const p=personById(id); if(!p) return;
-  const L=personLinks(p); const n=L.members.length+L.prospects.length+L.ba.length+L.ea.length+L.padel.length+L.inbound.length+L.bleads.length;
+  const L=personLinks(p); const n=L.members.length+L.prospects.length+L.warm.length+L.ba.length+L.ea.length+L.padel.length+L.inbound.length+L.bleads.length;
   if(n){ alert('This person still sits in '+n+' section record'+(n>1?'s':'')+'. Remove those first, the core record cannot be deleted while sections reference it.'); return; }
   if(!confirm('Delete '+p.name+' from the People database?')) return;
   ls.set('tuf_people',peopleAll().filter(x=>x.id!==id));
+  try{ const profs=ls.get('tuf_profiles',{})||{}; const k=profileKey(p.name); const pr=profs[k];
+    if(pr&&!pr.notes&&!(pr.journey&&pr.journey.length)){ delete profs[k]; ls.set('tuf_profiles',profs); } }catch(e){}
   personSelId=null; renderPeople();
 }
 function renderPersonProfile(id){
@@ -10839,11 +10849,237 @@ function renderMarket(){
   `;
 }
 
+// ═══ CRM CLEANUP (v72) ════════════════════════════════════════════════════════
+// A guided data review for Jasper: every person queued worst first, fixed,
+// merged, re-segmented or removed in a couple of taps. Snapshot first, every
+// destructive action is one human tap with a confirm, progress persists.
+const CLEAN_SNAP_STORES=['tuf_people','tuf_profiles','tuf_boardroom_payments','tuf_emaillist'];
+function crmCleanupSnapshot(){
+  try{
+    if(!sbLoadOK) return false;
+    const at=ls.str('tuf_cleanup_snapshot_at','');
+    const today=new Date().toISOString().slice(0,10);
+    if(at&&(new Date(today)-new Date(at))/86400000<7) return true;
+    const snap={at:today,by:CURRENT_USER,data:{}};
+    [...CLEAN_SNAP_STORES,...PEOPLE_LINK_STORES].forEach(k=>{ snap.data[k]=ls.get(k,null); });
+    ls.set('tuf_backup_precleanup',snap);
+    ls.setStr('tuf_cleanup_snapshot_at',today);
+    addNotif('CRM cleanup snapshot taken, everything can be restored from '+today);
+    return true;
+  }catch(e){ console.warn('cleanup snapshot failed',e); return false; }
+}
+// Notes and journey follow a rename or a merge instead of orphaning (v72 fix).
+function profileMergeInto(destKey,srcKey,divider){
+  if(!srcKey||destKey===srcKey) return;
+  const profs=ls.get('tuf_profiles',{})||{};
+  const src=profs[srcKey]; if(!src) return;
+  const dest=profs[destKey]=profs[destKey]||{};
+  if(src.notes) dest.notes=(dest.notes?dest.notes+'\n\n':'')+(divider?divider+'\n':'')+src.notes;
+  if(Array.isArray(src.journey)&&src.journey.length) dest.journey=[...(dest.journey||[]),...src.journey].sort((a,b)=>(a.date||'').localeCompare(b.date||''));
+  delete profs[srcKey];
+  ls.set('tuf_profiles',profs);
+}
+function crmNormName(n){ return String(n||'').toLowerCase().replace(/[^a-z0-9 ]+/g,'').replace(/\s+/g,' ').trim(); }
+function crmCleaned(){ return ls.get('tuf_crm_cleaned',{})||{}; }
+function cleanMark(id){ const c=crmCleaned(); c[id]=new Date().toISOString().slice(0,10); ls.set('tuf_crm_cleaned',c); }
+// Pure hygiene engine: duplicates, gaps, dangling links, orphaned profiles.
+function crmHygiene(){
+  const ppl=peopleAll(); const cleaned=crmCleaned();
+  const byEmail={}, byNorm={};
+  ppl.forEach(p=>{
+    const e=(p.email||'').trim().toLowerCase(); if(e)(byEmail[e]=byEmail[e]||[]).push(p);
+    const n=crmNormName(p.name); if(n)(byNorm[n]=byNorm[n]||[]).push(p);
+  });
+  const pairSet=new Set(); const dupes=[];
+  const addPair=(a,b,why)=>{ const k=[a.id,b.id].sort().join('|'); if(pairSet.has(k)) return; pairSet.add(k); dupes.push({a:a.id,b:b.id,an:a.name,bn:b.name,why}); };
+  Object.values(byEmail).forEach(g=>{ for(let i=0;i<g.length;i++) for(let j=i+1;j<g.length;j++) addPair(g[i],g[j],'same email'); });
+  Object.values(byNorm).forEach(g=>{ for(let i=0;i<g.length;i++) for(let j=i+1;j<g.length;j++) addPair(g[i],g[j],'same name'); });
+  const missing=ppl.filter(p=>!(p.email||'').trim()||!(p.co||'').trim());
+  const ids=new Set(ppl.map(p=>p.id));
+  const dangling=[];
+  PEOPLE_LINK_STORES.forEach(st=>{ (ls.get(st,[])||[]).forEach(r=>{ if(r.personId&&!ids.has(r.personId)) dangling.push({store:st,id:r.id,name:r.name||''}); }); });
+  const profs=ls.get('tuf_profiles',{})||{};
+  const keys=new Set(ppl.map(p=>profileKey(p.name)));
+  const profileOrphans=Object.keys(profs).filter(k=>!keys.has(k)&&(profs[k].notes||(profs[k].journey&&profs[k].journey.length)));
+  const uncleaned=ppl.filter(p=>!cleaned[p.id]).length;
+  return {dupes,missing,dangling,profileOrphans,uncleaned,total:ppl.length};
+}
+// The careful one. Repoints every linked record, fills survivor gaps, merges
+// notes and journey, removes the duplicate. One ls.set per touched store.
+const MERGE_LINK_STORES_EXTRA=['tuf_boardroom_payments','tuf_emaillist'];
+function personMerge(loserId,survivorId){
+  if(!loserId||!survivorId||loserId===survivorId) return false;
+  const ppl=peopleAll();
+  const loser=ppl.find(x=>x.id===loserId), surv=ppl.find(x=>x.id===survivorId);
+  if(!loser||!surv) return false;
+  const loserKey=profileKey(loser.name), survKey=profileKey(surv.name);
+  [...PEOPLE_LINK_STORES,...MERGE_LINK_STORES_EXTRA].forEach(st=>{
+    const arr=ls.get(st,[])||[]; let ch=false;
+    arr.forEach(r=>{
+      if(r.personId===loserId){ r.personId=survivorId; ch=true; }
+      else if(!r.personId&&profileKey(r.name||'')===loserKey){ r.personId=survivorId; ch=true; }
+    });
+    if(ch) ls.set(st,arr);
+  });
+  ['co','email','phone','revenue','website','businessDesc'].forEach(f=>{ if(!String(surv[f]||'').trim()&&String(loser[f]||'').trim()) surv[f]=loser[f]; });
+  surv.tags=[...new Set([...(surv.tags||[]),...(loser.tags||[])])];
+  if(loser.lastContact&&(!surv.lastContact||loser.lastContact>surv.lastContact)) surv.lastContact=loser.lastContact;
+  if(!surv.segment&&loser.segment){ surv.segment=loser.segment; surv.segmentAt=loser.segmentAt; }
+  if(loserKey!==survKey) profileMergeInto(survKey,loserKey,'[Merged from duplicate record '+loser.name+']');
+  ls.set('tuf_people',ppl.filter(x=>x.id!==loserId));
+  try{ journeyLog(surv.name,'Merged duplicate record '+loser.name); }catch(e){}
+  const c=crmCleaned(); if(c[loserId]){ delete c[loserId]; ls.set('tuf_crm_cleaned',c); }
+  addNotif('Merged '+loser.name+' into '+surv.name);
+  return true;
+}
+// ── Cleanup page ──
+let cleanSegFilter='all', cleanOnlyOpen=true, cleanOpenId=null;
+function cleanQueue(){
+  const hy=crmHygiene(); const cleaned=crmCleaned();
+  const dupeIds=new Set(); hy.dupes.forEach(d=>{ dupeIds.add(d.a); dupeIds.add(d.b); });
+  const missingIds=new Set(hy.missing.map(p=>p.id));
+  let list=peopleAll().slice();
+  if(cleanSegFilter!=='all') list=list.filter(p=>personSegment(p)===cleanSegFilter);
+  if(cleanOnlyOpen) list=list.filter(p=>!cleaned[p.id]);
+  const rank=p=>dupeIds.has(p.id)?0:missingIds.has(p.id)?1:!p.lastContact?2:3;
+  list.sort((a,b)=>rank(a)-rank(b)||String(a.name||'').localeCompare(String(b.name||'')));
+  return {list,hy,dupeIds};
+}
+function renderCleanup(){
+  const host=document.getElementById('crmclean-render'); if(!host) return;
+  crmTabsMount('');
+  crmCleanupSnapshot();
+  const {list,hy,dupeIds}=cleanQueue();
+  const cleaned=crmCleaned();
+  const cleanedCount=peopleAll().filter(p=>cleaned[p.id]).length;
+  document.getElementById('topbar-actions').innerHTML=`<button class="btn btn-ghost btn-sm" onclick="nav('crmhub',crmEl())">Back to hub</button>`;
+  if(!cleanOpenId&&list.length) cleanOpenId=list[0].id;
+  const chip=(t,on,go)=>`<button class="btn ${on?'btn-k':'btn-ghost'} btn-sm" onclick="${go}">${t}</button>`;
+  const dupFor=(id)=>hy.dupes.filter(d=>d.a===id||d.b===id);
+  const card=(p)=>{
+    const open=cleanOpenId===p.id;
+    const dus=dupFor(p.id);
+    const done=!!cleaned[p.id];
+    const chips=personSectionChips(p)||'';
+    if(!open) return `<div class="card" style="margin-bottom:6px;padding:10px 16px;cursor:pointer;border-left:4px solid ${done?'var(--grn)':dus.length?'var(--red)':'var(--bdr)'}" onclick="cleanOpenId='${p.id}';renderCleanup()">
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+        <span style="font-weight:700;font-size:13px">${escHtml(p.name)}</span>
+        <span class="tag tag-b" style="font-size:9px">${SEG_LABEL[personSegment(p)]||''}</span>
+        ${dus.length?`<span class="tag tag-r" style="font-size:9px">possible duplicate</span>`:''}
+        ${!(p.email||'').trim()?'<span class="tag tag-a" style="font-size:9px">no email</span>':''}
+        ${!(p.co||'').trim()?'<span class="tag tag-a" style="font-size:9px">no company</span>':''}
+        ${done?'<span class="tag tag-g" style="font-size:9px">cleaned '+fmtShort(cleaned[p.id])+'</span>':''}
+        <span style="margin-left:auto;font-size:11px;color:var(--mut)">${p.lastContact?'last contact '+fmtShort(p.lastContact):'no contact logged'}</span>
+      </div></div>`;
+    const fi=(id2,label,val)=>`<div class="form-row" style="margin-bottom:8px"><label class="form-label">${label}</label><input class="form-input" id="cc-${id2}" value="${escAttr(val||'')}"></div>`;
+    return `<div class="card" style="margin-bottom:10px;border-left:4px solid var(--y)">
+      <div style="display:flex;gap:10px;align-items:baseline;flex-wrap:wrap;margin-bottom:8px">
+        <span style="font-weight:800;font-size:16px">${escHtml(p.name)}</span>
+        <span style="display:flex;gap:4px;flex-wrap:wrap">${chips}</span>
+      </div>
+      ${dus.length?dus.map(d=>{const other=d.a===p.id?{id:d.b,name:d.bn}:{id:d.a,name:d.an};return `<div style="background:var(--rbg);border-radius:8px;padding:8px 12px;margin-bottom:10px;font-size:12px;display:flex;gap:10px;align-items:center;flex-wrap:wrap"><span style="flex:1;min-width:180px">Possible duplicate of <b>${escHtml(other.name)}</b> (${escHtml(d.why)})</span><button class="btn btn-k btn-sm" onclick="cleanMergeModal('${p.id}','${other.id}')">Compare and merge</button></div>`;}).join(''):''}
+      <div class="grid-2">
+        <div>
+          ${fi('name','Name',p.name)}${fi('co','Company',p.co)}${fi('email','Email',p.email)}${fi('phone','Phone',p.phone)}
+        </div>
+        <div>
+          ${fi('revenue','Annual revenue',p.revenue)}${fi('website','Website',p.website)}
+          <div class="form-row" style="margin-bottom:8px"><label class="form-label">Business description</label><textarea class="form-textarea" id="cc-desc" style="min-height:58px">${escHtml(p.businessDesc||'')}</textarea></div>
+        </div>
+      </div>
+      <div class="form-row"><label class="form-label">Segment</label><div style="display:flex;gap:6px;flex-wrap:wrap">${SEGMENTS.map(sg=>`<button class="btn ${personSegment(p)===sg.id?'btn-k':'btn-ghost'} btn-sm" onclick="setPersonSegment('${p.id}','${sg.id}','cleanup');renderCleanup()">${sg.label}</button>`).join('')}</div></div>
+      <div class="form-row"><label class="form-label">Shared notes</label><textarea class="form-textarea" id="cc-notes" style="min-height:64px">${escHtml(profileNotesGet(p.name))}</textarea></div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+        <button class="btn btn-k btn-sm" onclick="cleanSave('${p.id}')">Save and next</button>
+        <button class="btn btn-ghost btn-sm" onclick="cleanSkipNext('${p.id}')">Skip</button>
+        <button class="btn btn-ghost btn-sm" onclick="crmLogContact('${p.id}');renderCleanup()">Log contact today</button>
+        <button class="btn btn-ghost btn-sm" onclick="cleanOpenId=null;personSelId='${p.id}';navPeople('all',crmEl())">Full profile</button>
+        <button class="btn btn-red btn-sm" style="margin-left:auto" onclick="cleanDelete('${p.id}')">Delete</button>
+      </div>
+    </div>`;
+  };
+  host.innerHTML=`
+    <div style="font-size:12px;color:var(--mut);margin-bottom:12px">Work top to bottom: duplicates first, then missing details, then people with no contact logged. Everything here is safety netted by a snapshot taken ${escHtml(ls.str('tuf_cleanup_snapshot_at','today'))}.</div>
+    <div class="grid-4" style="margin-bottom:16px">
+      <div class="stat ${hy.dupes.length?'y':''}"><div class="n">${hy.dupes.length}</div><div class="l">Possible Duplicate Pairs</div></div>
+      <div class="stat"><div class="n">${hy.missing.length}</div><div class="l">Missing Email Or Company</div></div>
+      <div class="stat"><div class="n">${hy.dangling.length}</div><div class="l">Orphaned Links</div></div>
+      <div class="stat g"><div class="n">${cleanedCount}/${hy.total}</div><div class="l">Cleaned</div></div>
+    </div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px">
+      ${chip('All',cleanSegFilter==='all',"cleanSegFilter='all';cleanOpenId=null;renderCleanup()")}
+      ${SEGMENTS.map(sg=>chip(sg.label,cleanSegFilter===sg.id,`cleanSegFilter='${sg.id}';cleanOpenId=null;renderCleanup()`)).join('')}
+      <span style="flex:1"></span>
+      ${chip(cleanOnlyOpen?'Showing: still to clean':'Showing: everyone',true,"cleanOnlyOpen=!cleanOnlyOpen;cleanOpenId=null;renderCleanup()")}
+    </div>
+    ${list.length?list.map(card).join(''):'<div class="card"><div style="font-size:13px;color:var(--mut)">Nothing left in this view. Switch segment or show everyone.</div></div>'}
+    ${hy.dangling.length?`<div class="sec-hdr" style="margin-top:20px">Orphaned Links (${hy.dangling.length})</div>
+      <div style="font-size:11px;color:var(--mut);margin-bottom:8px">Section records pointing at a person who no longer exists. Re-link matches them to the core record with the same name, Clear removes the broken pointer.</div>
+      ${hy.dangling.slice(0,30).map(d=>{const match=peopleAll().find(pp=>profileKey(pp.name)===profileKey(d.name));return `<div class="card" style="margin-bottom:6px;padding:9px 14px;display:flex;gap:10px;align-items:center;flex-wrap:wrap"><span style="flex:1;min-width:180px;font-size:12px"><b>${escHtml(d.name||'(no name)')}</b> <span style="color:var(--mut)">in ${escHtml(d.store.replace('tuf_','').replace(/_/g,' '))}</span></span>${match?`<button class="btn btn-k btn-sm" onclick="cleanRelink('${d.store}','${d.id}','${match.id}')">Re-link to ${escHtml(match.name)}</button>`:''}<button class="btn btn-ghost btn-sm" onclick="cleanClearLink('${d.store}','${d.id}')">Clear</button></div>`;}).join('')}`:''}
+    ${hy.profileOrphans.length?`<div style="font-size:11px;color:var(--mut);margin-top:14px">Also holding notes for ${hy.profileOrphans.length} name${hy.profileOrphans.length!==1?'s':''} with no core record (kept safe, nothing to do): ${hy.profileOrphans.slice(0,8).map(escHtml).join(', ')}${hy.profileOrphans.length>8?'…':''}</div>`:''}
+  `;
+}
+function cleanNextAfter(id){
+  const {list}=cleanQueue();
+  const i=list.findIndex(p=>p.id===id);
+  const next=list.find((p,j)=>j>i&&p.id!==id)||list.find(p=>p.id!==id);
+  cleanOpenId=next?next.id:null;
+}
+function cleanSave(id){
+  const g=k=>document.getElementById('cc-'+k);
+  if(!g('name')) return;
+  const name=g('name').value.trim(); if(!name){ alert('A name is required.'); return; }
+  personSync(id,{name,co:g('co').value.trim(),email:g('email').value.trim(),phone:g('phone').value.trim(),revenue:g('revenue').value.trim(),website:g('website').value.trim(),businessDesc:g('desc').value.trim()});
+  const notes=g('notes').value;
+  const profs=ls.get('tuf_profiles',{})||{}; const k=profileKey(name);
+  profs[k]=profs[k]||{}; profs[k].notes=notes; ls.set('tuf_profiles',profs);
+  cleanMark(id);
+  cleanNextAfter(id);
+  renderCleanup();
+}
+function cleanSkipNext(id){ cleanNextAfter(id); renderCleanup(); }
+function cleanDelete(id){
+  const p=personById(id); if(!p) return;
+  personDelete(id); // existing guard + confirm; refuses while linked
+  if(!personById(id)){ const c=crmCleaned(); delete c[id]; ls.set('tuf_crm_cleaned',c); cleanOpenId=null; }
+  renderCleanup();
+}
+function cleanRelink(store,recId,personId){
+  const arr=ls.get(store,[])||[]; const r=arr.find(x=>x.id===recId); if(!r) return;
+  r.personId=personId; ls.set(store,arr); renderCleanup();
+}
+function cleanClearLink(store,recId){
+  const arr=ls.get(store,[])||[]; const r=arr.find(x=>x.id===recId); if(!r) return;
+  delete r.personId; ls.set(store,arr); renderCleanup();
+}
+function cleanMergeModal(aId,bId){
+  const a=personById(aId), b=personById(bId); if(!a||!b) return;
+  const row=(label,va,vb)=>`<tr><td style="color:var(--mut);font-size:11px;white-space:nowrap;padding:4px 10px 4px 0">${label}</td><td style="font-size:12px;padding:4px 10px 4px 0">${escHtml(va||'—')}</td><td style="font-size:12px;padding:4px 0">${escHtml(vb||'—')}</td></tr>`;
+  const links=p=>{const L=personLinks(p);return L.members.length+L.prospects.length+L.warm.length+L.ba.length+L.ea.length+L.padel.length+L.inbound.length+L.bleads.length;};
+  showModal('Merge duplicates',`
+    <div style="font-size:12px;color:var(--mut);margin-bottom:10px">Pick which record survives. The other's sections, notes and journey all move onto the survivor; empty details are filled in from it; nothing is lost.</div>
+    <table style="width:100%;border-collapse:collapse;margin-bottom:12px">
+      <tr><td></td><td style="padding:4px 10px 4px 0"><label style="font-weight:700;font-size:12px;cursor:pointer"><input type="radio" name="mg-surv" value="${a.id}" checked> Keep ${escHtml(a.name)}</label></td><td style="padding:4px 0"><label style="font-weight:700;font-size:12px;cursor:pointer"><input type="radio" name="mg-surv" value="${b.id}"> Keep ${escHtml(b.name)}</label></td></tr>
+      ${row('Segment',SEG_LABEL[personSegment(a)],SEG_LABEL[personSegment(b)])}
+      ${row('Company',a.co,b.co)}${row('Email',a.email,b.email)}${row('Phone',a.phone,b.phone)}
+      ${row('Sections',links(a)+' linked',links(b)+' linked')}
+      ${row('Last contact',a.lastContact,b.lastContact)}
+      ${row('Notes',profileNotesGet(a.name)?'yes':'none',profileNotesGet(b.name)?'yes':'none')}
+    </table>
+  `,`<button class="btn btn-ghost" onclick="closeModal()">Cancel</button><button class="btn btn-k" onclick="cleanMergeGo('${a.id}','${b.id}')">Merge</button>`);
+}
+function cleanMergeGo(aId,bId){
+  const surv=document.querySelector('input[name=mg-surv]:checked')?.value||aId;
+  const loser=surv===aId?bId:aId;
+  if(!confirm('Merge these two records? The duplicate is removed and everything moves to the survivor.')) return;
+  if(personMerge(loser,surv)){ closeModal(); cleanOpenId=surv; renderCleanup(); }
+}
+
 // ═══ CRM HUB (v69, Jasper's spec) ═════════════════════════════════════════════
 // One CRM nav item opens a hub dashboard; segment tabs run across every CRM page.
 // The follow-up list and health score cover Introducers, Leads and Onboarding
 // only: Jasper's remit as CRM manager. Thresholds live in crmSettings.
-const CRM_PAGES=['crmhub','people','pipeline','members','inbound','onboarding','clientanalysis'];
+const CRM_PAGES=['crmhub','crmclean','people','pipeline','members','inbound','onboarding','clientanalysis'];
 const CRM_TABS=[
   ['crmhub','Hub'],['network','Network'],['introducers','Introducers'],['leads','Leads'],
   ['onboarding','Onboarding'],['boardroom','Boardroom Members'],['private121','121 Clients']];
@@ -10942,7 +11178,7 @@ function renderCRMHub(){
   const host=document.getElementById('crmhub-render'); if(!host) return;
   crmTabsMount('crmhub');
   const s=crmSettings();
-  document.getElementById('topbar-actions').innerHTML=`<button class="btn btn-ghost btn-sm" onclick="crmSettingsModal()">Thresholds: ${s.followUpWarnDays}d / ${s.followUpDays}d</button><button class="btn btn-k btn-sm" onclick="personAddModal()">+ Add person</button>`;
+  document.getElementById('topbar-actions').innerHTML=`<button class="btn btn-ghost btn-sm" onclick="crmSettingsModal()">Thresholds: ${s.followUpWarnDays}d / ${s.followUpDays}d</button><button class="btn btn-ghost btn-sm" onclick="nav('crmclean',crmEl())">Start cleanup</button><button class="btn btn-k btn-sm" onclick="personAddModal()">+ Add person</button>`;
   const ppl=peopleAll();
   const counts={}; SEGMENTS.forEach(sg=>counts[sg.id]=ppl.filter(p=>personSegment(p)===sg.id).length);
   const circleGo={network:"crmTabGo('network')",introducers:"crmTabGo('introducers')",pipeline:"crmTabGo('leads')",onboarding:"crmTabGo('onboarding')",boardroom:"crmTabGo('boardroom')",private121:"crmTabGo('private121')"};
