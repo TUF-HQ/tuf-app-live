@@ -11188,6 +11188,7 @@ function updateFollowupBadge(){
 }
 function renderCRMHub(){
   const host=document.getElementById('crmhub-render'); if(!host) return;
+  cxLoadRemote();
   crmTabsMount('crmhub');
   const s=crmSettings();
   document.getElementById('topbar-actions').innerHTML=`<button class="btn btn-ghost btn-sm" onclick="crmSettingsModal()">Thresholds: ${s.followUpWarnDays}d / ${s.followUpDays}d</button><button class="btn btn-ghost btn-sm" onclick="nav('crmclean',crmEl())">Start cleanup</button><button class="btn btn-k btn-sm" onclick="personAddModal()">+ Add person</button>`;
@@ -11266,6 +11267,40 @@ function cxAddNote(personId,text,src,date){
   ls.set('tuf_crm_notes',all);
   cxSummaryRegen(personId);
   return entry;
+}
+// Remote notes: rows the scheduled agent files into the crm_notes table
+// (Read.ai partnership meetings). Read only here; merged into cxNotes feeds.
+let __cxRemoteAt=0, __cxRemoteBusy=false;
+async function cxLoadRemote(force){
+  if(typeof sb==='undefined'||!sb||!sb.from) return;
+  if(__cxRemoteBusy) return;
+  if(!force && (Date.now()-__cxRemoteAt)<5*60*1000) return;
+  __cxRemoteBusy=true;
+  try{
+    const {data,error}=await sb.from('crm_notes').select('id,person_key,person_id,note_date,src,text,actions,created_by').order('note_date',{ascending:false}).limit(500);
+    if(error||!Array.isArray(data)){ __cxRemoteAt=Date.now(); return; }
+    const ppl=peopleAll(); const idSet={}; const byKey={};
+    ppl.forEach(p=>{ idSet[p.id]=1; byKey[profileKey(p.name)]=p.id; });
+    const map={};
+    data.forEach(r=>{
+      const pid=(r.person_id&&idSet[r.person_id])?r.person_id:byKey[profileKey(r.person_key||'')];
+      if(!pid) return;
+      let text=String(r.text||'');
+      const acts=Array.isArray(r.actions)?r.actions:[];
+      if(acts.length) text+='\n\nSuggested actions: '+acts.map(a=>String((a&&a.text)||a||'')).filter(Boolean).join('; ');
+      (map[pid]=map[pid]||[]).push({id:'r_'+r.id,date:r.note_date||'',src:r.src||'readai',text,by:r.created_by||'agent',remote:true});
+    });
+    const changed=JSON.stringify(map)!==JSON.stringify(window.__cxRemoteNotes||{});
+    window.__cxRemoteNotes=map;
+    __cxRemoteAt=Date.now();
+    if(changed){
+      const a=document.querySelector('.page.active');
+      if(a&&a.id==='page-crmhub') renderCRMHub();
+      else if(a&&a.id==='page-people') renderPeople();
+      updateFollowupBadge();
+    }
+  }catch(e){ __cxRemoteAt=Date.now(); }
+  finally{ __cxRemoteBusy=false; }
 }
 function cxActionsAll(){ return ls.get('tuf_crm_actions',{})||{}; }
 function cxActions(personId){ return (cxActionsAll()[personId]||[]).filter(a=>!a.done); }
@@ -11479,6 +11514,7 @@ function cxQuickAddSave(personId){
 // ── Hub ──
 function renderCRMHub(){
   const host=document.getElementById('crmhub-render'); if(!host) return;
+  cxLoadRemote();
   crmTabsMount('crmhub');
   const inb=(ls.get('tuf_inbound_leads',[])||[]).filter(l=>l.status==='new');
   document.getElementById('topbar-actions').innerHTML=`
@@ -11542,6 +11578,7 @@ function cxListRow(p){
 }
 function renderPeople(){
   const host=document.getElementById('people-render'); if(!host) return;
+  cxLoadRemote();
   crmTabsMount(peopleSegFilter==='pipeline'?'leads':CRM_TABS.some(t=>t[0]===peopleSegFilter)?peopleSegFilter:'');
   if(personSelId){ renderPersonProfile(personSelId); return; }
   cxLoadCoachNames();
