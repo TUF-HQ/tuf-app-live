@@ -185,6 +185,17 @@ details>summary::-webkit-details-marker{display:none}
 .stage-pill{padding:6px 14px;border-radius:20px;font-size:11px;font-weight:700;white-space:nowrap;cursor:pointer;border:1px solid var(--bdr);background:var(--card);color:var(--mut);box-shadow:var(--sh-sm);transition:all .15s}
 .stage-pill:hover{border-color:var(--k);color:var(--txt)}
 .stage-pill.active{background:var(--k);color:var(--w);border-color:var(--k)}
+/* ── CRM v2 dark module (scoped to the CRM pages only, per JJ's spec) ── */
+#page-crmhub,#page-people,#page-crmclean{--card:#141416;--bdr:#26272B;--bdr-2:#202127;--txt:#F2F2F4;--mut:#9BA0A8;--bg:#0A0A0B;--bg-2:#1E1F24;--rbg:#3A2020;--abg:#37301C;--gbg:#1E2E1E;--bbg:#1C2733;background:#0A0A0B;color:#F2F2F4;margin:-26px -32px;padding:24px 30px 48px;min-height:calc(100vh - 52px)}
+#page-crmhub .card,#page-people .card,#page-crmclean .card{box-shadow:none}
+#page-crmhub .card-title,#page-people .card-title,#page-crmclean .card-title{color:#fff}
+#page-crmhub .btn-ghost,#page-people .btn-ghost,#page-crmclean .btn-ghost{background:transparent;border:1px solid #2E2F35;color:#D9DBDF;box-shadow:none}
+#page-crmhub .btn-ghost:hover,#page-people .btn-ghost:hover,#page-crmclean .btn-ghost:hover{background:#1E1F24;border-color:#3A3B42}
+#page-crmhub .form-input,#page-people .form-input,#page-crmclean .form-input,#page-crmhub .form-select,#page-people .form-select,#page-crmclean .form-select,#page-crmhub .form-textarea,#page-people .form-textarea,#page-crmclean .form-textarea{background:#1B1C20;color:#F2F2F4;border-color:#2E2F35}
+#page-crmhub .stat,#page-people .stat,#page-crmclean .stat{background:#141416;border-color:#26272B;color:#F2F2F4}
+#page-crmhub .stat .l,#page-people .stat .l,#page-crmclean .stat .l{color:#9BA0A8}
+#page-crmclean .chk-text{color:#F2F2F4}
+
 /* values bar */
 .values-bar{display:flex;background:var(--k);overflow:hidden;flex-shrink:0;border-bottom:1px solid #1E1F23}
 .val-item{flex:1;text-align:center;padding:8px 5px;font-family:'Montserrat',sans-serif;font-size:9.5px;font-weight:800;color:var(--y);letter-spacing:1px;text-transform:uppercase;border-right:1px solid rgba(255,255,255,.07)}
@@ -1447,6 +1458,7 @@ function initApp(user){
   crmSegmentFixV2();
   unitaskMigrate();
   crmOnboardingMigrate();
+  cxMigrate();
   updateFollowupBadge();
   setTimeout(()=>{ try{ csuiteAutoRun(); }catch(e){} },8000);
   updateInboundBadge();
@@ -4415,12 +4427,12 @@ function dupCheckWarn(name,email){
 const PEOPLE_LINK_STORES=['tuf_members','tuf_prospects','tuf_warm','tuf_boardroom_attendees','tuf_event_attendees','tuf_event_leads','tuf_inbound_leads','tuf_boardroom_leads'];
 // ═══ CRM SEGMENTS — every person sits in exactly one of five segments ═══
 const SEGMENTS=[
-  {id:'network',label:'Network'},
   {id:'introducers',label:'Introducers'},
   {id:'pipeline',label:'Leads'},
   {id:'onboarding',label:'Onboarding'},
   {id:'boardroom',label:'Boardroom Members'},
-  {id:'private121',label:'121 Clients'}
+  {id:'private121',label:'121 Clients'},
+  {id:'network',label:'Network'}
 ];
 const SEG_LABEL=Object.fromEntries(SEGMENTS.map(s=>[s.id,s.label]));
 function crmSettings(){ return {nudgeDays:7,staleDays:14,followUpWarnDays:14,followUpDays:21,...(ls.get('tuf_crm_settings',{})||{})}; }
@@ -11081,8 +11093,8 @@ function cleanMergeGo(aId,bId){
 // only: Jasper's remit as CRM manager. Thresholds live in crmSettings.
 const CRM_PAGES=['crmhub','crmclean','people','pipeline','members','inbound','onboarding','clientanalysis'];
 const CRM_TABS=[
-  ['crmhub','Hub'],['network','Network'],['introducers','Introducers'],['leads','Leads'],
-  ['onboarding','Onboarding'],['boardroom','Boardroom Members'],['private121','121 Clients']];
+  ['crmhub','Hub'],['introducers','Introducers'],['leads','Leads'],['onboarding','Onboarding'],
+  ['boardroom','Boardroom Members'],['private121','121 Clients'],['network','Network']];
 function crmEl(){ return document.querySelector('[data-page=crmhub]'); }
 function crmTabGo(key){
   if(key==='crmhub') return nav('crmhub',crmEl());
@@ -11234,6 +11246,431 @@ function crmOnboardingMigrate(){
     ls.set('tuf_segment_onb_v1',{at:new Date().toISOString(),by:CURRENT_USER,moved:n});
     if(n) addNotif('CRM: '+n+' mid onboarding '+(n===1?'person':'people')+' moved to the Onboarding segment');
   }catch(e){ console.warn('crmOnboardingMigrate failed',e); }
+}
+
+// ═══ CRM v2 CORE (v74, JJ's spec) — structured notes, actions, staleness ══════
+// One person = one record. Notes are dated, sourced entries; actions are their
+// own list and completing one becomes a note. Staleness is computed from real
+// contact history, never a hand maintained date (manual Log contact still works).
+function cxNotesAll(){ return ls.get('tuf_crm_notes',{})||{}; }
+function cxNotes(personId){
+  const local=(cxNotesAll()[personId]||[]);
+  const remote=(window.__cxRemoteNotes&&window.__cxRemoteNotes[personId])||[];
+  return [...local,...remote].sort((a,b)=>(b.date||'').localeCompare(a.date||''));
+}
+function cxAddNote(personId,text,src,date){
+  text=String(text||'').trim(); if(!text) return null;
+  const all=cxNotesAll();
+  const entry={id:uid(),date:date||new Date().toISOString().slice(0,10),src:src||'manual',text,by:CURRENT_USER};
+  (all[personId]=all[personId]||[]).push(entry);
+  ls.set('tuf_crm_notes',all);
+  cxSummaryRegen(personId);
+  return entry;
+}
+function cxActionsAll(){ return ls.get('tuf_crm_actions',{})||{}; }
+function cxActions(personId){ return (cxActionsAll()[personId]||[]).filter(a=>!a.done); }
+function cxAddAction(personId,text,due){
+  text=String(text||'').trim(); if(!text) return null;
+  const all=cxActionsAll();
+  const a={id:uid(),text,due:due||null,createdAt:new Date().toISOString().slice(0,10),createdBy:CURRENT_USER,done:false};
+  (all[personId]=all[personId]||[]).push(a);
+  ls.set('tuf_crm_actions',all);
+  return a;
+}
+function cxCompleteAction(personId,actionId){
+  const all=cxActionsAll(); const arr=all[personId]||[];
+  const a=arr.find(x=>x.id===actionId); if(!a||a.done) return;
+  a.done=true; a.doneAt=new Date().toISOString().slice(0,10);
+  ls.set('tuf_crm_actions',all);
+  cxAddNote(personId,'Done: '+a.text,'action');
+}
+// Last contact = the later of the logged field and the newest real note.
+function cxLastContact(p){
+  const n=cxNotes(p.id).find(x=>x.src!=='imported');
+  const nd=n?n.date:'';
+  return (p.lastContact||'')>nd?(p.lastContact||''):nd;
+}
+// Cadence per JJ's golden rules. Returns {dot:'green'|'amber'|'red', days, archive:bool, zero:bool}
+function cxCadence(p){
+  const seg=personSegment(p); const s=crmSettings();
+  if(seg!=='introducers'&&seg!=='pipeline') return null;
+  const lc=cxLastContact(p);
+  const days=crmDaysSince(lc);
+  if(seg==='introducers'){
+    if(days===null) return {dot:'red',days:null,zero:true,archive:false};
+    return {dot:days>s.followUpDays?'red':days>s.followUpWarnDays?'amber':'green',days,zero:false,archive:false};
+  }
+  // leads
+  if(days===null) return {dot:'red',days:null,zero:true,archive:false};
+  return {dot:days>s.followUpDays?'red':days>s.followUpWarnDays?'amber':'green',days,zero:false,archive:days>90};
+}
+// The hub's Next Actions feed: explicit actions plus staleness suggestions,
+// grouped Overdue / Due Today / Upcoming. Names appear here and nowhere else.
+function cxNextActions(){
+  const today=new Date().toISOString().slice(0,10);
+  const out={overdue:[],today:[],upcoming:[]};
+  const ppl=peopleAll();
+  const withAction=new Set();
+  ppl.forEach(p=>{
+    cxActions(p.id).forEach(a=>{
+      withAction.add(p.id);
+      const row={personId:p.id,name:p.name,seg:personSegment(p),text:a.text,actionId:a.id,dot:a.due&&a.due<today?'red':a.due===today?'amber':'green'};
+      if(a.due&&a.due<today) out.overdue.push(row);
+      else if(a.due===today) out.today.push(row);
+      else out.upcoming.push(row);
+    });
+  });
+  ppl.forEach(p=>{
+    if(withAction.has(p.id)) return;
+    const c=cxCadence(p); if(!c) return;
+    if(c.dot==='green') return;
+    const row={personId:p.id,name:p.name,seg:personSegment(p),actionId:null,dot:c.dot,
+      text:c.zero?'Make first contact, nothing logged yet':('Get back in touch, '+c.days+' days since contact'+(c.archive?' (consider archiving)':''))};
+    if(c.dot==='red') out.overdue.push(row);
+    else out.today.push(row);
+  });
+  const byDays=(a,b)=>0; out.overdue.sort(byDays);
+  return out;
+}
+function cxBadgeCount(){ const na=cxNextActions(); return na.overdue.length+na.today.length; }
+// Cross product duplication: the same name also lives in another product area.
+function cxCrossProduct(p){
+  const k=profileKey(p.name); const hits=[];
+  try{ if((window.__cxCoachNames||new Set()).has(k)) hits.push('Coaching'); }catch(e){}
+  if((ls.get('tuf_event_leads',[])||[]).some(r=>profileKey(r.name||'')===k)) hits.push('Padel pipeline');
+  if((ls.get('tuf_boardroom_attendees',[])||[]).some(r=>profileKey(r.name||'')===k)) hits.push('Session attendee');
+  return hits;
+}
+function cxLoadCoachNames(){
+  try{ const sum=JSON.parse(localStorage.getItem('tuf_coaching_summary')||'{}'); window.__cxCoachNames=new Set(Object.keys(sum.people||{})); }catch(e){ window.__cxCoachNames=new Set(); }
+}
+// ── AI summary banner ──
+function cxSummaries(){ return ls.get('tuf_ai_summaries',{})||{}; }
+function cxSummaryFor(personId){ return cxSummaries()[personId]||null; }
+async function cxSummaryRegen(personId){
+  try{
+    const p=personById(personId); if(!p) return;
+    const notes=cxNotes(personId).slice(0,8);
+    if(!notes.length){ return; }
+    const legacy=profileNotesGet(p.name);
+    const ctx=notes.map(n=>n.date+' ('+n.src+'): '+n.text.slice(0,600)).join('\n\n')+(legacy?'\n\nOlder notes: '+legacy.slice(0,800):'');
+    const data=await claudeCall({model:'claude-haiku-4-5-20251001',max_tokens:350,messages:[{role:'user',content:'You keep the CRM sharp for The Ultimate Founder (founder coaching and the Boardroom). Summarise where things stand with '+p.name+(p.co?' of '+p.co:'')+' (segment: '+(SEG_LABEL[personSegment(p)]||'')+') from these dated notes, newest first. Respond with ONLY JSON, no fences: {"summary":"2 to 3 tight sentences on the current situation and what matters next, plain UK English, no hyphens","fit":<1 to 10 relationship strength and fit score>}\n\nNOTES:\n'+ctx}]});
+    let t=(data.content&&data.content[0]&&data.content[0].text||'').replace(/```json/gi,'').replace(/```/g,'').trim();
+    const s2=t.indexOf('{'); const e2=t.lastIndexOf('}');
+    if(s2<0||e2<0) return;
+    const j=JSON.parse(t.slice(s2,e2+1));
+    const all=cxSummaries();
+    all[personId]={text:String(j.summary||'').slice(0,600),fit:Math.max(1,Math.min(10,parseInt(j.fit)||5)),at:new Date().toISOString().slice(0,10)};
+    ls.set('tuf_ai_summaries',all);
+    const a=document.querySelector('.page.active');
+    if(a&&a.id==='page-people'&&personSelId===personId) renderPeople();
+  }catch(e){ console.warn('summary regen failed',e); }
+}
+// ── Paste and parse ──
+async function cxParsePaste(personId){
+  const box=document.getElementById('cx-paste'); if(!box) return;
+  const raw=box.value.trim(); if(!raw){ return; }
+  const st=document.getElementById('cx-paste-status');
+  const say=m=>{ if(st) st.textContent=m; };
+  say('Reading the notes…');
+  try{
+    const data=await claudeCall({model:'claude-haiku-4-5-20251001',max_tokens:900,messages:[{role:'user',content:'Convert this raw meeting text (a Read.ai summary, email or notes) into structured CRM entries. Respond with ONLY JSON, no fences: {"notes":[{"date":"YYYY-MM-DD or empty if unknown","text":"a clean note in plain UK English, no hyphens"}],"actions":[{"text":"a specific next action in words","due":"YYYY-MM-DD or empty"}]}. Keep every substantive point; one note per topic; only real committed actions.\n\nRAW TEXT:\n'+raw.slice(0,6000)}]});
+    let t=(data.content&&data.content[0]&&data.content[0].text||'').replace(/```json/gi,'').replace(/```/g,'').trim();
+    const s2=t.indexOf('{'); const e2=t.lastIndexOf('}');
+    if(s2<0||e2<0) throw new Error('no json');
+    const j=JSON.parse(t.slice(s2,e2+1));
+    let nN=0,nA=0;
+    (j.notes||[]).forEach(n=>{ if(n&&n.text){ cxAddNote(personId,n.text,'parsed',/^\d{4}-\d{2}-\d{2}$/.test(n.date||'')?n.date:null); nN++; } });
+    (j.actions||[]).forEach(a2=>{ if(a2&&a2.text){ cxAddAction(personId,a2.text,/^\d{4}-\d{2}-\d{2}$/.test(a2.due||'')?a2.due:null); nA++; } });
+    if(!nN&&!nA) throw new Error('nothing extracted');
+    addNotif('Notes filed for '+((personById(personId)||{}).name||'')+': '+nN+' note'+(nN!==1?'s':'')+(nA?', '+nA+' action'+(nA!==1?'s':''):''));
+    renderPeople();
+  }catch(e){
+    cxAddNote(personId,raw,'manual');
+    addNotif('Could not structure the paste, saved it as one note instead');
+    renderPeople();
+  }
+}
+// ── One shot migration (ledger tuf_crmv2_migrated) ──
+function cxMigrate(){
+  try{
+    if(!sbLoadOK) return;
+    if(ls.get('tuf_crmv2_migrated',null)) return;
+    const ppl=peopleAll(); if(!ppl.length) return;
+    // 1. legacy notes -> one imported entry each
+    const profs=ls.get('tuf_profiles',{})||{};
+    const all=cxNotesAll(); let imported=0;
+    ppl.forEach(p=>{
+      const pr=profs[profileKey(p.name)];
+      if(pr&&pr.notes&&!(all[p.id]||[]).some(n=>n.src==='imported')){
+        (all[p.id]=all[p.id]||[]).push({id:uid(),date:(p.segmentAt||p.createdAt||'').slice(0,10)||new Date().toISOString().slice(0,10),src:'imported',text:pr.notes,by:'migration'});
+        imported++;
+      }
+    });
+    if(imported) ls.set('tuf_crm_notes',all);
+    // 2. USG company account + Barry link
+    let pplChanged=false;
+    const usg=ppl.find(p=>profileKey(p.name)==='usg');
+    const barry=ppl.find(p=>profileKey(p.name)==='barry whelan');
+    if(usg&&!usg.recordType){ usg.recordType='company'; pplChanged=true; }
+    if(usg&&barry){
+      usg.relatedIds=[...new Set([...(usg.relatedIds||[]),barry.id])];
+      barry.relatedIds=[...new Set([...(barry.relatedIds||[]),usg.id])];
+      pplChanged=true;
+    }
+    if(pplChanged) ls.set('tuf_people',ppl);
+    // 3. Julie Donoghue: two member rows, keep the paying one, merge notes
+    const mem=ls.get('tuf_members',[])||[];
+    const julies=mem.filter(m=>profileKey(m.name)==='julie donoghue'&&m.status==='active');
+    if(julies.length===2){
+      const keep=julies.find(m=>(m.clientFee||0)>0)||julies[0];
+      const drop=julies.find(m=>m.id!==keep.id);
+      if(drop){
+        if(drop.notes&&drop.notes!==keep.notes) keep.notes=((keep.notes||'')+'\n\n[Merged from duplicate member record] '+drop.notes).trim();
+        ['email','phone','co'].forEach(f=>{ if(!String(keep[f]||'').trim()&&String(drop[f]||'').trim()) keep[f]=drop[f]; });
+        const rest=mem.filter(m=>m.id!==drop.id);
+        ls.set('tuf_members',rest);
+        try{ const ob=ls.get('tuf_ob_'+drop.id,null); if(ob&&!ls.get('tuf_ob_'+keep.id,null)) ls.set('tuf_ob_'+keep.id,ob); }catch(e){}
+        try{ const ca=ls.get('tuf_ca_'+drop.id,null); if(ca&&!ls.get('tuf_ca_'+keep.id,null)) ls.set('tuf_ca_'+keep.id,ca); }catch(e){}
+        journeyLog(keep.name,'Duplicate member record merged');
+      }
+    }
+    ls.set('tuf_crmv2_migrated',{at:new Date().toISOString(),by:CURRENT_USER,importedNotes:imported});
+    addNotif('CRM v2 migration done: '+imported+' note histories imported'+(julies.length===2?', Julie Donoghue duplicate merged':''));
+  }catch(e){ console.warn('cxMigrate failed',e); }
+}
+
+// ═══ CRM v2 UI (v74) — dark module: hub, unified lists, full profile ══════════
+function cxDot(c){ const col=c==='red'?'#E05252':c==='amber'?'#E6A23C':'#3FBF6F'; return `<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${col};flex-shrink:0"></span>`; }
+function cxInitials(n){ return String(n||'?').split(/\s+/).slice(0,2).map(x=>x[0]||'').join('').toUpperCase(); }
+function cxAvatar(p,size){
+  const s=size||36; const comp=p.recordType==='company';
+  return `<span style="width:${s}px;height:${s}px;border-radius:${comp?'8px':'50%'};background:#1E1F24;border:1px solid #2E2F35;color:var(--y);font-weight:800;font-size:${Math.round(s*0.36)}px;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0">${escHtml(cxInitials(p.name))}</span>`;
+}
+function cxSegPills(p,ctx){
+  return `<span style="display:inline-flex;gap:4px;flex-wrap:wrap">${SEGMENTS.map(sg=>`<button class="btn btn-sm ${personSegment(p)===sg.id?'btn-y':'btn-ghost'}" style="padding:3px 9px;font-size:10px" onclick="event.stopPropagation();setPersonSegment('${p.id}','${sg.id}','moved by ${CURRENT_USER}');${ctx==='profile'?'renderPeople()':'renderPeople()'}">${sg.label}</button>`).join('')}</span>`;
+}
+let cxMoveOpenId=null;
+function cxQuickAddModal(personId){
+  const p=personId?personById(personId):null;
+  const remit=peopleAll().filter(x=>['introducers','pipeline','onboarding'].includes(personSegment(x))).sort((a,b)=>(a.name||'').localeCompare(b.name||''));
+  showModal('Quick add',`
+    ${p?`<div style="font-weight:700;margin-bottom:10px">${escHtml(p.name)}</div>`:`<div class="form-row"><label class="form-label">Who</label><select class="form-select" id="qa-who">${remit.map(x=>`<option value="${x.id}">${escHtml(x.name)}</option>`).join('')}</select></div>`}
+    <div class="form-row"><label class="form-label">Note (optional)</label><textarea class="form-textarea" id="qa-note" style="min-height:60px" placeholder="What happened…"></textarea></div>
+    <div class="grid-2">
+      <div class="form-row"><label class="form-label">Next action (optional)</label><input class="form-input" id="qa-action" placeholder="e.g. Book follow up call"></div>
+      <div class="form-row"><label class="form-label">Due</label><input class="form-input" type="date" id="qa-due"></div>
+    </div>
+  `,`<button class="btn btn-ghost" onclick="closeModal()">Cancel</button><button class="btn btn-y" onclick="cxQuickAddSave('${personId||''}')">Save</button>`);
+}
+function cxQuickAddSave(personId){
+  const id=personId||document.getElementById('qa-who')?.value; if(!id) return;
+  const note=document.getElementById('qa-note').value.trim();
+  const action=document.getElementById('qa-action').value.trim();
+  const due=document.getElementById('qa-due').value;
+  if(note) cxAddNote(id,note,'manual');
+  if(action) cxAddAction(id,action,due||null);
+  if(!note&&!action){ closeModal(); return; }
+  closeModal();
+  const a=document.querySelector('.page.active');
+  if(a&&a.id==='page-crmhub') renderCRMHub(); else renderPeople();
+  updateFollowupBadge();
+}
+// ── Hub ──
+function renderCRMHub(){
+  const host=document.getElementById('crmhub-render'); if(!host) return;
+  crmTabsMount('crmhub');
+  const inb=(ls.get('tuf_inbound_leads',[])||[]).filter(l=>l.status==='new');
+  document.getElementById('topbar-actions').innerHTML=`
+    <button class="btn btn-ghost btn-sm" onclick="nav('inbound',crmEl())" title="Inbound website approaches" style="position:relative">Inbound${inb.length?`<span style="position:absolute;top:-6px;right:-6px;background:var(--y);color:var(--k);border-radius:10px;font-size:9px;font-weight:800;padding:1px 6px">${inb.length}</span>`:''}</button>
+    <button class="btn btn-ghost btn-sm" onclick="nav('crmclean',crmEl())">Cleanup</button>
+    <button class="btn btn-y btn-sm" onclick="personAddModal()">+ Add person</button>`;
+  const ppl=peopleAll();
+  const counts={}; SEGMENTS.forEach(sg=>counts[sg.id]=ppl.filter(p=>personSegment(p)===sg.id).length);
+  const tileGo={introducers:"crmTabGo('introducers')",pipeline:"crmTabGo('leads')",onboarding:"crmTabGo('onboarding')",boardroom:"crmTabGo('boardroom')",private121:"crmTabGo('private121')",network:"crmTabGo('network')"};
+  const tiles=SEGMENTS.map(sg=>`<div onclick="${tileGo[sg.id]}" style="cursor:pointer;background:#141416;border:1px solid #26272B;border-radius:12px;padding:16px 18px;flex:1;min-width:130px">
+    <div style="font-family:var(--font-display);font-size:30px;font-weight:800;color:${['introducers','pipeline','onboarding'].includes(sg.id)?'var(--y)':'#F2F2F4'}">${counts[sg.id]}</div>
+    <div style="font-size:9.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#9BA0A8;margin-top:4px">${sg.label}</div></div>`).join('');
+  const na=cxNextActions();
+  const naRow=r=>`<div style="display:flex;gap:10px;align-items:center;padding:9px 4px;border-bottom:1px solid #202127">
+    ${cxDot(r.dot)}
+    <span style="cursor:pointer;flex:1;min-width:0;font-size:12.5px" onclick="personSelId='${r.personId}';navPeople('${r.seg}',crmEl())"><b>${escHtml(r.name)}</b> <span style="color:#9BA0A8">— ${escHtml(r.text)}</span></span>
+    ${r.actionId?`<button class="btn btn-ghost btn-sm" style="padding:2px 9px" title="Mark done" onclick="cxCompleteAction('${r.personId}','${r.actionId}');renderCRMHub();updateFollowupBadge()">✓</button>`:''}
+    <button class="btn btn-ghost btn-sm" style="padding:2px 9px" title="Add a note or action" onclick="cxQuickAddModal('${r.personId}')">+</button>
+  </div>`;
+  const naGroup=(title,rows)=>rows.length?`<div style="font-size:10px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:#9BA0A8;margin:14px 0 2px;display:flex;align-items:center;gap:8px">${title} <span style="opacity:.6">${rows.length}</span><span style="flex:1"></span><button class="btn btn-ghost btn-sm" style="padding:1px 8px" title="Quick add" onclick="cxQuickAddModal('')">+</button></div>${rows.map(naRow).join('')}`:'';
+  host.innerHTML=`
+    <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:22px">${tiles}</div>
+    <div class="sec-hdr">Next Actions</div>
+    <div class="card" style="padding:8px 18px 14px">
+      ${(na.overdue.length+na.today.length+na.upcoming.length)?naGroup('Overdue',na.overdue)+naGroup('Due today',na.today)+naGroup('Upcoming',na.upcoming.slice(0,12)):'<div style="font-size:13px;color:#9BA0A8;padding:14px 0">All clear. Log notes and actions as you go and this becomes your working day.</div>'}
+    </div>
+    <div style="font-size:10.5px;color:#7C8089;margin-top:12px">Introducers and Leads are tracked daily. Onboarding joins them once Danny's team confirms the process. Network, Boardroom Members and 121 Clients run on a quarterly rhythm and stay off this panel.</div>
+  `;
+  updateFollowupBadge();
+}
+// ── Unified segment list (route: people, filtered) ──
+function cxListRow(p){
+  const seg=personSegment(p);
+  const cad=cxCadence(p);
+  const lc=cxLastContact(p);
+  const acts=cxActions(p.id);
+  const nextA=acts.length?acts[0].text:'';
+  const L=personLinks(p);
+  const mem=(L.members||[]).find(m=>m.status==='active');
+  const moving=cxMoveOpenId===p.id;
+  let mid='';
+  if(seg==='boardroom'||seg==='private121'){
+    const fee=mem?(mem.type==='existing_client'?(mem.clientFee||0):bFee(mem)):0;
+    mid=`<span style="font-size:11px;color:#9BA0A8">${p.recordType==='company'?'Company account':''}${mem?`${p.recordType==='company'?' · ':''}£${fee.toLocaleString()}/mo${mem.type==='existing_client'?' · 121 advisory':' · Boardroom'}`:''}</span>`;
+  } else if(cad){
+    mid=`<span style="display:inline-flex;align-items:center;gap:6px;font-size:11px;color:#9BA0A8">${cxDot(cad.dot)} ${cad.zero?'no contact logged':cad.days+'d since contact'}${cad.archive?' · consider archiving':''}</span>`;
+  } else {
+    mid=`<span style="font-size:11px;color:#7C8089">${lc?'last contact '+fmtShort(lc):''}</span>`;
+  }
+  return `<div class="card" style="margin-bottom:6px;padding:10px 16px">
+    <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+      ${cxAvatar(p)}
+      <span style="cursor:pointer;min-width:150px" onclick="personSelId='${p.id}';renderPeople()"><b style="font-size:13px">${escHtml(p.name)}</b>${p.co?`<span style="color:#9BA0A8;font-size:11.5px"> · ${escHtml(p.co)}</span>`:''}</span>
+      ${mid}
+      <span style="flex:1;min-width:80px;font-size:11.5px;color:${nextA?'#F2F2F4':'#5A5D64'}">${nextA?escHtml(nextA):''}</span>
+      <button class="btn btn-ghost btn-sm" style="padding:3px 10px" onclick="cxMoveOpenId=cxMoveOpenId==='${p.id}'?null:'${p.id}';renderPeople()">Move</button>
+      <button class="btn btn-ghost btn-sm" style="padding:3px 10px" onclick="cxQuickAddModal('${p.id}')">+</button>
+    </div>
+    ${moving?`<div style="margin-top:10px;padding-top:10px;border-top:1px solid #202127">${cxSegPills(p,'row')}</div>`:''}
+  </div>`;
+}
+function renderPeople(){
+  const host=document.getElementById('people-render'); if(!host) return;
+  crmTabsMount(peopleSegFilter==='pipeline'?'leads':CRM_TABS.some(t=>t[0]===peopleSegFilter)?peopleSegFilter:'');
+  if(personSelId){ renderPersonProfile(personSelId); return; }
+  cxLoadCoachNames();
+  const seg=peopleSegFilter;
+  const ppl=peopleAll().filter(p=>seg==='all'?true:personSegment(p)===seg);
+  const q=(peopleSearch||'').trim().toLowerCase();
+  const list=(q?ppl.filter(p=>((p.name||'')+' '+(p.co||'')).toLowerCase().includes(q)):ppl)
+    .sort((a,b)=>{
+      const ca=cxCadence(a),cb=cxCadence(b);
+      const rank=c=>!c?2:c.dot==='red'?0:c.dot==='amber'?1:2;
+      return rank(ca)-rank(cb)||String(a.name||'').localeCompare(String(b.name||''));
+    });
+  const ta=document.getElementById('topbar-actions'); if(ta) ta.innerHTML=`<button class="btn btn-ghost btn-sm" onclick="renderReclassify()">Reclassify</button><button class="btn btn-y btn-sm" onclick="personAddModal()">+ Add person</button>`;
+  host.innerHTML=`
+    ${seg==='onboarding'?'<div style="font-size:11.5px;color:#9BA0A8;margin-bottom:12px">Onboarding journeys land here. The step by step process is being finalised with Danny\'s team; until then this lists who is mid onboarding.</div>':''}
+    <div style="display:flex;gap:10px;align-items:center;margin-bottom:14px;flex-wrap:wrap">
+      <input class="form-input" id="people-search" placeholder="Search…" value="${escAttr(peopleSearch)}" style="max-width:260px" oninput="peopleSearch=this.value;renderPeople();const s=document.getElementById('people-search');if(s){s.focus();s.setSelectionRange(s.value.length,s.value.length);}">
+      <span style="font-size:11px;color:#9BA0A8">${list.length} ${seg==='all'?'people':'in '+(SEG_LABEL[seg]||'')}</span>
+    </div>
+    ${list.length?list.map(cxListRow).join(''):'<div class="card"><div style="font-size:13px;color:#9BA0A8">Nobody here yet.</div></div>'}
+  `;
+}
+// ── Full profile page ──
+function renderPersonProfile(id){
+  const host=document.getElementById('people-render'); if(!host) return;
+  const p=personById(id); if(!p){ personSelId=null; renderPeople(); return; }
+  cxLoadCoachNames();
+  const ta=document.getElementById('topbar-actions'); if(ta) ta.innerHTML='';
+  const seg=personSegment(p);
+  const cad=cxCadence(p);
+  const lc=cxLastContact(p);
+  const notes=cxNotes(p.id);
+  const acts=cxActions(p.id);
+  const sum=cxSummaryFor(p.id);
+  const cross=cxCrossProduct(p);
+  const L=personLinks(p);
+  const mem=(L.members||[]).find(m=>m.status==='active');
+  const related=(p.relatedIds||[]).map(rid=>personById(rid)).filter(Boolean);
+  const chip=(l,v)=>`<span style="background:#1E1F24;border:1px solid #2E2F35;border-radius:8px;padding:6px 12px;font-size:11px"><span style="color:#9BA0A8">${l}</span> <b style="color:#F2F2F4">${v}</b></span>`;
+  const ph=(v,placeholder)=>v?escHtml(v):`<span style="color:#5A5D64;font-style:italic">${placeholder}</span>`;
+  const noteRow=(n,full)=>`<div style="padding:9px 0;border-bottom:1px solid #202127">
+    <div style="font-size:9.5px;color:#7C8089;margin-bottom:3px">${fmtDate(n.date)} · ${n.src==='readai'?'Read.ai':n.src==='parsed'?'parsed notes':n.src==='imported'?'imported history':n.src==='action'?'action done':'manual'}${n.by&&n.src==='manual'?' · '+escHtml(n.by):''}</div>
+    <div style="font-size:12px;line-height:1.55;white-space:pre-wrap;${full?'':'max-height:200px;overflow:hidden'}">${escHtml(full?n.text:n.text.slice(0,900))}</div></div>`;
+  let cxShowAll=window.__cxShowAllNotes===p.id;
+  host.innerHTML=`
+    <span style="display:inline-block;font-size:12px;font-weight:700;color:#9BA0A8;cursor:pointer;margin-bottom:14px" onclick="personSelId=null;window.__cxShowAllNotes=null;renderPeople()">← ${SEG_LABEL[seg]||'List'}</span>
+    <div style="display:flex;gap:14px;align-items:center;flex-wrap:wrap;margin-bottom:14px">
+      ${cxAvatar(p,52)}
+      <div style="flex:1;min-width:200px">
+        <div style="font-family:var(--font-display);font-size:22px;font-weight:800;color:#fff">${escHtml(p.name)}${p.recordType==='company'?' <span class="tag" style="background:#1E1F24;color:var(--y);font-size:9px;border:1px solid #2E2F35">COMPANY ACCOUNT</span>':''}</div>
+        <div style="font-size:12px;color:#9BA0A8">${escHtml(p.co||'')}${mem?` · £${(mem.type==='existing_client'?(mem.clientFee||0):bFee(mem)).toLocaleString()}/mo`:''}${related.length?` · linked: ${related.map(r=>`<span style="color:var(--y);cursor:pointer" onclick="personSelId='${r.id}';renderPeople()">${escHtml(r.name)}</span>`).join(', ')}`:''}</div>
+      </div>
+      ${cross.length?`<span class="tag" style="background:#2A2416;color:#E6A23C;border:1px solid #4A3C1A;font-size:10px">Duplication detected: also in ${cross.join(', ')}</span>`:''}
+    </div>
+    <div style="margin-bottom:14px">${cxSegPills(p,'profile')}</div>
+    <div class="card" style="border-left:4px solid var(--y);margin-bottom:16px">
+      <div style="display:flex;gap:10px;align-items:baseline;flex-wrap:wrap;margin-bottom:8px">
+        <span style="font-size:10px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:var(--y)">Where this stands</span>
+        <span style="font-size:9.5px;color:#7C8089">${sum?'updated '+fmtShort(sum.at):''}</span>
+        <span style="flex:1"></span>
+        <button class="btn btn-ghost btn-sm" style="padding:2px 9px" onclick="cxSummaryRegen('${p.id}')">Regenerate</button>
+      </div>
+      <div style="font-size:13.5px;line-height:1.6;color:#F2F2F4">${sum?escHtml(sum.text):(notes.length?'Summary will appear after the next note is added, or tap Regenerate.':'Early days: nothing logged yet. Add the first note below and the summary writes itself.')}</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">
+        ${chip('Last contact',lc?fmtShort(lc):'none yet')}
+        ${chip('Next action',acts.length?escHtml(acts[0].text.slice(0,40)):'none set')}
+        ${sum?chip('Fit',sum.fit+'/10'):''}
+        ${cad?chip('Status',cad.zero?'no contact':cad.days+'d'):''}
+      </div>
+    </div>
+    <div class="grid-3" style="align-items:start">
+      <div class="card" style="margin-bottom:0">
+        <div class="card-title" style="color:#fff">Details</div>
+        ${['email','phone'].map(f=>`<div class="form-row" style="margin-bottom:8px"><label class="form-label">${f==='email'?'Email':'Phone'}</label><input class="form-input" id="cx-${f}" value="${escAttr(p[f]||'')}" placeholder="${f==='email'?'hi@tuf.com':'07000 000000'}"></div>`).join('')}
+        <div class="form-row" style="margin-bottom:8px"><label class="form-label">Company</label><input class="form-input" id="cx-co" value="${escAttr(p.co||'')}" placeholder="Company"></div>
+        <div class="form-row"><label class="form-label">Overview</label><textarea class="form-textarea" id="cx-desc" style="min-height:70px" placeholder="What they do, how we met, first impressions…">${escHtml(p.businessDesc||'')}</textarea></div>
+        <button class="btn btn-y btn-sm" onclick="cxDetailsSave('${p.id}')">Save details</button>
+      </div>
+      <div class="card" style="margin-bottom:0">
+        <div class="card-title" style="color:#fff">Notes</div>
+        <textarea class="form-textarea" id="cx-paste" style="min-height:64px" placeholder="Type a note, or paste raw meeting notes and let the app structure them…"></textarea>
+        <div style="display:flex;gap:6px;margin:8px 0 4px;flex-wrap:wrap">
+          <button class="btn btn-y btn-sm" onclick="cxManualNote('${p.id}')">Add note</button>
+          <button class="btn btn-ghost btn-sm" onclick="cxParsePaste('${p.id}')">Paste and structure</button>
+          <span id="cx-paste-status" style="font-size:10.5px;color:#9BA0A8;align-self:center"></span>
+        </div>
+        ${notes.length?noteRow(notes[0],true)+(notes.length>1?(cxShowAll?notes.slice(1).map(n=>noteRow(n,false)).join(''):`<button class="btn btn-ghost btn-sm" style="margin-top:8px" onclick="window.__cxShowAllNotes='${p.id}';renderPeople()">See all notes (${notes.length})</button>`):''):'<div style="font-size:11.5px;color:#5A5D64;padding:8px 0;font-style:italic">No notes yet.</div>'}
+      </div>
+      <div class="card" style="margin-bottom:0">
+        <div class="card-title" style="color:#fff">Next actions</div>
+        ${acts.length?acts.map(a=>`<div style="display:flex;gap:8px;align-items:flex-start;padding:8px 0;border-bottom:1px solid #202127">
+          ${cxDot(a.due&&a.due<new Date().toISOString().slice(0,10)?'red':a.due===new Date().toISOString().slice(0,10)?'amber':'green')}
+          <span style="flex:1;font-size:12px">${escHtml(a.text)}${a.due?`<span style="color:#7C8089;font-size:10px"> · ${fmtShort(a.due)}</span>`:''}</span>
+          <button class="btn btn-ghost btn-sm" style="padding:2px 9px" title="Done" onclick="cxCompleteAction('${p.id}','${a.id}');renderPeople();updateFollowupBadge()">✓</button>
+        </div>`).join(''):'<div style="font-size:11.5px;color:#5A5D64;padding:8px 0;font-style:italic">Nothing outstanding.</div>'}
+        <div style="display:flex;gap:6px;margin-top:10px">
+          <input class="form-input" id="cx-newact" placeholder="Add an action…" style="flex:1" onkeydown="if(event.key==='Enter')cxNewAction('${p.id}')">
+          <input class="form-input" type="date" id="cx-newact-due" style="max-width:140px">
+          <button class="btn btn-y btn-sm" onclick="cxNewAction('${p.id}')">+</button>
+        </div>
+      </div>
+    </div>
+  `;
+}
+function cxDetailsSave(id){
+  const g=k=>document.getElementById('cx-'+k);
+  personSync(id,{co:g('co').value.trim(),email:g('email').value.trim(),phone:g('phone').value.trim(),businessDesc:g('desc').value.trim()});
+  addNotif('Details saved');
+  renderPeople();
+}
+function cxManualNote(id){
+  const box=document.getElementById('cx-paste'); if(!box) return;
+  const t=box.value.trim(); if(!t) return;
+  cxAddNote(id,t,'manual');
+  renderPeople(); updateFollowupBadge();
+}
+function cxNewAction(id){
+  const t=document.getElementById('cx-newact').value.trim(); if(!t) return;
+  cxAddAction(id,t,document.getElementById('cx-newact-due').value||null);
+  renderPeople(); updateFollowupBadge();
+}
+
+// v74: sidebar badge now counts the Next Actions panel (overdue + due today).
+function updateFollowupBadge(){
+  try{
+    const n=cxBadgeCount();
+    const b=document.getElementById('sb-followup');
+    if(b){ b.textContent=n; b.style.display=n?'inline':'none'; }
+  }catch(e){}
 }
 
 // ═══ FOUNDER TO CEO POSITIONING (Playbook v3.1, 25 Aug 2026) ═════════════════
