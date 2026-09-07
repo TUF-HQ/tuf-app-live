@@ -1462,6 +1462,7 @@ function initApp(user){
   crmOnboardingMigrate();
   cxMigrate();
   cxV80Migrate();
+  cxV82DataPass();
   updateFollowupBadge();
   setTimeout(()=>{ try{ csuiteAutoRun(); }catch(e){} },8000);
   updateInboundBadge();
@@ -11573,6 +11574,96 @@ function cxV80Migrate(){
     setTimeout(()=>{ try{ cxSummaryRegen('mrjf08p7uyf4'); }catch(e){} },1500);
     setTimeout(()=>{ try{ cxSummaryRegen('mrjf08pfyipg'); }catch(e){} },12000);
   }catch(e){ console.warn('cxV80Migrate failed',e); }
+}
+// ── One shot data pass for JJ's brief section 15 (ledger tuf_crmv4_dataentry) ──
+// The 3 Sept notes are already on file; this enters the itemised next actions
+// as structured entries, fixes Zahid's segment drift, and corrects the wrong
+// actor in the stored notes (Danny where JJ's authoritative version says
+// Jasper: his meetings, his brother). Jane's own manual note is untouched.
+function cxV82DataPass(){
+  try{
+    if(!sbLoadOK) return;
+    if(ls.get('tuf_crmv4_dataentry',null)) return;
+    const ppl=peopleAll(); if(!ppl.length) return;
+    const byId={}; ppl.forEach(p=>byId[p.id]=p);
+    const MARIA='mtlqwobwzfer', GILES='mtlqwobw6f2m', DAN='mtlqwobwxaqu', ZAHID='mtbmrv8eujge', JANE='mtrapdatfs9s';
+    const zah=byId[ZAHID];
+    if(zah&&profileKey(zah.name)==='zahid hussein'&&personSegment(zah)!=='introducers'){
+      zah.segment='introducers'; zah.segmentAt=new Date().toISOString();
+      ls.set('tuf_people',ppl);
+    }
+    // Note text corrections, imported blobs only.
+    const notes=cxNotesAll(); let notesTouched=false;
+    const fix=(pid,pairs)=>{
+      (notes[pid]||[]).forEach(n=>{
+        if(n.src!=='imported') return;
+        let t=n.text;
+        pairs.forEach(([a,b])=>{ t=t.split(a).join(b); });
+        if(t!==n.text){ n.text=t; notesTouched=true; }
+      });
+    };
+    const attr=[['[2026-09-03 · Danny]','[2026-09-03 · Jasper]']];
+    fix(MARIA,attr); fix(GILES,attr);
+    fix(DAN,attr.concat([
+      ['send Danny his investor deck; Danny will share it with his brother','send his investor deck; Jasper will share it with his brother'],
+      ['Dan would like Danny to attend','Dan would like Jasper to attend'],
+      ["send it to Danny's brother","send it to Jasper's brother"]]));
+    fix(ZAHID,attr.concat([
+      ['Danny could initially join by week three','Jasper could initially join by week three']]));
+    (notes[ZAHID]||[]).forEach(n=>{
+      if(n.src==='imported'&&n.text.includes('EOS implementer')&&!n.text.includes('Philip Pfeifer')){
+        n.text+='\n\n(Confirmed: the EOS implementer they mentioned is a different person from Philip Pfeifer, the existing EOS Implementer Introducer already on file. Not yet named.)';
+        notesTouched=true;
+      }
+    });
+    if(notesTouched) ls.set('tuf_crm_notes',notes);
+    // Structured next actions, verbatim from the brief.
+    const acts=cxActionsAll(); let added=0;
+    const add=(pid,texts)=>{
+      if(!byId[pid]) return;
+      const arr=acts[pid]=acts[pid]||[];
+      texts.forEach(t=>{
+        if(arr.some(x=>x.text===t)) return;
+        arr.push({id:uid(),text:t,due:null,createdAt:'2026-09-03',createdBy:'Jasper',done:false}); added++;
+      });
+    };
+    add(MARIA,[
+      'Maintain and develop the relationship with Maria',
+      'Explore relevant introductions and opportunities through her network',
+      'Consider introducing her to Matt Harty when appropriate',
+      "Get Maria's company name from Danny"]);
+    add(GILES,[
+      'Check in with Giles regularly',
+      'Support him as he develops the men\'s event and support network',
+      'Continue exploring where his network and The Ultimate Founder could align']);
+    add(DAN,[
+      "Receive Dan's investor deck and send it to Jasper's brother",
+      'Consider introducing Dan to Barry Whelan',
+      "Follow up about speaking at one of Dan's events",
+      'Explore bringing Dan into The Ultimate Founder partner network',
+      'Stay in regular contact and continue developing the relationship',
+      "Get Dan's company name from Danny"]);
+    add(ZAHID,[
+      "Join Zahid and Jane's weekly 8:30 call by week three, then establish a monthly rhythm",
+      'Follow up with Zahid about his potential Boardroom referrals',
+      'Nudge the WillU team regarding their relationship with Zahid',
+      'Connect with the EOS implementer they mentioned (create a record only once he is named)',
+      'Develop the concept for a joint founder panel event: target audience, potential panellists, format',
+      'Consider whether a padel event could complement the panel or support wider client relationship building',
+      'Continue exploring a structured partnership with Zahid and Jane']);
+    add(JANE,[
+      'Arrange a game of golf with Jane soon',
+      'Clarify whether it is the Tony Nash or Paul Nash Group',
+      'Join the weekly 8:30 call by week three (shared with Zahid)',
+      'Connect with the EOS implementer they mentioned (create a record only once he is named)',
+      'Develop the concept for a joint founder panel event: target audience, potential panellists, format',
+      'Consider whether a padel event could complement the panel or support wider client relationship building',
+      'Continue exploring a structured partnership with Zahid and Jane']);
+    if(added) ls.set('tuf_crm_actions',acts);
+    ls.set('tuf_crmv4_dataentry',{at:new Date().toISOString(),by:CURRENT_USER,actions:added});
+    addNotif('CRM data pass done: '+added+' next actions entered for Maria, Giles, Dan, Zahid and Jane');
+    [MARIA,GILES,DAN,ZAHID,JANE].forEach((pid,i)=>{ setTimeout(()=>{ try{ cxSummaryRegen(pid); }catch(e){} },2000+i*8000); });
+  }catch(e){ console.warn('cxV82DataPass failed',e); }
 }
 
 // ═══ CRM v2 UI (v74) — dark module: hub, unified lists, full profile ══════════
