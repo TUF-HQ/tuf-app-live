@@ -11409,7 +11409,7 @@ async function cxParsePaste(personId){
   const say=m=>{ if(st) st.textContent=m; };
   say('Reading the notes…');
   try{
-    const data=await claudeCall({model:'claude-haiku-4-5-20251001',max_tokens:900,messages:[{role:'user',content:'Convert this raw meeting text (a Read.ai summary, email or notes) into structured CRM entries. Respond with ONLY JSON, no fences: {"notes":[{"date":"YYYY-MM-DD or empty if unknown","text":"a clean note in plain UK English, no hyphens"}],"actions":[{"text":"a specific next action in words","due":"YYYY-MM-DD or empty"}]}. Keep every substantive point; one note per topic; only real committed actions.\n\nRAW TEXT:\n'+raw.slice(0,6000)}]});
+    const data=await claudeCall({model:'claude-haiku-4-5-20251001',max_tokens:900,messages:[{role:'user',content:'Today is '+new Date().toISOString().slice(0,10)+'. Convert this raw meeting text (a Read.ai summary, email or notes) into structured CRM entries. Respond with ONLY JSON, no fences: {"notes":[{"date":"YYYY-MM-DD or empty if unknown","text":"a clean note in plain UK English, no hyphens"}],"actions":[{"text":"a specific next action in words","due":"YYYY-MM-DD or empty"}]}. Dates without a year are recent: resolve them against today, never to an earlier year. Keep every substantive point; one note per topic; only real committed actions.\n\nRAW TEXT:\n'+raw.slice(0,6000)}]});
     let t=(data.content&&data.content[0]&&data.content[0].text||'').replace(/```json/gi,'').replace(/```/g,'').trim();
     const s2=t.indexOf('{'); const e2=t.lastIndexOf('}');
     if(s2<0||e2<0) throw new Error('no json');
