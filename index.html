@@ -1464,6 +1464,7 @@ function initApp(user){
   cxMigrate();
   cxV80Migrate();
   cxV82DataPass();
+  cxV86LeadStages();
   updateFollowupBadge();
   setTimeout(()=>{ try{ csuiteAutoRun(); }catch(e){} },8000);
   updateInboundBadge();
@@ -4444,6 +4445,7 @@ const PEOPLE_LINK_STORES=['tuf_members','tuf_prospects','tuf_warm','tuf_boardroo
 // accepts it for the sign-on handoff.
 const SEGMENTS=[
   {id:'network',label:'Network'},
+  {id:'partnerships',label:'Partnerships'},
   {id:'introducers',label:'Introducers'},
   {id:'pipeline',label:'Leads'},
   {id:'onboarding',label:'Onboarding'},
@@ -11180,8 +11182,8 @@ function cleanMergeGo(aId,bId){
 // only: Jasper's remit as CRM manager. Thresholds live in crmSettings.
 const CRM_PAGES=['crmhub','crmclean','people','pipeline','members','inbound','onboarding','clientanalysis'];
 const CRM_TABS=[
-  ['crmhub','Hub'],['network','Network'],['introducers','Introducers'],['leads','Leads'],
-  ['onboarding','Onboarding'],['private121','121 Clients']];
+  ['crmhub','Hub'],['network','Network'],['partnerships','Partnerships'],['introducers','Introducers'],
+  ['leads','Leads'],['onboarding','Onboarding'],['private121','121 Clients']];
 function crmEl(){ return document.querySelector('[data-page=crmhub]'); }
 // Every tab routes into the one unified dark list. The old pipeline kanban,
 // members and onboarding pages still exist for deep links, off the CRM nav.
@@ -11430,16 +11432,63 @@ function cxLastContact(p){
 // Cadence per JJ's golden rules. Returns {dot:'green'|'amber'|'red', days, archive:bool, zero:bool}
 function cxCadence(p){
   const seg=personSegment(p); const s=crmSettings();
-  if(seg!=='introducers'&&seg!=='pipeline') return null;
+  if(seg!=='introducers'&&seg!=='pipeline'&&seg!=='partnerships') return null;
   const lc=cxLastContact(p);
   const days=crmDaysSince(lc);
-  if(seg==='introducers'){
+  if(seg==='introducers'||seg==='partnerships'){
+    // Same golden rule: red at 3 weeks, or immediately on zero contact ever.
     if(days===null) return {dot:'red',days:null,zero:true,archive:false};
     return {dot:days>s.followUpDays?'red':days>s.followUpWarnDays?'amber':'green',days,zero:false,archive:false};
   }
   // leads
   if(days===null) return {dot:'red',days:null,zero:true,archive:false};
   return {dot:days>s.followUpDays?'red':days>s.followUpWarnDays?'amber':'green',days,zero:false,archive:days>90};
+}
+// ── Lead sub-stages (v86, JJ) — a checklist of where a Lead is in the sales
+// journey, independent of the staleness cadence. Manual one-tap only, can be
+// set directly to any stage (no forced sequence). Leads only.
+const LEAD_STAGES=[
+  ['first_contact','First Contact'],
+  ['overview_call','Overview Call'],
+  ['boardroom_guest','Boardroom Guest'],
+  ['close_call','Close Call']
+];
+function cxLeadStage(p){ return (p&&p.leadStage)||'first_contact'; }
+function cxLeadStageLabel(p){ const f=LEAD_STAGES.find(s=>s[0]===cxLeadStage(p)); return f?f[1]:'First Contact'; }
+function cxSetLeadStage(personId,stage){
+  if(!LEAD_STAGES.some(s=>s[0]===stage)) return;
+  const ppl=peopleAll(); const p=ppl.find(x=>x.id===personId); if(!p) return;
+  if(p.leadStage===stage) return;
+  p.leadStage=stage; p.leadStageAt=new Date().toISOString().slice(0,10);
+  ls.set('tuf_people',ppl);
+  try{ journeyLog(p.name,'Lead stage: '+cxLeadStageLabel(p)); }catch(e){}
+  renderPeople(); updateFollowupBadge();
+}
+// Milestone strip for the profile: done stages filled, current highlighted,
+// each a one-tap setter.
+function cxLeadStageStrip(p){
+  const cur=cxLeadStage(p); const curIdx=LEAD_STAGES.findIndex(s=>s[0]===cur);
+  return `<div style="display:flex;gap:0;align-items:center;margin-bottom:16px;flex-wrap:wrap">
+    ${LEAD_STAGES.map(([id,label],i)=>{
+      const done=i<curIdx, active=i===curIdx;
+      return `${i?`<span style="width:22px;height:2px;background:${i<=curIdx?'var(--y)':'#2E2F35'};flex-shrink:0"></span>`:''}
+        <button title="Set stage to ${label}" onclick="cxSetLeadStage('${p.id}','${id}')" style="cursor:pointer;border-radius:20px;padding:5px 13px;font-size:10.5px;font-weight:${active?'800':'600'};font-family:Montserrat,sans-serif;border:1px solid ${active?'var(--y)':done?'#4d4a1f':'#2E2F35'};background:${active?'var(--y)':done?'#26240f':'transparent'};color:${active?'var(--k)':done?'var(--y)':'#9BA0A8'}">${done?'✓ ':''}${label}</button>`;
+    }).join('')}
+  </div>`;
+}
+// One-shot: JJ's known stages (ledger tuf_crmv5_leadstages).
+function cxV86LeadStages(){
+  try{
+    if(!sbLoadOK) return;
+    if(ls.get('tuf_crmv5_leadstages',null)) return;
+    const ppl=peopleAll(); if(!ppl.length) return;
+    let ch=false;
+    const set=(id,name,st)=>{ const p=ppl.find(x=>x.id===id); if(p&&profileKey(p.name)===profileKey(name)&&p.leadStage!==st){ p.leadStage=st; p.leadStageAt=new Date().toISOString().slice(0,10); ch=true; } };
+    set('mrjc5k1qw4wi','Kieran Turner','boardroom_guest');
+    set('mrjf08pfyipg','Oliver James','overview_call');
+    if(ch) ls.set('tuf_people',ppl);
+    ls.set('tuf_crmv5_leadstages',{at:new Date().toISOString(),by:CURRENT_USER});
+  }catch(e){}
 }
 // The hub's Next Actions feed: explicit actions plus staleness suggestions,
 // grouped Overdue / Due Today / Upcoming. Names appear here and nowhere else.
@@ -11451,7 +11500,7 @@ function cxCadence(p){
 function cxNextActions(){
   const today=new Date().toISOString().slice(0,10);
   const mk=()=>({overdue:[],today:[],upcoming:[]});
-  const groups={introducers:mk(),pipeline:mk(),onboarding:mk()};
+  const groups={partnerships:mk(),introducers:mk(),pipeline:mk(),onboarding:mk()};
   peopleAll().forEach(p=>{
     const seg=personSegment(p); if(!groups[seg]) return;
     const acts=cxActions(p.id);
@@ -11915,7 +11964,7 @@ function cxSegPills(p,ctx){
 let cxMoveOpenId=null;
 function cxQuickAddModal(personId){
   const p=personId?personById(personId):null;
-  const remit=peopleAll().filter(x=>['introducers','pipeline','onboarding'].includes(personSegment(x))).sort((a,b)=>(a.name||'').localeCompare(b.name||''));
+  const remit=peopleAll().filter(x=>['partnerships','introducers','pipeline','onboarding'].includes(personSegment(x))).sort((a,b)=>(a.name||'').localeCompare(b.name||''));
   showModal('Quick add',`
     ${p?`<div style="font-weight:700;margin-bottom:10px">${escHtml(p.name)}</div>`:`<div class="form-row"><label class="form-label">Who</label><select class="form-select" id="qa-who">${remit.map(x=>`<option value="${x.id}">${escHtml(x.name)}</option>`).join('')}</select></div>`}
     <div class="form-row"><label class="form-label">Note (optional)</label><textarea class="form-textarea" id="qa-note" style="min-height:60px" placeholder="What happened…"></textarea></div>
@@ -11953,7 +12002,7 @@ function renderCRMHub(){
   const ppl=peopleAll();
   const counts={}; SEGMENTS.forEach(sg=>counts[sg.id]=ppl.filter(p=>personSegment(p)===sg.id).length);
   const tiles=SEGMENTS.map(sg=>`<div onclick="crmTabGo('${sg.id==='pipeline'?'leads':sg.id}')" style="cursor:pointer;background:#141416;border:1px solid #26272B;border-radius:12px;padding:16px 18px;flex:1;min-width:130px">
-    <div style="font-family:var(--font-display);font-size:30px;font-weight:800;color:${['introducers','pipeline','onboarding'].includes(sg.id)?'var(--y)':'#F2F2F4'}">${counts[sg.id]}</div>
+    <div style="font-family:var(--font-display);font-size:30px;font-weight:800;color:${['partnerships','introducers','pipeline','onboarding'].includes(sg.id)?'var(--y)':'#F2F2F4'}">${counts[sg.id]}</div>
     <div style="font-size:9.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#9BA0A8;margin-top:4px">${sg.label}</div></div>`).join('');
   const na=cxNextActions();
   const naRow=r=>`<div style="display:flex;gap:10px;align-items:center;padding:8px 4px 8px 14px;border-bottom:1px solid #1B1C21">
@@ -11972,7 +12021,7 @@ function renderCRMHub(){
       ${naBucket('Overdue',b.overdue)}${naBucket('Due today',b.today)}${naBucket('Upcoming',b.upcoming)}
     </div>`;
   };
-  const naTotal=['introducers','pipeline','onboarding'].reduce((n,s)=>n+na[s].overdue.length+na[s].today.length+na[s].upcoming.length,0);
+  const naTotal=['partnerships','introducers','pipeline','onboarding'].reduce((n,s)=>n+na[s].overdue.length+na[s].today.length+na[s].upcoming.length,0);
   const legend=`<span style="display:inline-flex;gap:14px;align-items:center;font-size:10px;color:#9BA0A8;font-weight:600">
     <span style="display:inline-flex;gap:5px;align-items:center">${cxDot('red')} Overdue</span>
     <span style="display:inline-flex;gap:5px;align-items:center">${cxDot('amber')} Due soon</span>
@@ -11982,9 +12031,9 @@ function renderCRMHub(){
     <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:22px">${tiles}</div>
     <div class="sec-hdr" style="display:flex;align-items:center;gap:14px">Next Actions <span style="flex:1"></span>${legend}</div>
     <div class="card" style="padding:2px 18px 16px">
-      ${naTotal?naSeg('introducers','Introducers')+naSeg('pipeline','Leads')+naSeg('onboarding','Onboarding'):'<div style="font-size:13px;color:#9BA0A8;padding:14px 0">All clear. Log notes and actions as you go and this becomes your working day.</div>'}
+      ${naTotal?naSeg('partnerships','Partnerships')+naSeg('introducers','Introducers')+naSeg('pipeline','Leads')+naSeg('onboarding','Onboarding'):'<div style="font-size:13px;color:#9BA0A8;padding:14px 0">All clear. Log notes and actions as you go and this becomes your working day.</div>'}
     </div>
-    <div style="font-size:10.5px;color:#7C8089;margin-top:12px">The dot shows time since last contact against each segment's cadence. Introducers and Leads are tracked daily; Onboarding joins them once Danny's team confirms the process. Network and 121 Clients run on a quarterly rhythm and stay off this panel. Open a name for the action detail.</div>
+    <div style="font-size:10.5px;color:#7C8089;margin-top:12px">The dot shows time since last contact against each segment's cadence. Partnerships, Introducers and Leads are tracked daily; Onboarding joins them once Danny's team confirms the process. Network and 121 Clients run on a quarterly rhythm and stay off this panel. Open a name for the action detail.</div>
   `;
   updateFollowupBadge();
 }
@@ -12011,6 +12060,7 @@ function cxListRow(p){
     <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
       ${cxAvatar(p)}
       <span style="cursor:pointer;min-width:150px" onclick="personSelId='${p.id}';renderPeople()"><b style="font-size:13px">${escHtml(p.name)}</b>${p.co?`<span style="color:#9BA0A8;font-size:11.5px"> · ${escHtml(p.co)}</span>`:''}</span>
+      ${seg==='pipeline'?`<span class="tag" style="background:#1E1F24;color:var(--y);border:1px solid #3A3B42;font-size:9px" title="Lead stage">${cxLeadStageLabel(p)}</span>`:''}
       ${seg==='network'&&mem&&mem.type!=='existing_client'?'<span class="tag" style="background:#1E1F24;color:var(--y);border:1px solid #3A3B42;font-size:9px" title="Read only, managed by Joe under Products">Boardroom Member</span>':''}
       ${mid}
       <span style="flex:1;min-width:80px;font-size:11.5px;color:${nextA?'#F2F2F4':'#5A5D64'}">${nextA?escHtml(nextA):''}</span>
@@ -12100,6 +12150,7 @@ function renderPersonProfile(id){
     <div style="margin-bottom:14px;display:flex;gap:10px;align-items:center;flex-wrap:wrap">${cxSegPills(p,'profile')}
       ${seg!=='boardroom'?`<button class="btn btn-ghost btn-sm" style="border-color:var(--y);color:var(--y);font-size:10px;padding:3px 10px" title="Signed on: fee, member record, handed to Joe under Products" onclick="cxSignOn('${p.id}')">Signed → Boardroom</button>`:''}
     </div>
+    ${seg==='pipeline'?cxLeadStageStrip(p):''}
     <div class="card" style="border-left:4px solid var(--y);margin-bottom:16px">
       <div style="display:flex;gap:10px;align-items:baseline;flex-wrap:wrap;margin-bottom:8px">
         <span style="font-size:10px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:var(--y)">Where this stands</span>
