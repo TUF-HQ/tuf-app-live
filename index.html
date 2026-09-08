@@ -11744,7 +11744,7 @@ function cxV82DataPass(){
 // gracefully while the table does not exist yet: writes fail silently, the
 // timeline shows notes only, and lastContact falls back to the stored fields.
 // UI surfaces are individually revertible via STALE_UI.
-const STALE_UI={kanban:true,crmLeads:true,navItem:true};
+const STALE_UI={kanban:true,crmLeads:true,navItem:false};
 const ALOG_CONTACT_TYPES=['call','whatsapp','email','meeting'];
 let __alogAt=0, __alogBusy=false, __alogMissing=false;
 function alogWrite(personId,type,module,summary,metadata,occurredAt){
