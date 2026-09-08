@@ -11312,12 +11312,14 @@ async function cxLoadRemote(force){
     const map={};
     const actsAll=cxActionsAll(); let actsTouched=false;
     data.forEach(r=>{
+      if(r.src==='deleted') return; // JJ removed it in the app; the row stays so the agent never re-files the meeting
       const pid=(r.person_id&&idSet[r.person_id])?r.person_id:byKey[profileKey(r.person_key||'')];
       if(!pid) return;
-      let text=String(r.text||'');
+      const rawText=String(r.text||'');
+      let text=rawText;
       const acts=Array.isArray(r.actions)?r.actions:[];
       if(acts.length) text+='\n\nSuggested actions: '+acts.map(a=>String((a&&a.text)||a||'')).filter(Boolean).join('; ');
-      (map[pid]=map[pid]||[]).push({id:'r_'+r.id,date:r.note_date||'',src:r.src||'readai',text,by:r.created_by||'agent',remote:true});
+      (map[pid]=map[pid]||[]).push({id:'r_'+r.id,date:r.note_date||'',src:r.src||'readai',text,rawText,by:r.created_by||'agent',remote:true});
       // Agent-extracted actions become real Next Actions once, keyed by the
       // remote row id, so completing or re-loading never duplicates them.
       acts.forEach((a,i)=>{
@@ -11343,7 +11345,7 @@ async function cxLoadRemote(force){
   finally{ __cxRemoteBusy=false; }
 }
 function cxActionsAll(){ return ls.get('tuf_crm_actions',{})||{}; }
-function cxActions(personId){ return (cxActionsAll()[personId]||[]).filter(a=>!a.done); }
+function cxActions(personId){ return (cxActionsAll()[personId]||[]).filter(a=>!a.done&&!a.deleted); }
 function cxAddAction(personId,text,due){
   text=String(text||'').trim(); if(!text) return null;
   const all=cxActionsAll();
@@ -11381,33 +11383,43 @@ function cxCadence(p){
 }
 // The hub's Next Actions feed: explicit actions plus staleness suggestions,
 // grouped Overdue / Due Today / Upcoming. Names appear here and nowhere else.
-// Grouped by segment first (JJ's journey order), then urgency within each.
-// One row per PERSON with a count of outstanding actions; the action detail
-// lives on their profile. Network and 121 are never on this panel.
+// Grouped by segment (JJ's journey order), then REAL urgency buckets within
+// each: Overdue / Due Today / Upcoming. The status dot is driven purely by
+// time since last contact per the golden rule cadences; the bucket also
+// respects action due dates; the action count is context only and never
+// drives colour or order. Network and 121 are never on this panel.
 function cxNextActions(){
   const today=new Date().toISOString().slice(0,10);
-  const groups={introducers:[],pipeline:[],onboarding:[]};
-  const rank={red:0,amber:1,green:2};
+  const mk=()=>({overdue:[],today:[],upcoming:[]});
+  const groups={introducers:mk(),pipeline:mk(),onboarding:mk()};
   peopleAll().forEach(p=>{
     const seg=personSegment(p); if(!groups[seg]) return;
     const acts=cxActions(p.id);
-    let dot=null;
-    acts.forEach(a=>{ const d=a.due&&a.due<today?'red':a.due===today?'amber':'green'; if(dot===null||rank[d]<rank[dot]) dot=d; });
     const c=cxCadence(p);
-    let hint='';
-    if(c&&c.dot!=='green'){
-      if(!acts.length) hint=c.zero?'Make first contact, nothing logged yet':('Get back in touch, '+c.days+' days since contact'+(c.archive?' (consider archiving)':''));
-      if(dot===null||rank[c.dot]<rank[dot]) dot=c.dot;
+    if(!acts.length&&(!c||c.dot==='green')) return;
+    let actUrg='upcoming';
+    acts.forEach(a=>{ if(a.due&&a.due<today) actUrg='overdue'; else if(a.due===today&&actUrg!=='overdue') actUrg='today'; });
+    const cadUrg=c?(c.dot==='red'?'overdue':c.dot==='amber'?'today':'upcoming'):'upcoming';
+    const urg=(cadUrg==='overdue'||actUrg==='overdue')?'overdue':(cadUrg==='today'||actUrg==='today')?'today':'upcoming';
+    const dot=c?c.dot:'green';
+    let sinceTxt='', sortKey=0;
+    if(c&&c.zero){
+      const added=crmDaysSince(p.createdAt||p.segmentAt);
+      sinceTxt='No contact yet'+(added!==null&&added>=0?' — added '+added+' day'+(added===1?'':'s')+' ago':'');
+      sortKey=100000+(added||0);
+    } else if(c){
+      sortKey=c.days||0;
+      sinceTxt=(c.days!==null&&c.days!==undefined)?c.days+'d since contact'+(c.archive?' · consider archiving':''):'';
     }
-    if(!acts.length&&!hint) return;
-    groups[seg].push({personId:p.id,name:p.name,seg,count:acts.length,dot:dot||'green',hint});
+    groups[seg][urg].push({personId:p.id,name:p.name,seg,count:acts.length,dot,sinceTxt,sortKey});
   });
-  Object.keys(groups).forEach(k=>groups[k].sort((a,b)=>rank[a.dot]-rank[b.dot]||b.count-a.count||String(a.name).localeCompare(String(b.name))));
+  Object.keys(groups).forEach(s=>['overdue','today','upcoming'].forEach(u=>
+    groups[s][u].sort((a,b)=>b.sortKey-a.sortKey||String(a.name).localeCompare(String(b.name)))));
   return groups;
 }
 function cxBadgeCount(){
   const g=cxNextActions(); let n=0;
-  Object.keys(g).forEach(k=>g[k].forEach(r=>{ if(r.dot!=='green') n++; }));
+  Object.keys(g).forEach(s=>{ n+=g[s].overdue.length+g[s].today.length; });
   return n;
 }
 // Cross product duplication: the same name also lives in another product area.
@@ -11720,24 +11732,35 @@ function renderCRMHub(){
     <div style="font-family:var(--font-display);font-size:30px;font-weight:800;color:${['introducers','pipeline','onboarding'].includes(sg.id)?'var(--y)':'#F2F2F4'}">${counts[sg.id]}</div>
     <div style="font-size:9.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#9BA0A8;margin-top:4px">${sg.label}</div></div>`).join('');
   const na=cxNextActions();
-  const naRow=r=>`<div style="display:flex;gap:10px;align-items:center;padding:9px 4px;border-bottom:1px solid #202127">
+  const naRow=r=>`<div style="display:flex;gap:10px;align-items:center;padding:8px 4px 8px 14px;border-bottom:1px solid #1B1C21">
     ${cxDot(r.dot)}
-    <span style="cursor:pointer;flex:1;min-width:0;font-size:12.5px" onclick="personSelId='${r.personId}';navPeople('${r.seg}',crmEl())"><b>${escHtml(r.name)}</b> <span style="color:#9BA0A8">— ${r.count?r.count+' action'+(r.count>1?'s':'')+' outstanding':escHtml(r.hint)}</span></span>
+    <span style="cursor:pointer;flex:1;min-width:0;font-size:12.5px" onclick="personSelId='${r.personId}';navPeople('${r.seg}',crmEl())"><b>${escHtml(r.name)}</b> <span style="color:#9BA0A8">${r.count?'— '+r.count+' action'+(r.count>1?'s':''):''}${r.count&&r.sinceTxt?' · ':(r.sinceTxt?'— ':'')}${escHtml(r.sinceTxt)}</span></span>
     <button class="btn btn-ghost btn-sm" style="padding:2px 9px" title="Add a note or action" onclick="cxQuickAddModal('${r.personId}')">+</button>
   </div>`;
-  const urgOrder={red:0,amber:1,green:2};
+  const naBucket=(label,rows)=>`
+    <div style="font-size:9.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:#7C8089;margin:10px 0 0 14px">${label} (${rows.length})</div>
+    ${rows.map(naRow).join('')}`;
   const naSeg=(segId,label)=>{
-    const rows=na[segId]||[]; if(!rows.length) return '';
-    return `<div style="font-size:10px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:var(--y);margin:16px 0 2px;display:flex;align-items:center;gap:8px">${label} <span style="opacity:.6;color:#9BA0A8">${rows.length}</span><span style="flex:1"></span><button class="btn btn-ghost btn-sm" style="padding:1px 8px" title="Quick add a note or action" onclick="cxQuickAddModal('')">+</button></div>${rows.map(naRow).join('')}`;
+    const b=na[segId]; const total=b.overdue.length+b.today.length+b.upcoming.length;
+    if(!total) return '';
+    return `<div style="margin-top:20px;padding-top:14px;border-top:1px solid #26272B">
+      <div style="font-size:11px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:var(--y);display:flex;align-items:center;gap:8px">${label} <span style="opacity:.6;color:#9BA0A8">${total}</span><span style="flex:1"></span><button class="btn btn-ghost btn-sm" style="padding:1px 8px" title="Quick add a note or action" onclick="cxQuickAddModal('')">+</button></div>
+      ${naBucket('Overdue',b.overdue)}${naBucket('Due today',b.today)}${naBucket('Upcoming',b.upcoming)}
+    </div>`;
   };
-  const naTotal=(na.introducers||[]).length+(na.pipeline||[]).length+(na.onboarding||[]).length;
+  const naTotal=['introducers','pipeline','onboarding'].reduce((n,s)=>n+na[s].overdue.length+na[s].today.length+na[s].upcoming.length,0);
+  const legend=`<span style="display:inline-flex;gap:14px;align-items:center;font-size:10px;color:#9BA0A8;font-weight:600">
+    <span style="display:inline-flex;gap:5px;align-items:center">${cxDot('red')} Overdue</span>
+    <span style="display:inline-flex;gap:5px;align-items:center">${cxDot('amber')} Due soon</span>
+    <span style="display:inline-flex;gap:5px;align-items:center">${cxDot('green')} On track</span>
+  </span>`;
   host.innerHTML=`
     <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:22px">${tiles}</div>
-    <div class="sec-hdr">Next Actions</div>
-    <div class="card" style="padding:8px 18px 14px">
+    <div class="sec-hdr" style="display:flex;align-items:center;gap:14px">Next Actions <span style="flex:1"></span>${legend}</div>
+    <div class="card" style="padding:2px 18px 16px">
       ${naTotal?naSeg('introducers','Introducers')+naSeg('pipeline','Leads')+naSeg('onboarding','Onboarding'):'<div style="font-size:13px;color:#9BA0A8;padding:14px 0">All clear. Log notes and actions as you go and this becomes your working day.</div>'}
     </div>
-    <div style="font-size:10.5px;color:#7C8089;margin-top:12px">Introducers and Leads are tracked daily. Onboarding joins them once Danny's team confirms the process. Network and 121 Clients run on a quarterly rhythm and stay off this panel. Open a name for the action detail.</div>
+    <div style="font-size:10.5px;color:#7C8089;margin-top:12px">The dot shows time since last contact against each segment's cadence. Introducers and Leads are tracked daily; Onboarding joins them once Danny's team confirms the process. Network and 121 Clients run on a quarterly rhythm and stay off this panel. Open a name for the action detail.</div>
   `;
   updateFollowupBadge();
 }
@@ -11831,7 +11854,7 @@ function renderPersonProfile(id){
         <span style="flex:1;min-width:0;font-size:12px;color:#F2F2F4;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escHtml(noteTitle(n))}</span>
         <span style="font-size:10px;color:#7C8089;flex-shrink:0">${fmtShort(n.date)}</span>
       </div>
-      ${open?`<div style="font-size:12px;line-height:1.55;white-space:pre-wrap;padding:0 0 10px 17px;color:#D9DBDF">${escHtml(n.text)}<div style="font-size:9.5px;color:#7C8089;margin-top:6px">${fmtDate(n.date)} · ${srcLabel(n)}${n.by?' · '+escHtml(n.by):''}</div></div>`:''}
+      ${open?`<div style="font-size:12px;line-height:1.55;white-space:pre-wrap;padding:0 0 10px 17px;color:#D9DBDF">${escHtml(n.text)}<div style="display:flex;gap:8px;align-items:center;font-size:9.5px;color:#7C8089;margin-top:6px">${fmtDate(n.date)} · ${srcLabel(n)}${n.by?' · '+escHtml(n.by):''}${n.editedAt?' · edited by '+escHtml(n.editedBy||''):''}<span style="flex:1"></span><button class="btn btn-ghost btn-sm" style="padding:1px 7px;font-size:9px" title="Edit this note" onclick="event.stopPropagation();cxNoteEdit('${p.id}','${n.id}')">✎ Edit</button><button class="btn btn-ghost btn-sm" style="padding:1px 7px;font-size:9px" title="Delete this note" onclick="event.stopPropagation();cxNoteDelete('${p.id}','${n.id}')">✕ Delete</button></div></div>`:''}
     </div>`;
   };
   host.innerHTML=`
@@ -11886,7 +11909,9 @@ function renderPersonProfile(id){
         <div class="card-title" style="color:#fff">Next actions</div>
         ${acts.length?acts.map(a=>`<div style="display:flex;gap:8px;align-items:flex-start;padding:8px 0;border-bottom:1px solid #202127">
           ${cxDot(a.due&&a.due<new Date().toISOString().slice(0,10)?'red':a.due===new Date().toISOString().slice(0,10)?'amber':'green')}
-          <span style="flex:1;font-size:12px">${escHtml(a.text)}${a.due?`<span style="color:#7C8089;font-size:10px"> · ${fmtShort(a.due)}</span>`:''}</span>
+          <span style="flex:1;font-size:12px">${escHtml(a.text)}${a.due?`<span style="color:#7C8089;font-size:10px"> · ${fmtShort(a.due)}</span>`:''}${a.editedAt?`<span style="color:#7C8089;font-size:9.5px"> · edited</span>`:''}</span>
+          <button class="btn btn-ghost btn-sm" style="padding:2px 8px" title="Edit this action" onclick="cxActionEdit('${p.id}','${a.id}')">✎</button>
+          <button class="btn btn-ghost btn-sm" style="padding:2px 8px" title="Delete: it will not come back if the source is processed again" onclick="cxActionDelete('${p.id}','${a.id}')">✕</button>
           <button class="btn btn-ghost btn-sm" style="padding:2px 9px" title="Done" onclick="cxCompleteAction('${p.id}','${a.id}');renderPeople();updateFollowupBadge()">✓</button>
         </div>`).join(''):'<div style="font-size:11.5px;color:#5A5D64;padding:8px 0;font-style:italic">Nothing outstanding.</div>'}
         <div style="display:flex;gap:6px;margin-top:10px">
@@ -11938,6 +11963,85 @@ function cxDetailsSave(id){
   personSync(id,{co:g('co').value.trim(),email:g('email').value.trim(),phone:g('phone').value.trim(),businessDesc:g('desc').value.trim()});
   addNotif('Details saved');
   renderPeople();
+}
+// ── Editing and deleting notes and actions (JJ fix 2) ──
+// AI and Read.ai output will sometimes be wrong; JJ's correction is the record
+// of truth. Actions are tombstoned rather than removed so a deleted Read.ai
+// action can never be regenerated on the next load; edited remote notes update
+// the shared crm_notes row, and deleted ones keep their row (src 'deleted') so
+// the agent's meeting_id idempotency still blocks a re-file.
+function cxActionEdit(personId,actionId){
+  const a=(cxActionsAll()[personId]||[]).find(x=>x.id===actionId); if(!a) return;
+  showModal('Edit action',`
+    <div class="form-row"><label class="form-label">Action</label><input class="form-input" id="cxe-text" value="${escAttr(a.text)}"></div>
+    <div class="form-row"><label class="form-label">Due (optional)</label><input class="form-input" type="date" id="cxe-due" value="${a.due||''}"></div>
+  `,`<button class="btn btn-ghost" onclick="closeModal()">Cancel</button><button class="btn btn-y" onclick="cxActionEditSave('${personId}','${actionId}')">Save</button>`);
+}
+function cxActionEditSave(personId,actionId){
+  const all=cxActionsAll(); const a=(all[personId]||[]).find(x=>x.id===actionId); if(!a) return;
+  const t=document.getElementById('cxe-text').value.trim(); if(!t){ alert('The action cannot be empty. Use delete to remove it.'); return; }
+  a.text=t.slice(0,200); a.due=document.getElementById('cxe-due').value||null;
+  a.editedBy=CURRENT_USER; a.editedAt=new Date().toISOString().slice(0,10);
+  ls.set('tuf_crm_actions',all);
+  closeModal(); renderPeople(); updateFollowupBadge();
+}
+function cxActionDelete(personId,actionId){
+  const all=cxActionsAll(); const a=(all[personId]||[]).find(x=>x.id===actionId); if(!a) return;
+  if(!confirm('Delete this action? It stays deleted even if the source note is ever processed again.')) return;
+  a.deleted=true; a.deletedBy=CURRENT_USER; a.deletedAt=new Date().toISOString().slice(0,10);
+  ls.set('tuf_crm_actions',all);
+  renderPeople(); updateFollowupBadge();
+}
+function cxNoteEdit(personId,noteId){
+  const isRemote=String(noteId).indexOf('r_')===0;
+  let text='';
+  if(isRemote){
+    const r=(((window.__cxRemoteNotes||{})[personId])||[]).find(n=>n.id===noteId); if(!r) return;
+    text=r.rawText!==undefined?r.rawText:r.text;
+  } else {
+    const n=(cxNotesAll()[personId]||[]).find(x=>x.id===noteId); if(!n) return;
+    text=n.text;
+  }
+  showModal('Edit note',`
+    <textarea class="form-textarea" id="cxe-note" style="min-height:150px">${escHtml(text)}</textarea>
+    ${isRemote?'<div style="font-size:10.5px;color:var(--mut);margin-top:6px">This is a Read.ai note. Your correction updates the shared record and becomes the version of truth; the automation never overwrites it.</div>':''}
+  `,`<button class="btn btn-ghost" onclick="closeModal()">Cancel</button><button class="btn btn-y" onclick="cxNoteEditSave('${personId}','${noteId}')">Save</button>`);
+}
+async function cxNoteEditSave(personId,noteId){
+  const t=document.getElementById('cxe-note').value.trim(); if(!t){ alert('The note cannot be empty. Use delete to remove it.'); return; }
+  if(String(noteId).indexOf('r_')===0){
+    try{
+      const {error}=await sb.from('crm_notes').update({text:t}).eq('id',String(noteId).slice(2));
+      if(error) throw error;
+      closeModal(); addNotif('Note corrected: your version is now the record');
+      __cxRemoteAt=0; await cxLoadRemote(true); renderPeople();
+    }catch(e){ alert('Could not save the correction. Check the connection and try again.'); }
+    return;
+  }
+  const all=cxNotesAll(); const n=(all[personId]||[]).find(x=>x.id===noteId); if(!n) return;
+  n.text=t; n.editedBy=CURRENT_USER; n.editedAt=new Date().toISOString().slice(0,10);
+  ls.set('tuf_crm_notes',all);
+  closeModal(); renderPeople();
+  cxSummaryRegen(personId);
+}
+async function cxNoteDelete(personId,noteId){
+  if(String(noteId).indexOf('r_')===0){
+    if(!confirm('Delete this Read.ai note for everyone? The automation will not re-file it.')) return;
+    try{
+      const {error}=await sb.from('crm_notes').update({src:'deleted'}).eq('id',String(noteId).slice(2));
+      if(error) throw error;
+      addNotif('Note deleted');
+      __cxRemoteAt=0; await cxLoadRemote(true); renderPeople(); updateFollowupBadge();
+    }catch(e){ alert('Could not delete the note. Check the connection and try again.'); }
+    return;
+  }
+  const all=cxNotesAll(); const arr=all[personId]||[];
+  const n=arr.find(x=>x.id===noteId); if(!n) return;
+  if(!confirm('Delete this note? This removes it from the record permanently.')) return;
+  all[personId]=arr.filter(x=>x.id!==noteId);
+  ls.set('tuf_crm_notes',all);
+  renderPeople(); updateFollowupBadge();
+  cxSummaryRegen(personId);
 }
 // Manual staleness override (JJ spec 4): stamps today as last contact with no
 // note, for contact that happened outside the app. cxLastContact takes the
