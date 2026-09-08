@@ -11364,7 +11364,7 @@ async function cxLoadRemote(force){
   if(!force && (Date.now()-__cxRemoteAt)<5*60*1000) return;
   __cxRemoteBusy=true;
   try{
-    const {data,error}=await sb.from('crm_notes').select('id,person_key,person_id,note_date,src,text,actions,created_by').order('note_date',{ascending:false}).limit(500);
+    const {data,error}=await sb.from('crm_notes').select('id,person_key,person_id,note_date,src,text,actions,created_by,meeting_id').order('note_date',{ascending:false}).limit(500);
     if(error||!Array.isArray(data)){ __cxRemoteAt=Date.now(); return; }
     const ppl=peopleAll(); const idSet={}; const byKey={};
     ppl.forEach(p=>{ idSet[p.id]=1; byKey[profileKey(p.name)]=p.id; });
@@ -11378,7 +11378,7 @@ async function cxLoadRemote(force){
       let text=rawText;
       const acts=Array.isArray(r.actions)?r.actions:[];
       if(acts.length) text+='\n\nSuggested actions: '+acts.map(a=>String((a&&a.text)||a||'')).filter(Boolean).join('; ');
-      (map[pid]=map[pid]||[]).push({id:'r_'+r.id,date:r.note_date||'',src:r.src||'readai',text,rawText,by:r.created_by||'agent',remote:true});
+      (map[pid]=map[pid]||[]).push({id:'r_'+r.id,date:r.note_date||'',src:r.src||'readai',text,rawText,by:r.created_by||'agent',remote:true,meetingId:(r.meeting_id||'').split('#')[0]});
       // Agent-extracted actions become real Next Actions once, keyed by the
       // remote row id, so completing or re-loading never duplicates them.
       acts.forEach((a,i)=>{
@@ -12133,7 +12133,7 @@ function renderPersonProfile(id){
         <span style="flex:1;min-width:0;font-size:12px;color:#F2F2F4;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escHtml(noteTitle(n))}</span>
         <span style="font-size:10px;color:#7C8089;flex-shrink:0">${fmtShort(n.date)}</span>
       </div>
-      ${open?`<div style="font-size:12px;line-height:1.55;white-space:pre-wrap;padding:0 0 10px 17px;color:#D9DBDF">${escHtml(n.text)}<div style="display:flex;gap:8px;align-items:center;font-size:9.5px;color:#7C8089;margin-top:6px">${fmtDate(n.date)} · ${srcLabel(n)}${n.by?' · '+escHtml(n.by):''}${n.editedAt?' · edited by '+escHtml(n.editedBy||''):''}<span style="flex:1"></span><button class="btn btn-ghost btn-sm" style="padding:1px 7px;font-size:9px" title="Edit this note" onclick="event.stopPropagation();cxNoteEdit('${p.id}','${n.id}')">✎ Edit</button><button class="btn btn-ghost btn-sm" style="padding:1px 7px;font-size:9px" title="Delete this note" onclick="event.stopPropagation();cxNoteDelete('${p.id}','${n.id}')">✕ Delete</button></div></div>`:''}
+      ${open?`<div style="font-size:12px;line-height:1.55;white-space:pre-wrap;padding:0 0 10px 17px;color:#D9DBDF">${escHtml(n.text)}<div style="display:flex;gap:8px;align-items:center;font-size:9.5px;color:#7C8089;margin-top:6px">${fmtDate(n.date)} · ${srcLabel(n)}${n.by?' · '+escHtml(n.by):''}${n.editedAt?' · edited by '+escHtml(n.editedBy||''):''}${n.remote&&n.meetingId&&/^[0-9A-Z]{26}$/.test(n.meetingId)?` · <a href="https://app.read.ai/analytics/meetings/${n.meetingId}" target="_blank" rel="noopener" style="color:var(--y)" onclick="event.stopPropagation()">View in Read.ai</a>`:''}<span style="flex:1"></span><button class="btn btn-ghost btn-sm" style="padding:1px 7px;font-size:9px" title="Edit this note" onclick="event.stopPropagation();cxNoteEdit('${p.id}','${n.id}')">✎ Edit</button><button class="btn btn-ghost btn-sm" style="padding:1px 7px;font-size:9px" title="Delete this note" onclick="event.stopPropagation();cxNoteDelete('${p.id}','${n.id}')">✕ Delete</button></div></div>`:''}
     </div>`;
   };
   host.innerHTML=`
