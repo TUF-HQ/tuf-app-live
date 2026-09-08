@@ -506,6 +506,7 @@ details>summary::-webkit-details-marker{display:none}
 
     <div class="sb-section">CRM</div>
     <div class="sb-item" data-page="crmhub" onclick="nav('crmhub',this)">CRM <span class="sb-badge" id="sb-followup" style="background:var(--red);display:none">0</span> <span class="sb-badge amb" id="sb-inbound" style="display:none">0</span></div>
+    <div class="sb-item" data-page="pipeline" id="sb-item-pipeline" onclick="nav('pipeline',this)">Sales Pipeline <span class="sb-badge" id="sb-pipealerts" style="background:var(--red);display:none">0</span></div>
     <div class="sb-item" data-page="coaching" onclick="nav('coaching',this)">Coaching</div>
 
     <div class="sb-section">Products</div>
@@ -1735,7 +1736,7 @@ function seedDefaultData(){
 const PAGE_TITLES = {
   myday:'My Day',
   home:'Morning Brief',teamoverview:'Team Overview',tasks:'Tasks',transcript:'Meeting Notes → Tasks',
-  people:'Network',members:'Boardroom Members',pipeline:'Leads',inbound:'Inbound Leads',dannycal:"Danny's Calendar",
+  people:'Network',members:'Boardroom Members',pipeline:'Sales Pipeline',inbound:'Inbound Leads',dannycal:"Danny's Calendar",
   boardroom:'Boardroom',crmhub:'CRM',crmclean:'CRM Cleanup',content:'Content Calendar',social:'Social Media',kpis:'KPIs',aidump:'AI Tool (Dump)',buildreq:'Build Requests',clientanalysis:'Client Analysis',emaillist:'Email List',watemplates:'WhatsApp Templates',
   testimonials:'Testimonials',
   onboarding:'Onboarding',sessions:'Session Planner',padel:'Padel Event',
@@ -2476,10 +2477,15 @@ function renderBriefPosting(){
   el.innerHTML = plannedNudge + overdue.map(p=>row(p,'OVERDUE','var(--red)')).join('') + todays.map(p=>row(p,'TODAY','var(--amb)')).join('');
 }
 function markPosted(id){ const list=ls.get('tuf_content',[]); const i=list.findIndex(x=>x.id===id); if(i<0)return; list[i].status='Posted'; ls.set('tuf_content',list); addNotif(`Marked posted: "${list[i].title}"`); renderBriefPosting(); }
+// v84: a completed task linked to a person lands on their activity timeline.
+function alogTaskDone(t){
+  try{ if(t&&t.linkedTo&&String(t.linkedTo).indexOf('person:')===0&&typeof alogWrite==='function') alogWrite(String(t.linkedTo).slice(7),'task_done','tasks','Task done: '+(t.title||''),null); }catch(e){}
+}
 async function quickCompleteTask(id){
   const cur = ls.get('tuf_tasks',[]).find(t=>t.id===id);
   if(!cur) return;
   const ns = cur.status==='Done'?'To Do':'Done';
+  if(ns==='Done') alogTaskDone(cur);
   const patch = { status: ns, completedAt: ns==='Done'?new Date().toISOString():null };
   patchLocalTask(id, patch);            // instant UI
   renderBriefTasks();
@@ -2669,6 +2675,7 @@ async function cycleTaskStatus(id){
   const cur = ls.get('tuf_tasks',[]).find(t=>t.id===id); if(!cur) return;
   const next = {'To Do':'In Progress','In Progress':'Done','Done':'To Do'};
   const ns = next[cur.status]||'To Do';
+  if(ns==='Done') alogTaskDone(cur);
   const patch = { status: ns, completedAt: ns==='Done'?new Date().toISOString():null };
   patchLocalTask(id, patch);            // instant UI
   renderTasks();
@@ -2767,7 +2774,7 @@ async function updateTask(id){
     if(!wasDone && arr[i].status==='Done') became=true;
   });
   syncBoardroomFromTask(id);
-  if(became){ const t=ls.get('tuf_tasks',[]).find(x=>x.id===id); if(t){ addNotif(`Task done: "${t.title}"`); sendTaskCompleteEmail(t).catch(()=>{}); } }
+  if(became){ const t=ls.get('tuf_tasks',[]).find(x=>x.id===id); if(t){ addNotif(`Task done: "${t.title}"`); alogTaskDone(t); sendTaskCompleteEmail(t).catch(()=>{}); } }
   renderTasks(); renderBriefTasks();
 }
 
@@ -5095,17 +5102,24 @@ function crmSegmentFixV2(){
 }
 function renderPipeline(){
   crmTabsMount('leads');
+  alogLoad();
   const tabBar = document.getElementById('pipeline-tabs');
   const tabContent = document.getElementById('pipeline-tab-content');
   if(!tabBar || !tabContent) return;
   const newLeads = ls.get('tuf_event_leads',[]).filter(l=>l.status==='New Lead').length;
   const today=new Date().toISOString().slice(0,10);
   const dueCount=(ls.get('tuf_prospects',[])||[]).filter(p=>prospectDue(p,today)).length;
+  const alerts=pipelineAlertsNow();
   tabBar.innerHTML=`
+    ${alerts.length?`<div class="card" style="width:100%;border-left:4px solid var(--red);margin-bottom:12px;padding:12px 16px">
+      <div style="font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;margin-bottom:4px">Needs attention <span style="color:var(--mut);font-weight:600">${alerts.length} prospect${alerts.length>1?'s':''} overdue or going cold</span></div>
+      ${staleAlertRowsHtml(alerts,false)}
+    </div>`:''}
     <button class="btn ${pipelineTab==='followups'?'btn-k':'btn-ghost'} btn-sm" onclick="setPipelineTab('followups')">Follow-ups ${dueCount?`<span style="background:var(--red);color:#fff;border-radius:10px;font-size:9px;padding:1px 5px;margin-left:4px">${dueCount}</span>`:''}</button>
     <button class="btn ${pipelineTab==='pipeline'?'btn-k':'btn-ghost'} btn-sm" onclick="setPipelineTab('pipeline')">Sales Pipeline</button>`;
   if(pipelineTab==='followups') renderFollowups();
   else renderKanban();
+  updatePipelineBadge();
 }
 function setPipelineTab(t){pipelineTab=t;renderPipeline();}
 let pipelineTab='followups';
@@ -5197,7 +5211,9 @@ function saveLogContact(id){
   list[i].lastContact=new Date().toISOString().slice(0,10);
   list[i].nextAction=(document.getElementById('lc-action')?.value||'').trim();
   list[i].nextActionDate=document.getElementById('lc-date')?.value||'';
-  ls.set('tuf_prospects',list); closeModal(); renderPipeline();
+  ls.set('tuf_prospects',list);
+  alogWrite(list[i].personId,'note','pipeline','Contact logged'+(list[i].nextAction?' — next: '+list[i].nextAction:''),null);
+  closeModal(); renderPipeline();
 }
 function draftFollowupModal(id){
   const p=(ls.get('tuf_prospects',[])||[]).find(x=>x.id===id); if(!p) return;
@@ -5259,17 +5275,21 @@ function renderKanban(){
     </div>
     <div class="kanban" style="grid-template-columns:repeat(${STAGES.length},1fr)">
       ${STAGES.map(stage=>{
-        const cards=prospects.filter(p=>p.stage===stage);
+        const alertIds=STALE_UI.kanban?new Set(pipelineAlertsNow().map(a=>a.id)):new Set();
+        const cards=prospects.filter(p=>p.stage===stage)
+          .map((p,i)=>({p,i}))
+          .sort((a,b)=>(alertIds.has(b.p.id)?1:0)-(alertIds.has(a.p.id)?1:0)||a.i-b.i)
+          .map(x=>x.p);
         return `<div class="k-col">
           <div class="k-col-hdr">${stage}<span>${cards.length}</span></div>
-          ${cards.map(p=>`<div class="k-card" onclick="editProspectModal('${p.id}')">
+          ${cards.map(p=>`<div class="k-card" style="${alertIds.has(p.id)?'border-left:3px solid var(--red)':''}" onclick="editProspectModal('${p.id}')">
             <div style="display:flex;align-items:flex-start;justify-content:space-between">
               <div><div class="k-name">${escHtml(p.name)}</div><div class="k-co">${escHtml(p.co)}</div></div>
               ${p.score?`<span style="font-family:Montserrat,sans-serif;font-size:13px;font-weight:800;color:${p.score>=8?'var(--grn)':p.score>=5?'var(--amb)':'var(--red)'}">${p.score}</span>`:''}
             </div>
             <div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:4px">
               ${p.temp?`<span class="tag ${p.temp==='Hot'?'tag-r':p.temp==='Warm'?'tag-a':'tag-b'}" style="font-size:9px">${p.temp}</span>`:''}
-              ${getStaleLabel(p.lastContact)?`<span class="tag tag-r" style="font-size:9px">${getStaleLabel(p.lastContact)}</span>`:''}
+              ${getStaleLabel(derivedLastContact(p))?`<span class="tag tag-r" style="font-size:9px">${getStaleLabel(derivedLastContact(p))}</span>`:''}
             </div>
             ${p.email||p.phone?`<div style="display:flex;gap:6px;margin-top:4px">${p.email?`<a href="mailto:${escHtml(p.email)}" style="font-size:9px;color:var(--blu)" onclick="event.stopPropagation()">Email</a>`:''} ${p.phone?`<a href="tel:${escHtml(p.phone)}" style="font-size:9px;color:var(--grn)" onclick="event.stopPropagation()">Call</a>`:''}</div>`:''}
             ${(p.nextAction||p.nextActionDate)?`<div style="font-size:10px;color:var(--mut);margin-top:4px">${escHtml(p.nextAction||'')}${p.nextActionDate?` <span style="font-weight:700;color:${(p.nextActionDate<new Date().toISOString().slice(0,10))?'var(--red)':'var(--blu)'}">· ${fmtShort(p.nextActionDate)}</span>`:''}</div>`:''}
@@ -5404,6 +5424,7 @@ function saveEL(){
   const a=ls.get('tuf_event_attendees',[]);
   a.push({id:uid(),name,co:document.getElementById('nel-co').value.trim(),email:document.getElementById('nel-email').value.trim(),phone:document.getElementById('nel-phone').value.trim(),event:document.getElementById('nel-event').value.trim(),eventDate:document.getElementById('nel-evdate').value||'',score:elClampScore(document.getElementById('nel-score').value),owner:document.getElementById('nel-owner').value,notes:document.getElementById('nel-notes').value.trim(),addedDate:new Date().toISOString().slice(0,10)});
   personTag(a);
+  alogWrite(a[a.length-1].personId,'event_attended','events','Attended '+(a[a.length-1].event||'an event'),null,(a[a.length-1].eventDate?a[a.length-1].eventDate+'T12:00:00Z':undefined));
   ls.set('tuf_event_attendees',a);closeModal();refreshAttendees();addNotif(`Event attendee added: ${name}`);
   journeyLog(name,'Entered the system: Event CRM'+(a[a.length-1].event?' ('+a[a.length-1].event+')':''));
 }
@@ -5441,6 +5462,7 @@ function elAddFromSave(){
   picks.forEach(chk=>{ const src=chk.getAttribute('data-src'); const id=chk.getAttribute('data-id'); const p=(src==='p'?prospects:members).find(x=>x.id===id); if(!p) return;
     if(att.some(a=>(a.name||'').toLowerCase()===(p.name||'').toLowerCase() && (a.event||'')===event)){ dup++; return; }
     att.push({id:uid(),name:p.name||'',co:p.co||'',email:p.email||'',phone:p.phone||'',event,eventDate,score,owner,notes:'',addedDate:new Date().toISOString().slice(0,10),fromMemberId:src==='m'?id:'',fromProspectId:src==='p'?id:''}); n++; personTag(att);
+    alogWrite(att[att.length-1].personId,'event_attended','events','Attended '+(event||'an event'),null,(eventDate?eventDate+'T12:00:00Z':undefined));
     journeyLog(p.name,'Added to Event CRM'+(event?' ('+event+')':''));
   });
   ls.set('tuf_event_attendees',att); closeModal(); refreshAttendees();
@@ -5464,7 +5486,7 @@ function baFormRows(a){ a=a||{}; return `<div class="grid-2"><div class="form-ro
   <div class="form-row"><label class="form-label">Notes ${typeof micBtnHtml==='function'?micBtnHtml('ba-notes'):''}</label><textarea class="form-textarea" id="ba-notes" style="min-height:60px">${escHtml(a.notes||'')}</textarea></div>`; }
 function baReadForm(){ const sid=document.getElementById('ba-session').value; const meta=baSessionMeta(sid); return {name:document.getElementById('ba-name').value.trim(),co:document.getElementById('ba-co').value.trim(),email:document.getElementById('ba-email').value.trim(),phone:document.getElementById('ba-phone').value.trim(),sessionId:sid,sessionName:meta.sessionName,sessionDate:meta.sessionDate,owner:document.getElementById('ba-owner').value,notes:document.getElementById('ba-notes').value.trim()}; }
 function baAddModal(){ showModal('Add Boardroom attendee',baFormRows({}),`<button class="btn btn-ghost" onclick="closeModal()">Cancel</button><button class="btn btn-k" onclick="baSave()">Add</button>`); }
-function baSave(){ const f=baReadForm(); if(!f.name){alert('Add a name.');return;} if(!dupCheckWarn(f.name,f.email))return; const l=baStore(); l.push({id:uid(),...f,addedDate:new Date().toISOString().slice(0,10)}); personTag(l); ls.set('tuf_boardroom_attendees',l); closeModal(); renderMembers(); brxRefresh(); addNotif(`Boardroom attendee added: ${f.name}`); journeyLog(f.name,'Logged as Boardroom event attendee'+(f.sessionName?' ('+f.sessionName+')':'')); }
+function baSave(){ const f=baReadForm(); if(!f.name){alert('Add a name.');return;} if(!dupCheckWarn(f.name,f.email))return; const l=baStore(); l.push({id:uid(),...f,addedDate:new Date().toISOString().slice(0,10)}); personTag(l); alogWrite(l[l.length-1].personId,'event_attended','events','Attended Boardroom session'+(f.sessionName?': '+f.sessionName:''),null,(f.sessionDate?f.sessionDate+'T12:00:00Z':undefined)); ls.set('tuf_boardroom_attendees',l); closeModal(); renderMembers(); brxRefresh(); addNotif(`Boardroom attendee added: ${f.name}`); journeyLog(f.name,'Logged as Boardroom event attendee'+(f.sessionName?' ('+f.sessionName+')':'')); }
 function baEditModal(id){ const a=baStore().find(x=>x.id===id); if(!a)return; showModal('Edit Boardroom attendee',baFormRows(a)+baFormsHtml(a),`<button class="btn btn-red btn-sm" onclick="baDelete('${id}')">Delete</button><button class="btn btn-ghost" onclick="closeModal()">Cancel</button><button class="btn btn-k" onclick="baUpdate('${id}')">Save</button>`); }
 function baUpdate(id){ const f=baReadForm(); const l=baStore(); const i=l.findIndex(x=>x.id===id); if(i<0)return; l[i]={...l[i],...f}; ls.set('tuf_boardroom_attendees',l); personAbsorb(l[i]); closeModal(); renderMembers(); brxRefresh(); }
 function baDelete(id){ if(!confirm('Remove this attendee?'))return; ls.set('tuf_boardroom_attendees',baStore().filter(x=>x.id!==id)); closeModal(); renderMembers(); brxRefresh(); }
@@ -5491,6 +5513,7 @@ function baAddFromSave(){
   picks.forEach(chk=>{ const src=chk.getAttribute('data-src'); const id=chk.getAttribute('data-id'); const p=(src==='p'?prospects:members).find(x=>x.id===id); if(!p)return;
     if(l.some(a=>(a.name||'').toLowerCase()===(p.name||'').toLowerCase()&&a.sessionId===sid)){dup++;return;}
     l.push({id:uid(),name:p.name||'',co:p.co||'',email:p.email||'',phone:p.phone||'',sessionId:sid,sessionName:meta.sessionName,sessionDate:meta.sessionDate,owner,notes:'',addedDate:new Date().toISOString().slice(0,10),fromMemberId:src==='m'?id:'',fromProspectId:src==='p'?id:''}); n++; personTag(l);
+    alogWrite(l[l.length-1].personId,'event_attended','events','Attended Boardroom session'+(meta.sessionName?': '+meta.sessionName:''),null,(meta.sessionDate?meta.sessionDate+'T12:00:00Z':undefined));
     journeyLog(p.name,'Logged as Boardroom event attendee'+(meta.sessionName?' ('+meta.sessionName+')':''));
   });
   ls.set('tuf_boardroom_attendees',l); closeModal(); renderMembers(); brxRefresh(); addNotif(`${n} added as Boardroom attendees${dup?` (${dup} already logged, skipped)`:''}`);
@@ -5543,8 +5566,26 @@ function addProspectModal(stage='Prospect'){
     <div class="form-row"><label class="form-label">Notes</label><textarea class="form-textarea" id="np-notes"></textarea></div>
   `,`<button class="btn btn-ghost" onclick="closeModal()">Cancel</button><button class="btn btn-k" onclick="saveProspect()">Save</button>`);
 }
+// Next action discipline (v84): an active prospect cannot be saved without a
+// dated next action. Won and Lost are exempt; old blanks only block on save.
+function prospectSaveAllowed(prefix,stage){
+  if(stage==='Won'||stage==='Lost') return true;
+  const act=(document.getElementById(prefix+'-action')?.value||'').trim();
+  const dt=document.getElementById(prefix+'-actiondate')?.value||'';
+  if(act&&dt) return true;
+  let d=document.getElementById(prefix+'-msg');
+  if(!d){
+    const anchor=document.getElementById(prefix+'-action');
+    if(anchor&&anchor.parentElement){ d=document.createElement('div'); d.id=prefix+'-msg'; anchor.parentElement.appendChild(d); }
+  }
+  const msg='Every active prospect needs a next action and a date. Fill both in to save.';
+  if(d){ d.style.cssText='color:var(--red);font-size:11px;font-weight:700;margin-top:4px'; d.textContent=msg; }
+  else alert(msg);
+  return false;
+}
 function saveProspect(){
   const name=document.getElementById('np-name').value.trim();if(!name)return;
+  if(!prospectSaveAllowed('np',document.getElementById('np-stage').value))return;
   if(!dupCheckWarn(name,document.getElementById('np-email')?.value.trim()||''))return;
   const list=ls.get('tuf_prospects',[]);
   list.push({id:uid(),name,co:document.getElementById('np-co').value.trim(),email:document.getElementById('np-email')?.value.trim()||'',phone:document.getElementById('np-phone')?.value.trim()||'',stage:document.getElementById('np-stage').value,temp:document.getElementById('np-temp').value,score:parseInt(document.getElementById('np-score').value)||null,nextAction:document.getElementById('np-action').value.trim(),nextActionDate:document.getElementById('np-actiondate')?.value||'',notes:document.getElementById('np-notes').value.trim(),lastContact:new Date().toISOString().slice(0,10)});
@@ -5685,6 +5726,7 @@ function inbConvert(id){
   const perInb=personOf(l)||personEnsure(l.name||l.email||'Lead',{co:l.company||'',email:l.email||'',phone:l.phone||''});
   if(perInb) setPersonSegment(perInb.id,'pipeline','inbound flagged');
   l.status='converted'; l.prospectId=pid; ls.set('tuf_inbound_leads',leads);
+  alogWrite(prospects[prospects.length-1].personId,'inbound_submitted','inbound',(l.source==='Diagnostic'?'Founder Diagnostic submitted':'Website signup submitted'),{leadId:l.id},l.submittedAt||undefined);
   addNotif(`${srcName} added to pipeline: ${l.name||l.email||'lead'}`);
   journeyLog(l.name,srcName+' → Sales Pipeline');
   renderInbound();
@@ -5752,6 +5794,7 @@ function prospectWonSave(id){
   const today=new Date().toISOString().slice(0,10);
   list[i].convertedToMemberId=newId; list[i].stage='Won'; list[i].wonTo=to; list[i].closedAt=today;
   ls.set('tuf_prospects',list);
+  alogWrite(p.personId,'stage_change','pipeline','Pipeline: Won ('+(to==='private121'?'121 client':'Boardroom')+')',{from:p.stage||'',to:'Won'});
   const per=personOf(p); if(per) setPersonSegment(per.id,'onboarding','Won, onboarding started');
   addNotif(`${p.name} converted: Leads → Onboarding${to==='private121'?' (121 client)':''}`);
   journeyLog(p.name,'Sales Pipeline → '+(to==='private121'?'Private 121 client':'Boardroom member')+' (Won)');
@@ -5770,6 +5813,7 @@ function prospectLostSave(id){
   const list=ls.get('tuf_prospects',[]);const i=list.findIndex(x=>x.id===id);if(i<0)return;const p=list[i];
   list[i].stage='Lost'; list[i].lostReason=reason; list[i].closedAt=new Date().toISOString().slice(0,10);
   ls.set('tuf_prospects',list);
+  alogWrite(p.personId,'stage_change','pipeline','Pipeline: Lost ('+reason+')',{from:p.stage||'',to:'Lost'});
   const per=personOf(p); if(per) setPersonSegment(per.id,'network','Lost: '+reason);
   addNotif(`${p.name} marked Lost — back in Network`);
   journeyLog(p.name,'Pipeline → Lost ('+reason+'). Returned to Network.');
@@ -5779,9 +5823,18 @@ function prospectLostSave(id){
 function convertProspectToMember(id){ prospectWonModal(id); }
 function updateProspect(id){
   const list=ls.get('tuf_prospects',[]);const i=list.findIndex(x=>x.id===id);if(i<0)return;
+  if(!prospectSaveAllowed('ep',document.getElementById('ep-stage').value))return;
   const oldStage=list[i].stage;
+  const oldNotes=list[i].notes||'';
   list[i]={...list[i],email:document.getElementById('ep-email')?.value.trim()||list[i].email||'',phone:document.getElementById('ep-phone')?.value.trim()||list[i].phone||'',stage:document.getElementById('ep-stage').value,temp:document.getElementById('ep-temp').value,score:parseInt(document.getElementById('ep-score').value)||list[i].score||null,nextAction:document.getElementById('ep-action').value.trim(),nextActionDate:document.getElementById('ep-actiondate')?.value||'',notes:document.getElementById('ep-notes').value.trim(),futureStart:document.getElementById('ep-future')?.value||list[i].futureStart||'',lastContact:document.getElementById('ep-lastcontact').value||new Date().toISOString().slice(0,10)};
-  if(list[i].stage!==oldStage){ addNotif(`${list[i].name} moved to ${list[i].stage}`); journeyLog(list[i].name,'Pipeline stage: '+(oldStage||'?')+' → '+list[i].stage); }
+  if(list[i].stage!==oldStage){
+    addNotif(`${list[i].name} moved to ${list[i].stage}`);
+    journeyLog(list[i].name,'Pipeline stage: '+(oldStage||'?')+' → '+list[i].stage);
+    alogWrite(list[i].personId,'stage_change','pipeline','Pipeline stage: '+(oldStage||'?')+' → '+list[i].stage,{from:oldStage||'',to:list[i].stage});
+  }
+  if((list[i].notes||'')!==oldNotes){
+    alogWrite(list[i].personId,'note','pipeline','Pipeline note updated',{notes:(list[i].notes||'').slice(0,2000)});
+  }
   ls.set('tuf_prospects',list);personAbsorb(list[i]);closeModal();renderPipeline();
 }
 function deleteProspect(id){if(!confirm('Delete?'))return;ls.set('tuf_prospects',ls.get('tuf_prospects',[]).filter(x=>x.id!==id));closeModal();renderPipeline();}
@@ -6265,9 +6318,10 @@ function linkTargets(){
   const out=[];
   ls.get('tuf_events',[]).forEach(e=>out.push({val:'event:'+e.id,label:`Event · ${e.name}${e.date?' ('+fmtShort(e.date)+')':''}`}));
   ls.get('tuf_sessions',[]).forEach(s=>out.push({val:'session:'+s.id,label:`Session · ${s.name}${s.date?' ('+fmtShort(s.date)+')':''}`}));
+  peopleAll().slice().sort((a,b)=>String(a.name||'').localeCompare(String(b.name||''))).forEach(p=>out.push({val:'person:'+p.id,label:`Person · ${p.name}${p.co?' ('+p.co+')':''}`}));
   return out;
 }
-function linkSelectHtml(elId,current){return `<select class="form-select" id="${elId}"><option value="">Not linked to an event or session</option>${linkTargets().map(o=>`<option value="${o.val}"${o.val===(current||'')?' selected':''}>${escHtml(o.label)}</option>`).join('')}</select>`;}
+function linkSelectHtml(elId,current){return `<select class="form-select" id="${elId}"><option value="">Not linked to an event, session or person</option>${linkTargets().map(o=>`<option value="${o.val}"${o.val===(current||'')?' selected':''}>${escHtml(o.label)}</option>`).join('')}</select>`;}
 function linkedToTarget(targetVal){
   const posts=ls.get('tuf_content',[]).filter(p=>p.linkedTo===targetVal);
   const tasks=ls.get('tuf_tasks',[]).filter(t=>t.linkedTo===targetVal&&t.status!=='Done');
@@ -6319,7 +6373,9 @@ function padelSaveEdit(id){
   const l=ls.get('tuf_event_leads',[]); const i=l.findIndex(x=>x.id===id); if(i<0)return;
   const g=x=>document.getElementById(x);
   const sc=g('pe2-score').value;
+  const wasAttended=l[i].attendance==='Attended';
   l[i]={...l[i],name:g('pe2-name').value.trim()||l[i].name,co:g('pe2-co').value.trim(),assignedTo:g('pe2-source').value,status:g('pe2-status').value,attendance:g('pe2-att').value,score:sc===''?'':Math.max(1,Math.min(10,parseInt(sc)||1)),lastContact:g('pe2-last').value,email:g('pe2-email').value.trim(),notes:g('pe2-notes').value.trim()};
+  if(!wasAttended&&l[i].attendance==='Attended') alogWrite(l[i].personId,'event_attended','events','Attended '+(l[i].event||'Padel event'),null);
   ls.set('tuf_event_leads',l); closeModal(); renderPadel();
 }
 function padelDeleteLead(id){ if(!confirm('Remove this contact from the Padel pipeline?'))return; ls.set('tuf_event_leads',(ls.get('tuf_event_leads',[])||[]).filter(x=>x.id!==id)); closeModal(); renderPadel(); }
@@ -6376,6 +6432,7 @@ function stripeSyncToCRM(){
       att.push({id:uid(),name,co:'',email:p.email||'',phone:p.phone||'',event:'Padel Event',eventDate:paid,score:null,owner:'Danny',notes:'Paid £'+(((p.amount||0)/100).toLocaleString('en-GB'))+' via Stripe on '+fmtDate(paid)+'.',addedDate:new Date().toISOString().slice(0,10),source:'Stripe',stripeCharge:p.charge||''});
       personTag(att);
       try{ const perT=personOf(att[att.length-1]); if(perT) personAddTag(perT.id,'Padel Event · '+new Date(paid).toLocaleDateString('en-GB',{month:'short',year:'numeric'})); }catch(e){}
+      alogWrite(att[att.length-1].personId,'event_attended','events','Attended Padel Event (paid via Stripe)',null,(/^\d{4}-\d{2}-\d{2}/.test(paid||'')?String(paid).slice(0,10)+'T12:00:00Z':undefined));
       journeyLog(name,'Entered the system: Event CRM (Stripe payment)');
       added++;
     });
@@ -11216,7 +11273,7 @@ function updateFollowupBadge(){
 }
 function renderCRMHub(){
   const host=document.getElementById('crmhub-render'); if(!host) return;
-  cxLoadRemote();
+  cxLoadRemote(); alogLoad();
   crmTabsMount('crmhub');
   const s=crmSettings();
   document.getElementById('topbar-actions').innerHTML=`<button class="btn btn-ghost btn-sm" onclick="crmSettingsModal()">Thresholds: ${s.followUpWarnDays}d / ${s.followUpDays}d</button><button class="btn btn-ghost btn-sm" onclick="nav('crmclean',crmEl())">Start cleanup</button><button class="btn btn-k btn-sm" onclick="personAddModal()">+ Add person</button>`;
@@ -11365,7 +11422,10 @@ function cxCompleteAction(personId,actionId){
 function cxLastContact(p){
   const n=cxNotes(p.id).find(x=>x.src!=='imported');
   const nd=n?n.date:'';
-  return (p.lastContact||'')>nd?(p.lastContact||''):nd;
+  const al=(window.__alogContact||{})[p.id]||'';
+  let best=(p.lastContact||'')>nd?(p.lastContact||''):nd;
+  if(al>best) best=al;
+  return best;
 }
 // Cadence per JJ's golden rules. Returns {dot:'green'|'amber'|'red', days, archive:bool, zero:bool}
 function cxCadence(p){
@@ -11678,6 +11738,165 @@ function cxV82DataPass(){
   }catch(e){ console.warn('cxV82DataPass failed',e); }
 }
 
+// ═══ ACTIVITY LOG + PIPELINE DISCIPLINE (v84) ═════════════════════════════════
+// One timeline per person (activity_log table, see activity_log.sql — James
+// runs that by hand) plus stale prospect alerts. Everything here degrades
+// gracefully while the table does not exist yet: writes fail silently, the
+// timeline shows notes only, and lastContact falls back to the stored fields.
+// UI surfaces are individually revertible via STALE_UI.
+const STALE_UI={kanban:true,crmLeads:true,navItem:true};
+const ALOG_CONTACT_TYPES=['call','whatsapp','email','meeting'];
+let __alogAt=0, __alogBusy=false, __alogMissing=false;
+function alogWrite(personId,type,module,summary,metadata,occurredAt){
+  try{
+    if(!personId||typeof sb==='undefined'||!sb||!sb.from) return;
+    const row={person_id:personId,type,module:module||'manual',summary:String(summary||'').slice(0,300)||type,metadata:metadata||null,occurred_at:occurredAt||new Date().toISOString(),created_by:CURRENT_USER||null};
+    sb.from('activity_log').insert(row).then(res=>{
+      if(res&&res.error){ __alogMissing=true; return; }
+      const m=window.__alog=window.__alog||{};
+      (m[personId]=m[personId]||[]).unshift(row);
+      if(ALOG_CONTACT_TYPES.includes(type)){
+        const c=window.__alogContact=window.__alogContact||{};
+        const d=String(row.occurred_at).slice(0,10);
+        if(!c[personId]||c[personId]<d) c[personId]=d;
+      }
+    }).catch(()=>{ __alogMissing=true; });
+  }catch(e){}
+}
+async function alogLoad(force){
+  if(typeof sb==='undefined'||!sb||!sb.from) return;
+  if(__alogBusy) return;
+  if(!force&&(Date.now()-__alogAt)<5*60*1000) return;
+  __alogBusy=true;
+  try{
+    const {data,error}=await sb.from('activity_log').select('person_id,type,module,summary,occurred_at,created_by').order('occurred_at',{ascending:false}).limit(1500);
+    if(error){ __alogMissing=true; __alogAt=Date.now(); return; }
+    __alogMissing=false;
+    const m={}, c={};
+    (data||[]).forEach(r=>{
+      (m[r.person_id]=m[r.person_id]||[]).push(r);
+      if(ALOG_CONTACT_TYPES.includes(r.type)){
+        const d=String(r.occurred_at).slice(0,10);
+        if(!c[r.person_id]||c[r.person_id]<d) c[r.person_id]=d;
+      }
+    });
+    window.__alog=m; window.__alogContact=c;
+    __alogAt=Date.now();
+  }catch(e){ __alogMissing=true; __alogAt=Date.now(); }
+  finally{ __alogBusy=false; }
+}
+// Derived last contact for a pipeline prospect: newest logged contact activity
+// for their person, else the stored lastContact field (backward compatible).
+function derivedLastContact(prospect){
+  const viaLog=prospect.personId?(window.__alogContact||{})[prospect.personId]:'';
+  const stored=prospect.lastContact||'';
+  return viaLog>stored?viaLog:stored;
+}
+// PURE staleness computation (no DOM, no storage) so a daily email digest can
+// reuse it later. lastContactByPerson: {personId: 'YYYY-MM-DD'}.
+function pipelineStaleAlerts(prospects,lastContactByPerson,opts){
+  const coldDays=(opts&&opts.coldDays)||14;
+  const today=(opts&&opts.today)||new Date().toISOString().slice(0,10);
+  const dayMs=86400000;
+  const days=(from,to)=>Math.round((new Date(to+'T00:00:00')-new Date(from+'T00:00:00'))/dayMs);
+  const out=[];
+  (prospects||[]).forEach(p=>{
+    if(!(!p.archived&&p.stage!=='Won'&&p.stage!=='Lost')) return;
+    if(p.convertedToMemberId) return;
+    const lc=((p.personId&&(lastContactByPerson||{})[p.personId])||p.lastContact||'');
+    const flags=[];
+    let daysOverdue=0, daysSinceContact=lc?days(lc,today):null;
+    if(p.nextActionDate&&p.nextActionDate<today){ flags.push('overdue'); daysOverdue=days(p.nextActionDate,today); }
+    if(daysSinceContact!==null&&daysSinceContact>coldDays) flags.push('cold');
+    if(!flags.length) return;
+    out.push({id:p.id,personId:p.personId||null,name:p.name,owner:p.owner||'',nextAction:p.nextAction||'',nextActionDate:p.nextActionDate||'',daysOverdue,daysSinceContact,flags});
+  });
+  out.sort((a,b)=>b.daysOverdue-a.daysOverdue||(b.daysSinceContact||0)-(a.daysSinceContact||0));
+  return out;
+}
+function pipelineAlertsNow(){
+  return pipelineStaleAlerts(ls.get('tuf_prospects',[])||[],window.__alogContact||{},{coldDays:crmSettings().staleDays});
+}
+function updatePipelineBadge(){
+  const b=document.getElementById('sb-pipealerts'); if(!b) return;
+  const n=pipelineAlertsNow().length;
+  b.textContent=n; b.style.display=n?'inline':'none';
+}
+// Shared attention panel rows (light and dark variants share the data shape).
+function staleAlertRowsHtml(alerts,dark){
+  const mut=dark?'#9BA0A8':'var(--mut)', bdr=dark?'#202127':'var(--bdr)';
+  return alerts.map(a=>{
+    const badge=a.flags.includes('overdue')?`<span style="color:var(--red);font-weight:700">${a.daysOverdue}d overdue</span>`:'';
+    const cold=a.flags.includes('cold')?`<span style="color:#E6A23C;font-weight:600">${a.daysSinceContact}d since contact</span>`:'';
+    const open=a.personId&&dark?`personSelId='${a.personId}';renderPeople()`:`editProspectModal('${a.id}')`;
+    return `<div style="display:flex;gap:10px;align-items:center;padding:7px 2px;border-bottom:1px solid ${bdr};font-size:12px;flex-wrap:wrap">
+      <span style="cursor:pointer;min-width:130px" onclick="${open}"><b>${escHtml(a.name)}</b>${a.owner?` <span style="color:${mut};font-size:10.5px">· ${escHtml(a.owner)}</span>`:''}</span>
+      <span style="flex:1;min-width:120px;color:${mut}">${a.nextAction?escHtml(a.nextAction):'<i>no next action set</i>'}</span>
+      ${badge}${badge&&cold?'<span style="color:'+mut+'">·</span>':''}${cold}
+      <button class="btn btn-ghost btn-sm" style="padding:2px 9px" onclick="logContactModal('${a.id}')">Log</button>
+    </div>`;
+  }).join('');
+}
+// Quick log (Feature 1.3): one tap per touch type on the person profile.
+let __alogQuickType=null;
+function alogQuickOpen(personId,type){
+  __alogQuickType={personId,type};
+  const f=document.getElementById('alog-quickform'); if(!f) return;
+  const label={call:'Call',whatsapp:'WhatsApp',email:'Email',meeting:'Meeting',note:'Note'}[type]||type;
+  f.style.display='block';
+  f.innerHTML=`
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">
+      <span style="font-size:11px;font-weight:700;align-self:center;color:var(--y)">${label}</span>
+      <input class="form-input" id="alog-q-summary" placeholder="One line summary (optional)" style="flex:1;min-width:160px">
+      <input class="form-input" type="date" id="alog-q-date" value="${new Date().toISOString().slice(0,10)}" style="max-width:150px">
+      <button class="btn btn-y btn-sm" onclick="alogQuickSave()">Save</button>
+      <button class="btn btn-ghost btn-sm" onclick="document.getElementById('alog-quickform').style.display='none'">Cancel</button>
+    </div>`;
+  const s=document.getElementById('alog-q-summary'); if(s) s.focus();
+}
+function alogQuickSave(){
+  if(!__alogQuickType) return;
+  const {personId,type}=__alogQuickType;
+  const label={call:'Call',whatsapp:'WhatsApp',email:'Email',meeting:'Meeting',note:'Note'}[type]||type;
+  const summary=(document.getElementById('alog-q-summary')?.value||'').trim()||(label+' logged');
+  const d=document.getElementById('alog-q-date')?.value||new Date().toISOString().slice(0,10);
+  alogWrite(personId,type,'manual',summary,null,d+'T12:00:00Z');
+  if(ALOG_CONTACT_TYPES.includes(type)){
+    const ppl=peopleAll(); const p=ppl.find(x=>x.id===personId);
+    if(p&&(p.lastContact||'')<d){ p.lastContact=d; ls.set('tuf_people',ppl); }
+  }
+  if(__alogMissing) addNotif('Logged locally, but the activity log table is not set up yet: run activity_log.sql');
+  else addNotif(summary);
+  __alogQuickType=null;
+  setTimeout(()=>{ renderPeople(); updateFollowupBadge(); },300);
+}
+// Timeline card: activity_log rows merged with the structured notes.
+function alogTimelineCard(p){
+  const chip={call:'Ca',whatsapp:'Wh',email:'Em',meeting:'Me',note:'No',stage_change:'St',task_done:'Ta',event_attended:'Ev',inbound_submitted:'In',system:'Sy'};
+  const rows=[];
+  (((window.__alog||{})[p.id])||[]).forEach(r=>rows.push({t:r.type,when:String(r.occurred_at).slice(0,10),sum:r.summary,by:r.created_by||''}));
+  cxNotes(p.id).forEach(n=>rows.push({t:'note',when:n.date,sum:(n.text||'').split('\n')[0].slice(0,120),by:n.by||''}));
+  rows.sort((a,b)=>(b.when||'').localeCompare(a.when||''));
+  const shown=rows.slice(0,200);
+  const btn=t=>`<button class="btn btn-ghost btn-sm" style="padding:3px 10px" onclick="alogQuickOpen('${p.id}','${t}')">${{call:'Call',whatsapp:'WhatsApp',email:'Email',meeting:'Meeting',note:'Note'}[t]}</button>`;
+  return `<div class="card" style="margin-top:14px">
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+      <div class="card-title" style="color:#fff;margin-bottom:0">Timeline</div>
+      <span style="flex:1"></span>
+      ${['call','whatsapp','email','meeting','note'].map(btn).join('')}
+    </div>
+    <div id="alog-quickform" style="display:none"></div>
+    ${__alogMissing?'<div style="font-size:10.5px;color:#E6A23C;margin-top:8px">The activity log table is not set up yet. Run activity_log.sql in the Supabase SQL editor and touches will start recording here.</div>':''}
+    <div style="margin-top:10px">
+      ${shown.length?shown.map(r=>`<div style="display:flex;gap:10px;align-items:baseline;padding:5px 0;border-bottom:1px solid #202127;font-size:11.5px">
+        <span style="flex-shrink:0;width:24px;text-align:center;background:#1E1F24;border:1px solid #2E2F35;border-radius:6px;font-size:9px;font-weight:800;color:var(--y);padding:2px 0">${chip[r.t]||'·'}</span>
+        <span style="flex:1;min-width:0;color:#D9DBDF;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escHtml(r.sum)}</span>
+        <span style="flex-shrink:0;color:#7C8089;font-size:10px">${r.when?fmtShort(r.when):''}${r.by?' · '+escHtml(r.by):''}</span>
+      </div>`).join(''):'<div style="font-size:11.5px;color:#5A5D64;font-style:italic">No touches logged yet. The buttons above take one tap.</div>'}
+    </div>
+  </div>`;
+}
+
 // ═══ CRM v2 UI (v74) — dark module: hub, unified lists, full profile ══════════
 function cxDot(c){ const col=c==='red'?'#E05252':c==='amber'?'#E6A23C':'#3FBF6F'; return `<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${col};flex-shrink:0"></span>`; }
 function cxInitials(n){ return String(n||'?').split(/\s+/).slice(0,2).map(x=>x[0]||'').join('').toUpperCase(); }
@@ -11718,7 +11937,7 @@ function cxQuickAddSave(personId){
 // ── Hub ──
 function renderCRMHub(){
   const host=document.getElementById('crmhub-render'); if(!host) return;
-  cxLoadRemote();
+  cxLoadRemote(); alogLoad();
   crmTabsMount('crmhub');
   const inb=(ls.get('tuf_inbound_leads',[])||[]).filter(l=>l.status==='new');
   const bell='<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.7 21a2 2 0 0 1-3.4 0"></path></svg>';
@@ -11798,7 +12017,7 @@ function cxListRow(p){
 }
 function renderPeople(){
   const host=document.getElementById('people-render'); if(!host) return;
-  cxLoadRemote();
+  cxLoadRemote(); alogLoad();
   crmTabsMount(peopleSegFilter==='pipeline'?'leads':CRM_TABS.some(t=>t[0]===peopleSegFilter)?peopleSegFilter:'');
   if(personSelId){ renderPersonProfile(personSelId); return; }
   cxLoadCoachNames();
@@ -11812,7 +12031,12 @@ function renderPeople(){
       return rank(ca)-rank(cb)||String(a.name||'').localeCompare(String(b.name||''));
     });
   const ta=document.getElementById('topbar-actions'); if(ta) ta.innerHTML=`<button class="btn btn-ghost btn-sm" onclick="renderReclassify()">Reclassify</button><button class="btn btn-y btn-sm" onclick="personAddModal()">+ Add person</button>`;
+  const segAlerts=(seg==='pipeline'&&STALE_UI.crmLeads)?pipelineAlertsNow():[];
   host.innerHTML=`
+    ${segAlerts.length?`<div class="card" style="border-left:4px solid #E05252;margin-bottom:12px;padding:12px 16px">
+      <div style="font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#E05252;margin-bottom:4px">Needs attention <span style="color:#9BA0A8;font-weight:600">${segAlerts.length} overdue or going cold</span></div>
+      ${staleAlertRowsHtml(segAlerts,true)}
+    </div>`:''}
     ${seg==='onboarding'?'<div style="font-size:11.5px;color:#9BA0A8;margin-bottom:12px">Onboarding journeys land here. The step by step process is being finalised with Danny\'s team; until then this lists who is mid onboarding.</div>':''}
     <div style="display:flex;gap:10px;align-items:center;margin-bottom:14px;flex-wrap:wrap">
       <input class="form-input" id="people-search" placeholder="Search…" value="${escAttr(peopleSearch)}" style="max-width:260px" oninput="peopleSearch=this.value;renderPeople();const s=document.getElementById('people-search');if(s){s.focus();s.setSelectionRange(s.value.length,s.value.length);}">
@@ -11922,6 +12146,7 @@ function renderPersonProfile(id){
       </div>
     </div>
     ${seg==='onboarding'?cxObCard(p,mem):''}
+    ${alogTimelineCard(p)}
   `;
 }
 // Onboarding checklist card shown alongside Next Actions on onboarding profiles.
@@ -12050,6 +12275,7 @@ function cxLogContact(id){
   const ppl=peopleAll(); const p=ppl.find(x=>x.id===id); if(!p) return;
   p.lastContact=new Date().toISOString().slice(0,10);
   ls.set('tuf_people',ppl);
+  alogWrite(id,'note','manual','Contact logged manually',null);
   addNotif('Contact logged for '+p.name+' (today)');
   renderPeople(); updateFollowupBadge();
 }
@@ -12091,6 +12317,8 @@ function updateFollowupBadge(){
     const n=cxBadgeCount();
     const b=document.getElementById('sb-followup');
     if(b){ b.textContent=n; b.style.display=n?'inline':'none'; }
+    updatePipelineBadge();
+    if(!STALE_UI.navItem){ const it=document.getElementById('sb-item-pipeline'); if(it) it.style.display='none'; }
   }catch(e){}
 }
 
