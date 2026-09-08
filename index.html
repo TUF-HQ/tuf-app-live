@@ -11815,7 +11815,12 @@ function pipelineStaleAlerts(prospects,lastContactByPerson,opts){
   return out;
 }
 function pipelineAlertsNow(){
-  return pipelineStaleAlerts(ls.get('tuf_prospects',[])||[],window.__alogContact||{},{coldDays:crmSettings().staleDays});
+  // Last-contact map from every source the app knows: logged activity,
+  // structured CRM notes and the stored field (cxLastContact merges all three),
+  // so this panel never disagrees with the CRM lists.
+  const map={};
+  try{ peopleAll().forEach(p=>{ const d=cxLastContact(p); if(d) map[p.id]=d; }); }catch(e){}
+  return pipelineStaleAlerts(ls.get('tuf_prospects',[])||[],map,{coldDays:crmSettings().staleDays});
 }
 function updatePipelineBadge(){
   const b=document.getElementById('sb-pipealerts'); if(!b) return;
