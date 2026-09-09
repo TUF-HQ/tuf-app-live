@@ -3405,6 +3405,58 @@ function coSendBody(sess,p){
 // Direct client send (v71): Chloe sends the recap straight to the client from
 // the app, from her own address, PDF attached. Sending archives the session
 // (status sent), so approved vs sent is always the true have and have not list.
+// ═══ SEND RECAPS — Chloe's simple view (v89) ═════════════════════════════════
+// One job: see what is ready, read it, send it. No statuses, no editing, no
+// clutter. Reuses coSendClient/coMailto/coMarkSent untouched via the same
+// element ids the full send modal uses.
+function coSendView(){
+  const byDate=(a,b)=>(b.session_date||'').localeCompare(a.session_date||'');
+  const ready=coData.sessions.filter(s=>s.status==='approved').slice().sort(byDate);
+  const waiting=coData.sessions.filter(s=>s.status==='draft').slice().sort(byDate);
+  const sent=coData.sessions.filter(s=>s.status==='sent').slice().sort((a,b)=>(b.sent_at||'').localeCompare(a.sent_at||'')).slice(0,15);
+  const bigCard=(s,canSend)=>{
+    const p=coPerson(s.person_id);
+    const first=((p&&p.name)||'the client').split(' ')[0];
+    const recap=(s.recap_md||'').trim();
+    return `<div class="card" style="margin-bottom:14px;border-left:5px solid ${canSend?'var(--y)':'var(--amb)'};padding:18px 20px">
+      <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:6px">
+        <div style="flex:1;min-width:200px">
+          <div style="font-size:17px;font-weight:800">${escHtml((p&&p.name)||'Unknown')}${p&&p.company?` <span style="font-weight:500;color:var(--mut);font-size:13px">· ${escHtml(p.company)}</span>`:''}</div>
+          <div style="font-size:12.5px;color:var(--mut)">Session on ${fmtDate(s.session_date)}${p&&p.email?` · goes to ${escHtml(p.email)}`:' · <span style="color:var(--amb)">no email on file yet, you can type it when you send</span>'}</div>
+        </div>
+        ${canSend?`<button class="btn btn-y" style="font-size:14px;padding:10px 22px" onclick="coSimpleSendModal('${s.id}')">Send to ${escHtml(first)}</button>`:'<span class="tag tag-a" style="font-size:10px">Waiting for Danny</span>'}
+      </div>
+      ${recap?`<div style="font-size:13px;line-height:1.65;white-space:pre-wrap;background:var(--bg);border:1px solid var(--bdr);border-radius:10px;padding:12px 14px;max-height:320px;overflow-y:auto">${escHtml(recap)}</div>`:'<div style="font-size:12px;color:var(--mut);font-style:italic">No written recap on this session.</div>'}
+      ${canSend?'':'<div style="font-size:11.5px;color:var(--mut);margin-top:8px">Danny checks this first. It moves up to Ready as soon as he approves it.</div>'}
+    </div>`;
+  };
+  return `
+    <div class="sec-hdr">Ready to send (${ready.length})</div>
+    ${ready.length?ready.map(s=>bigCard(s,true)).join(''):'<div class="card" style="margin-bottom:14px"><div style="font-size:13.5px;color:var(--mut);line-height:1.6">Nothing waiting to send right now. When Danny approves a recap it appears here with a big yellow button.</div></div>'}
+    <div class="sec-hdr">Waiting for Danny to approve (${waiting.length})</div>
+    ${waiting.length?waiting.map(s=>bigCard(s,false)).join(''):'<div class="card" style="margin-bottom:14px"><div style="font-size:13px;color:var(--mut)">Nothing waiting on Danny.</div></div>'}
+    <div class="sec-hdr">Already sent</div>
+    ${sent.length?sent.map(s=>{const p=coPerson(s.person_id);return `<div class="card" style="margin-bottom:6px;padding:10px 16px"><div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;font-size:12.5px">
+      <span style="color:var(--grn);font-weight:800">✓</span>
+      <b>${escHtml((p&&p.name)||'Unknown')}</b>
+      <span style="color:var(--mut)">session ${fmtDate(s.session_date)} · sent ${s.sent_at?fmtDate(String(s.sent_at).slice(0,10)):''}${s.sent_to&&s.sent_to.length?' to '+escHtml(s.sent_to.join(', ')):''}</span>
+    </div></div>`;}).join(''):'<div class="card"><div style="font-size:12.5px;color:var(--mut)">Nothing sent yet.</div></div>'}
+  `;
+}
+function coSimpleSendModal(id){
+  const sess=coData.sessions.find(x=>x.id===id); if(!sess) return;
+  const p=coPerson(sess.person_id);
+  const first=((p&&p.name)||'the client').split(' ')[0];
+  const to=(sess.sent_to&&sess.sent_to.length)?sess.sent_to.join(', '):((p&&p.email)||'');
+  showModal('Send the recap to '+escHtml(first),`
+    <input type="hidden" id="cosnd-subj" value="${escHtml('Your coaching session recap · '+fmtDate(sess.session_date))}">
+    <div class="form-row"><label class="form-label">Their email address</label><input class="form-input" id="cosnd-to" value="${escHtml(to)}" placeholder="client@company.com" style="font-size:14px"></div>
+    <div class="form-row"><label class="form-label">The email ${first} will receive (you can tweak it)</label><textarea class="form-textarea" id="cosnd-body" style="min-height:180px;font-size:13px">${escHtml(coSendBody(sess,p))}</textarea></div>
+    <div style="font-size:11.5px;color:var(--mut);margin-bottom:6px">It goes from your address with the recap PDF attached, then moves to the Already sent list automatically.</div>
+    <div style="font-size:11px;color:var(--mut)">If sending from the app is not working yet: <button class="btn btn-ghost btn-sm" onclick="coMailto()">Open in Mail</button> <button class="btn btn-ghost btn-sm" onclick="coMarkSent('${id}')">Mark as sent</button></div>
+    <div id="cosnd-status" style="font-size:12.5px;margin-top:8px"></div>
+  `,`<button class="btn btn-ghost" onclick="closeModal()">Cancel</button><button class="btn btn-ghost" id="cosnd-test" onclick="coSendClient('${id}',true)">Send me a test copy first</button><button class="btn btn-y" id="cosnd-send" style="font-size:14px;padding:10px 20px" onclick="coSendClient('${id}')">Send to ${escHtml(first)}</button>`);
+}
 function coSendModal(id){
   const sess=coData.sessions.find(x=>x.id===id); if(!sess) return;
   const p=coPerson(sess.person_id);
@@ -3479,6 +3531,8 @@ function renderCoaching(){
   const ta=document.getElementById('topbar-actions'); if(ta) ta.innerHTML='';
   coLoad().then(r=>{
     const still=document.getElementById('coaching-content'); if(!still) return;
+    // Chloe's job here is sending recaps: land her straight on the simple view.
+    if(CURRENT_USER==='Chloe'&&!window.__coChloeLanded){ window.__coChloeLanded=true; coView='send'; }
     if(!r.ok){
       still.innerHTML = r.reason==='setup'
         ? `<div class="card" style="border-left:4px solid var(--amb)"><div style="font-weight:800;margin-bottom:6px">One-time setup needed</div><div style="font-size:13px;line-height:1.6">The coaching tables do not exist yet. Run <b>COACHING_SETUP.md</b> in the Supabase dashboard (SQL editor + one storage bucket), then reload this page. Nothing else in the app is affected.</div></div>`
@@ -3492,9 +3546,9 @@ function coNav(v){ coView=v; if(v!=='person') coPersonId=null; coDraw(); }
 function coOpenPerson(id){ coPersonId=id; coView='person'; coDraw(); }
 function coDraw(){
   const el=document.getElementById('coaching-content'); if(!el) return;
-  const pills=[['list','People'],['danny','Danny view']];
+  const pills=[['list','People'],['send','Send recaps'],['danny','Danny view']];
   const nav=`<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px">${pills.map(([k,l])=>`<button class="btn btn-sm ${coView===k?'btn-k':'btn-ghost'}" onclick="coNav('${k}')">${l}</button>`).join('')}</div>`;
-  const body=(coView==='person'&&coPersonId)?coPersonView():coView==='danny'?coDannyView():coListView();
+  const body=(coView==='person'&&coPersonId)?coPersonView():coView==='danny'?coDannyView():coView==='send'?coSendView():coListView();
   el.innerHTML=nav+body;
   const ta=document.getElementById('topbar-actions');
   if(ta) ta.innerHTML=`<button class="btn btn-k btn-sm" onclick="coPersonModal()">+ Add Person</button>`;
