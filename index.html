@@ -3396,7 +3396,8 @@ function coStatusStrip(s){
 function coSendBody(sess,p){
   const first=((p&&p.name)||'').trim().split(/\s+/)[0]||'there';
   const acts=coData.actions.filter(a=>a.session_id===sess.id&&a.status!=='dropped');
-  const lines=['Hi '+first+',','','Great session on '+fmtDate(sess.session_date)+'. Your full recap is attached, and the recording link is below so you can revisit anything we covered.',''];
+  const hasPdf=coData.files.some(f=>f.session_id===sess.id&&f.kind==='recap_pdf');
+  const lines=['Hi '+first+',','','Great session on '+fmtDate(sess.session_date)+'. '+(hasPdf?'Your full recap is attached, and the':'The')+' recording link is below so you can revisit anything we covered.',''];
   if(sess.recording_url) lines.push('Recording: '+sess.recording_url,'');
   if(acts.length){ lines.push('Your actions from this session:'); acts.forEach(a=>lines.push('· '+a.text)); lines.push(''); }
   lines.push('Any questions before next time, just reply here.','','Danny');
@@ -3448,14 +3449,28 @@ function coSimpleSendModal(id){
   const p=coPerson(sess.person_id);
   const first=((p&&p.name)||'the client').split(' ')[0];
   const to=(sess.sent_to&&sess.sent_to.length)?sess.sent_to.join(', '):((p&&p.email)||'');
+  const pdf=coData.files.find(f=>f.session_id===id&&f.kind==='recap_pdf');
+  const step=(n,btn,note)=>`<div style="display:flex;gap:12px;align-items:flex-start;margin-bottom:14px">
+    <span style="flex-shrink:0;width:26px;height:26px;border-radius:50%;background:var(--k);color:var(--y);font-weight:800;font-size:13px;display:flex;align-items:center;justify-content:center">${n}</span>
+    <div style="flex:1">${btn}<div style="font-size:11.5px;color:var(--mut);margin-top:4px;line-height:1.5">${note}</div></div>
+  </div>`;
   showModal('Send the recap to '+escHtml(first),`
     <input type="hidden" id="cosnd-subj" value="${escHtml('Your coaching session recap · '+fmtDate(sess.session_date))}">
     <div class="form-row"><label class="form-label">Their email address</label><input class="form-input" id="cosnd-to" value="${escHtml(to)}" placeholder="client@company.com" style="font-size:14px"></div>
-    <div class="form-row"><label class="form-label">The email ${first} will receive (you can tweak it)</label><textarea class="form-textarea" id="cosnd-body" style="min-height:180px;font-size:13px">${escHtml(coSendBody(sess,p))}</textarea></div>
-    <div style="font-size:11.5px;color:var(--mut);margin-bottom:6px">It goes from your address with the recap PDF attached, then moves to the Already sent list automatically.</div>
-    <div style="font-size:11px;color:var(--mut)">If sending from the app is not working yet: <button class="btn btn-ghost btn-sm" onclick="coMailto()">Open in Mail</button> <button class="btn btn-ghost btn-sm" onclick="coMarkSent('${id}')">Mark as sent</button></div>
-    <div id="cosnd-status" style="font-size:12.5px;margin-top:8px"></div>
-  `,`<button class="btn btn-ghost" onclick="closeModal()">Cancel</button><button class="btn btn-ghost" id="cosnd-test" onclick="coSendClient('${id}',true)">Send me a test copy first</button><button class="btn btn-y" id="cosnd-send" style="font-size:14px;padding:10px 20px" onclick="coSendClient('${id}')">Send to ${escHtml(first)}</button>`);
+    <div class="form-row"><label class="form-label">The email text (you can tweak it before opening Mail)</label><textarea class="form-textarea" id="cosnd-body" style="min-height:140px;font-size:13px">${escHtml(coSendBody(sess,p))}</textarea></div>
+    <div style="border-top:1px solid var(--bdr);margin:14px 0;padding-top:14px">
+      ${step(1,
+        pdf?`<button class="btn btn-k" style="font-size:13px;padding:8px 18px" onclick="coFileOpen('${pdf.id}')">Download the recap PDF</button>`:'<span style="color:var(--amb);font-size:13px;font-weight:600">No recap PDF on this session</span>',
+        pdf?'It opens in a new tab. Save it somewhere easy to find, like your Downloads folder.':'The email text above carries everything, so you can send without an attachment.')}
+      ${step(2,
+        `<button class="btn btn-k" style="font-size:13px;padding:8px 18px" onclick="coMailto()">Open the email in Mail</button> <button class="btn btn-ghost btn-sm" id="cosnd-copy" onclick="coCopyEmail()">Copy email text instead</button>`,
+        'Your email app opens with everything written for you.'+(pdf?' Attach the PDF you just downloaded, then press send.':' Press send when you are happy.')+' If you use Gmail in the browser, use Copy email text and paste it into a new message.')}
+      ${step(3,
+        `<button class="btn btn-y" style="font-size:14px;padding:9px 20px" onclick="coMarkSent('${id}')">Done, mark as sent</button>`,
+        'This moves '+escHtml(first)+' to the Already sent list so you always know where you are.')}
+    </div>
+    <div id="cosnd-status" style="font-size:12.5px;margin-top:4px"></div>
+  `,`<button class="btn btn-ghost" onclick="closeModal()">Cancel</button>`);
 }
 function coSendModal(id){
   const sess=coData.sessions.find(x=>x.id===id); if(!sess) return;
