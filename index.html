@@ -3393,14 +3393,16 @@ function coStatusStrip(s){
   }).join('')+'</span>';
 }
 // The covering email, generated in Danny's voice and fully editable.
+// Written in Chloe's voice: she sends these from her own address on Danny's
+// behalf, so the email must never read as if Danny wrote it himself.
 function coSendBody(sess,p){
   const first=((p&&p.name)||'').trim().split(/\s+/)[0]||'there';
   const acts=coData.actions.filter(a=>a.session_id===sess.id&&a.status!=='dropped');
   const hasPdf=coData.files.some(f=>f.session_id===sess.id&&f.kind==='recap_pdf');
-  const lines=['Hi '+first+',','','Great session on '+fmtDate(sess.session_date)+'. '+(hasPdf?'Your full recap is attached, and the':'The')+' recording link is below so you can revisit anything we covered.',''];
+  const lines=['Hi '+first+',','','Danny asked me to send over the recap from your session on '+fmtDate(sess.session_date)+'. '+(hasPdf?'The full recap is attached, and the':'The')+' recording link is below so you can revisit anything you covered.',''];
   if(sess.recording_url) lines.push('Recording: '+sess.recording_url,'');
-  if(acts.length){ lines.push('Your actions from this session:'); acts.forEach(a=>lines.push('· '+a.text)); lines.push(''); }
-  lines.push('Any questions before next time, just reply here.','','Danny');
+  if(acts.length){ lines.push('Your actions from the session:'); acts.forEach(a=>lines.push('· '+a.text)); lines.push(''); }
+  lines.push('Any questions before next time, just reply here and I will make sure Danny sees it.','','Chloe','The Ultimate Founder');
   return lines.join('\n');
 }
 // Direct client send (v71): Chloe sends the recap straight to the client from
@@ -3463,8 +3465,8 @@ function coSimpleSendModal(id){
         pdf?`<button class="btn btn-k" style="font-size:13px;padding:8px 18px" onclick="coFileOpen('${pdf.id}')">Download the recap PDF</button>`:'<span style="color:var(--amb);font-size:13px;font-weight:600">No recap PDF on this session</span>',
         pdf?'It opens in a new tab. Save it somewhere easy to find, like your Downloads folder.':'The email text above carries everything, so you can send without an attachment.')}
       ${step(2,
-        `<button class="btn btn-k" style="font-size:13px;padding:8px 18px" onclick="coMailto()">Open the email in Mail</button> <button class="btn btn-ghost btn-sm" id="cosnd-copy" onclick="coCopyEmail()">Copy email text instead</button>`,
-        'Your email app opens with everything written for you.'+(pdf?' Attach the PDF you just downloaded, then press send.':' Press send when you are happy.')+' If you use Gmail in the browser, use Copy email text and paste it into a new message.')}
+        `<button class="btn btn-k" style="font-size:13px;padding:8px 18px" onclick="coOutlook()">Open the email in Outlook</button> <button class="btn btn-ghost btn-sm" onclick="coMailto()">Use my Mail app instead</button> <button class="btn btn-ghost btn-sm" id="cosnd-copy" onclick="coCopyEmail()">Copy email text</button>`,
+        'Outlook opens in your browser with everything written for you.'+(pdf?' Attach the PDF you just downloaded, then press send.':' Press send when you are happy.'))}
       ${step(3,
         `<button class="btn btn-y" style="font-size:14px;padding:9px 20px" onclick="coMarkSent('${id}')">Done, mark as sent</button>`,
         'This moves '+escHtml(first)+' to the Already sent list so you always know where you are.')}
@@ -3535,6 +3537,15 @@ function coMailto(){
   const subj=document.getElementById('cosnd-subj').value;
   const body=document.getElementById('cosnd-body').value;
   window.location.href='mailto:'+to+'?subject='+encodeURIComponent(subj)+'&body='+encodeURIComponent(body);
+}
+// Outlook on the web compose deeplink: opens a prefilled draft in the browser,
+// signed into the company Microsoft 365 account. More dependable for Chloe
+// than relying on the machine's default mail app.
+function coOutlook(){
+  const to=document.getElementById('cosnd-to').value.trim();
+  const subj=document.getElementById('cosnd-subj').value;
+  const body=document.getElementById('cosnd-body').value;
+  window.open('https://outlook.office.com/mail/deeplink/compose?to='+encodeURIComponent(to)+'&subject='+encodeURIComponent(subj)+'&body='+encodeURIComponent(body),'_blank');
 }
 async function coMarkSent(id){
   const to=document.getElementById('cosnd-to').value.split(',').map(x=>x.trim().toLowerCase()).filter(Boolean);
