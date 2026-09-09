@@ -3465,8 +3465,8 @@ function coSimpleSendModal(id){
         pdf?`<button class="btn btn-k" style="font-size:13px;padding:8px 18px" onclick="coFileOpen('${pdf.id}')">Download the recap PDF</button>`:'<span style="color:var(--amb);font-size:13px;font-weight:600">No recap PDF on this session</span>',
         pdf?'It opens in a new tab. Save it somewhere easy to find, like your Downloads folder.':'The email text above carries everything, so you can send without an attachment.')}
       ${step(2,
-        `<button class="btn btn-k" style="font-size:13px;padding:8px 18px" onclick="coOutlook()">Open the email in Outlook</button> <button class="btn btn-ghost btn-sm" onclick="coMailto()">Open the Outlook app on this computer</button> <button class="btn btn-ghost btn-sm" id="cosnd-copy" onclick="coCopyEmail()">Copy email text</button>`,
-        'The first button opens Outlook in your browser; the second opens the Outlook app on your computer (or whichever email app is set as your default). Either way the email is written for you.'+(pdf?' Attach the PDF you just downloaded, then press send.':' Press send when you are happy.'))}
+        `<button class="btn btn-k" style="font-size:13px;padding:8px 18px" onclick="coOutlook()">Open the email in Outlook</button> <button class="btn btn-ghost btn-sm" onclick="coOutlookApp()">Open the Outlook app on this computer</button> <button class="btn btn-ghost btn-sm" id="cosnd-copy" onclick="coCopyEmail()">Copy email text</button>`,
+        'The first button opens Outlook in your browser; the second opens the Outlook app if it is installed on your computer (otherwise your usual email app opens instead). Either way the email is written for you.'+(pdf?' Attach the PDF you just downloaded, then press send.':' Press send when you are happy.'))}
       ${step(3,
         `<button class="btn btn-y" style="font-size:14px;padding:9px 20px" onclick="coMarkSent('${id}')">Done, mark as sent</button>`,
         'This moves '+escHtml(first)+' to the Already sent list so you always know where you are.')}
@@ -3546,6 +3546,22 @@ function coOutlook(){
   const subj=document.getElementById('cosnd-subj').value;
   const body=document.getElementById('cosnd-body').value;
   window.open('https://outlook.office.com/mail/deeplink/compose?to='+encodeURIComponent(to)+'&subject='+encodeURIComponent(subj)+'&body='+encodeURIComponent(body),'_blank');
+}
+// Desktop Outlook: try the ms-outlook scheme Outlook registers when installed
+// (this sidesteps the computer's default mail setting). If nothing answers
+// within a moment, fall back to the default mail app so the button always
+// produces an email either way.
+function coOutlookApp(){
+  const to=encodeURIComponent(document.getElementById('cosnd-to').value.trim());
+  const subj=encodeURIComponent(document.getElementById('cosnd-subj').value);
+  const body=encodeURIComponent(document.getElementById('cosnd-body').value);
+  const before=Date.now();
+  window.location.href='ms-outlook://compose?to='+to+'&subject='+subj+'&body='+body;
+  setTimeout(()=>{
+    // If Outlook took over, the tab usually loses visibility; if we are still
+    // front and centre, nothing handled the link, so use the default mail app.
+    if(!document.hidden&&(Date.now()-before)<2600) window.location.href='mailto:'+to.replace(/%40/g,'@')+'?subject='+subj+'&body='+body;
+  },1800);
 }
 async function coMarkSent(id){
   const to=document.getElementById('cosnd-to').value.split(',').map(x=>x.trim().toLowerCase()).filter(Boolean);
