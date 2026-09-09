@@ -3548,19 +3548,22 @@ function coOutlook(){
   window.open('https://outlook.office.com/mail/deeplink/compose?to='+encodeURIComponent(to)+'&subject='+encodeURIComponent(subj)+'&body='+encodeURIComponent(body),'_blank');
 }
 // Desktop Outlook: try the ms-outlook scheme Outlook registers when installed
-// (this sidesteps the computer's default mail setting). If nothing answers
-// within a moment, fall back to the default mail app so the button always
-// produces an email either way.
+// (sidesteps the computer's default mail setting). Desktop Outlook opens but
+// often IGNORES the compose parameters, so the email text is copied to the
+// clipboard first and the dialog says to paste if the message arrives empty.
+// If nothing answers the scheme, fall back to the default mail app (which
+// does prefill everything).
 function coOutlookApp(){
-  const to=encodeURIComponent(document.getElementById('cosnd-to').value.trim());
-  const subj=encodeURIComponent(document.getElementById('cosnd-subj').value);
-  const body=encodeURIComponent(document.getElementById('cosnd-body').value);
+  const toRaw=document.getElementById('cosnd-to').value.trim();
+  const subjRaw=document.getElementById('cosnd-subj').value;
+  const bodyRaw=document.getElementById('cosnd-body').value;
+  try{ if(navigator.clipboard&&navigator.clipboard.writeText) navigator.clipboard.writeText(bodyRaw); }catch(e){}
+  const st=document.getElementById('cosnd-status');
+  if(st) st.innerHTML='<div style="background:var(--bg);border:1px solid var(--bdr);border-radius:8px;padding:10px 12px;line-height:1.6">Outlook is opening. If the message comes up empty, click into it and paste — the email text is already copied for you. Use this subject: <b>'+escHtml(subjRaw)+'</b> <button class="btn btn-ghost btn-sm" style="padding:1px 8px" onclick="navigator.clipboard.writeText(document.getElementById(\'cosnd-subj\').value);this.textContent=\'Copied ✓\'">Copy subject</button><br>Sending to: <b>'+escHtml(toRaw)+'</b> <button class="btn btn-ghost btn-sm" style="padding:1px 8px" onclick="navigator.clipboard.writeText(document.getElementById(\'cosnd-to\').value);this.textContent=\'Copied ✓\'">Copy address</button></div>';
   const before=Date.now();
-  window.location.href='ms-outlook://compose?to='+to+'&subject='+subj+'&body='+body;
+  window.location.href='ms-outlook://compose?to='+encodeURIComponent(toRaw)+'&subject='+encodeURIComponent(subjRaw)+'&body='+encodeURIComponent(bodyRaw);
   setTimeout(()=>{
-    // If Outlook took over, the tab usually loses visibility; if we are still
-    // front and centre, nothing handled the link, so use the default mail app.
-    if(!document.hidden&&(Date.now()-before)<2600) window.location.href='mailto:'+to.replace(/%40/g,'@')+'?subject='+subj+'&body='+body;
+    if(!document.hidden&&(Date.now()-before)<2600) window.location.href='mailto:'+toRaw+'?subject='+encodeURIComponent(subjRaw)+'&body='+encodeURIComponent(bodyRaw);
   },1800);
 }
 async function coMarkSent(id){
