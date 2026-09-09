@@ -3465,8 +3465,8 @@ function coSimpleSendModal(id){
         pdf?`<button class="btn btn-k" style="font-size:13px;padding:8px 18px" onclick="coFileOpen('${pdf.id}')">Download the recap PDF</button>`:'<span style="color:var(--amb);font-size:13px;font-weight:600">No recap PDF on this session</span>',
         pdf?'It opens in a new tab. Save it somewhere easy to find, like your Downloads folder.':'The email text above carries everything, so you can send without an attachment.')}
       ${step(2,
-        `<button class="btn btn-k" style="font-size:13px;padding:8px 18px" onclick="coOutlook()">Open the email in Outlook</button> <button class="btn btn-ghost btn-sm" onclick="coMailto()">Use my Mail app instead</button> <button class="btn btn-ghost btn-sm" id="cosnd-copy" onclick="coCopyEmail()">Copy email text</button>`,
-        'Outlook opens in your browser with everything written for you.'+(pdf?' Attach the PDF you just downloaded, then press send.':' Press send when you are happy.'))}
+        `<button class="btn btn-k" style="font-size:13px;padding:8px 18px" onclick="coOutlook()">Open the email in Outlook</button> <button class="btn btn-ghost btn-sm" onclick="coMailto()">Open the Outlook app on this computer</button> <button class="btn btn-ghost btn-sm" id="cosnd-copy" onclick="coCopyEmail()">Copy email text</button>`,
+        'The first button opens Outlook in your browser; the second opens the Outlook app on your computer (or whichever email app is set as your default). Either way the email is written for you.'+(pdf?' Attach the PDF you just downloaded, then press send.':' Press send when you are happy.'))}
       ${step(3,
         `<button class="btn btn-y" style="font-size:14px;padding:9px 20px" onclick="coMarkSent('${id}')">Done, mark as sent</button>`,
         'This moves '+escHtml(first)+' to the Already sent list so you always know where you are.')}
