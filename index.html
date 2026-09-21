@@ -1459,6 +1459,7 @@ function initApp(user){
   cxV82DataPass();
   cxV86LeadStages();
   podSeedLoad();
+  podV97Promo();
   updateFollowupBadge();
   setTimeout(()=>{ try{ csuiteAutoRun(); }catch(e){} },8000);
   updateInboundBadge();
@@ -6988,6 +6989,16 @@ const POD_EP_STATUSES=["Booked","Recorded","In edit","With guest","Approved","Sc
 const POD_GUEST_STAGES=["Idea","Approached","Agreed","Booked","Recorded","Live"];
 const POD_PACK_HOURS=48; // pack to Joe deadline, from guest confirmation
 const POD_BOOKED_TARGET=4;
+// v97: promotion step group, Danny's 21 Sept review ("each podcast needs a
+// promotional plan agreed BEFORE recording, with ownership"). Owners are
+// defaults only, editable per episode; plan ownership is still an open item.
+const POD_PROMO_STEPS=[
+  {n:21,text:'Promotional plan agreed: content, channels, timing, ownership',owner:'James',sop:'TUF_Podcast_Go_Live_Plan.md'},
+  {n:22,text:'Clips scheduled across channels',owner:'Joe',sop:'TUF_Clip_Selection_Method.md'},
+  {n:23,text:'LinkedIn posts live, Danny and TUF pages',owner:'Danny',sop:''},
+  {n:24,text:'Newsletter mention sent',owner:'James',sop:''},
+  {n:25,text:'Guest assets pack sent for their own channels',owner:'James',sop:''}
+];
 let podView='eps', podSelId=null, __pod48Int=null;
 function podEps(){ return ls.get('tuf_pod_eps',[])||[]; }
 function podGuests(){ return ls.get('tuf_pod_guests',[])||[]; }
@@ -7066,6 +7077,7 @@ function podSetStatus(epId,val){
   if(val==='Live'){
     const open=(ep.steps||[]).filter(s=>(s.n===9||s.n===11)&&!s.done);
     if(open.length){ alert('This episode cannot go Live yet: '+open.map(s=>'step '+s.n+' ('+s.text+')').join(' and ')+' still open.'); renderPodcast(); return; }
+    if(podThumbWarn(ep)&&!confirm('No approved thumbnail on this episode yet. Go Live anyway?')){ renderPodcast(); return; }
     if(!ep.liveAt) ep.liveAt=new Date().toISOString();
   }
   ep.status=val; ls.set('tuf_pod_eps',eps); renderPodcast();
@@ -7102,6 +7114,196 @@ function podNoteSave(epId){
   const eps=podEps(); const ep=eps.find(e=>e.id===epId); if(!ep) return;
   ep.note=el.value; ls.set('tuf_pod_eps',eps);
 }
+// ── v97 additions: promo migration, thumbnails, calendar, prep brief, miner ──
+// One shot: append the Promotion group to episodes that predate it. For
+// episodes already recorded, step 21 gets no due date rather than being born
+// overdue; new episodes get due dates from their own dates at creation.
+function podV97Promo(){
+  try{
+    if(!sbLoadOK) return;
+    if(ls.get('tuf_pod_promo_v97',null)) return;
+    const eps=podEps(); if(!eps.length) return;
+    const today=new Date().toISOString().slice(0,10);
+    let touched=false;
+    eps.forEach(ep=>{
+      if((ep.steps||[]).some(s=>s.phase==='Promotion')) return;
+      ep.steps=(ep.steps||[]).concat(POD_PROMO_STEPS.map(t=>({n:t.n,text:t.text,phase:'Promotion',owner:t.owner,
+        due:t.n===21?((ep.recordDate&&ep.recordDate>=today)?ep.recordDate:''):(ep.publishDate||''),
+        done:false,doneBy:'',doneAt:'',taskId:'',sop:t.sop||''})));
+      touched=true;
+    });
+    if(touched) ls.set('tuf_pod_eps',eps);
+    ls.set('tuf_pod_promo_v97',{at:new Date().toISOString(),by:CURRENT_USER});
+  }catch(e){ console.warn('podV97Promo failed',e); }
+}
+// Thumbnails live in the existing private bucket under the coaching/ prefix so
+// every storage policy and the agent allowlist stay exactly as they are.
+let __podThumbUrls={};
+function podThumbWarn(ep){ return !(ep&&ep.thumbPath&&ep.thumbApprovedAt); }
+function podThumbUpload(epId){
+  const inp=document.createElement('input'); inp.type='file'; inp.accept='image/*';
+  inp.onchange=async ()=>{
+    const f=inp.files&&inp.files[0]; if(!f) return;
+    if(f.size>10*1024*1024){ alert('That image is over 10MB. Export a smaller version.'); return; }
+    try{
+      const safe=(f.name||'thumb').replace(/[^A-Za-z0-9.\-_]/g,'_');
+      const path='coaching/podcast/'+epId+'/'+uid()+'_'+safe;
+      const {error}=await sb.storage.from(CO_BUCKET).upload(path,f,{upsert:false,contentType:f.type||undefined});
+      if(error) throw error;
+      const eps=podEps(); const ep=eps.find(e=>e.id===epId); if(!ep) return;
+      ep.thumbPath=path; ep.thumbName=f.name||'';
+      ep.thumbApprovedBy=''; ep.thumbApprovedAt=''; // new artwork needs a fresh sign off
+      ls.set('tuf_pod_eps',eps);
+      delete __podThumbUrls[epId];
+      addNotif('Thumbnail uploaded. It now needs approval before the episode goes Live.');
+      renderPodcast();
+    }catch(e){ alert('Upload failed: '+(e.message||e)); }
+  };
+  inp.click();
+}
+function podThumbApprove(epId){
+  const eps=podEps(); const ep=eps.find(e=>e.id===epId); if(!ep||!ep.thumbPath) return;
+  if(ep.thumbApprovedAt){ ep.thumbApprovedBy=''; ep.thumbApprovedAt=''; }
+  else { ep.thumbApprovedBy=CURRENT_USER; ep.thumbApprovedAt=new Date().toISOString(); }
+  ls.set('tuf_pod_eps',eps); renderPodcast();
+}
+async function podThumbFill(){
+  const imgs=document.querySelectorAll('img[data-podthumb]');
+  for(const img of imgs){
+    const epId=img.getAttribute('data-podthumb');
+    try{
+      let c=__podThumbUrls[epId];
+      if(!c||c.exp<Date.now()){
+        const ep=podEps().find(e=>e.id===epId); if(!ep||!ep.thumbPath) continue;
+        const {data,error}=await sb.storage.from(CO_BUCKET).createSignedUrl(ep.thumbPath,3600);
+        if(error||!data) continue;
+        c=__podThumbUrls[epId]={url:data.signedUrl,exp:Date.now()+55*60*1000};
+      }
+      img.src=c.url; img.style.display='';
+    }catch(e){}
+  }
+}
+// Six month publish calendar. Pure so it can be unit tested.
+function podCalendarMonths(eps,today,count){
+  count=count||6; today=today||new Date().toISOString().slice(0,10);
+  const names=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const y0=parseInt(today.slice(0,4),10), m0=parseInt(today.slice(5,7),10)-1;
+  const out=[];
+  for(let i=0;i<count;i++){
+    const y=y0+Math.floor((m0+i)/12), m=(m0+i)%12;
+    const ym=y+'-'+String(m+1).padStart(2,'0');
+    const list=(eps||[]).filter(e=>e.publishDate&&e.publishDate.slice(0,7)===ym)
+      .map(e=>({number:e.number,guestName:e.guestName,guestJob:e.guestJob,status:e.status}));
+    const auth=list.filter(e=>e.guestJob==='Authority'&&e.status!=='Closed');
+    out.push({ym,label:names[m]+' '+y,eps:list,clash:auth.length>1});
+  }
+  return out;
+}
+// Prep brief: everything the app knows about a guest, assembled for Danny.
+function podPrepBriefText(g){
+  const eps=podEps();
+  const ep=g.episodeId?eps.find(e=>e.number===g.episodeId):null;
+  const lines=[];
+  lines.push('PODCAST PREP BRIEF · '+(g.name||('Episode '+(g.episodeId||'?')+' slot')));
+  if(g.company) lines.push('Company: '+g.company);
+  lines.push('Guest job: '+(g.guestJob||'')+' · Stage: '+(g.stage||'')+' · Owner: '+(g.owner||''));
+  if(g.source) lines.push('Source: '+g.source);
+  if(g.fitNote) lines.push('Why they fit: '+g.fitNote);
+  if(g.nextAction) lines.push('Next action: '+g.nextAction+(g.nextActionDate?' by '+g.nextActionDate:''));
+  if(ep){
+    lines.push('');
+    lines.push('EPISODE '+ep.number+(ep.recordDate?' · records '+ep.recordDate:'')+(ep.publishDate?' · publishes '+ep.publishDate:''));
+    if(ep.studio) lines.push('Studio: '+ep.studio);
+    if(ep.note) lines.push('Episode note: '+ep.note);
+    const open=(ep.steps||[]).filter(s=>!s.done&&s.phase==='Prep');
+    if(open.length) lines.push('Prep steps still open: '+open.map(s=>s.n+'. '+s.text).join(' · '));
+  }
+  try{
+    const nm=(g.name||'').trim().toLowerCase();
+    if(nm){
+      const p=peopleAll().find(x=>(x.name||'').trim().toLowerCase()===nm);
+      if(p){
+        lines.push('');
+        lines.push('IN THE CRM: '+(SEG_LABEL[personSegment(p)]||personSegment(p)||'no segment'));
+        const lc=cxLastContact(p);
+        if(lc) lines.push('Last contact: '+String(lc).slice(0,10));
+        cxNotes(p.id).filter(e=>!e.deleted).slice(0,3).forEach(e=>lines.push('Note ('+String(e.date||'').slice(0,10)+'): '+String(e.text||'').replace(/\s+/g,' ').slice(0,220)));
+      } else { lines.push(''); lines.push('Not in the CRM yet.'); }
+    }
+  }catch(e){}
+  return lines.join('\n');
+}
+function podPrepBrief(guestId){
+  const g=podGuests().find(x=>x.id===guestId); if(!g) return;
+  const txt=podPrepBriefText(g);
+  showModal('Prep brief · '+(g.name||'Guest'),`
+    <pre id="pod-prep-txt" style="white-space:pre-wrap;font-family:inherit;font-size:12.5px;line-height:1.6;background:var(--bg);border:1px solid var(--bdr);border-radius:8px;padding:12px;max-height:50vh;overflow:auto;margin:0 0 8px">${escHtml(txt)}</pre>
+    <div id="pod-prep-ai" style="font-size:12.5px;line-height:1.6"></div>
+  `,`<button class="btn btn-ghost" onclick="closeModal()">Close</button><button class="btn btn-ghost" onclick="podPrepAngles('${g.id}')">Suggest angles</button><button class="btn btn-k" onclick="podPrepCopy()">Copy brief</button>`);
+}
+function podPrepCopy(){
+  const el=document.getElementById('pod-prep-txt'); if(!el) return;
+  const ai=document.getElementById('pod-prep-ai');
+  const txt=el.innerText+(ai&&ai.innerText?'\n\n'+ai.innerText:'');
+  navigator.clipboard.writeText(txt).then(()=>addNotif('Brief copied')).catch(()=>{
+    const r=document.createRange(); r.selectNodeContents(el);
+    const s=getSelection(); s.removeAllRanges(); s.addRange(r);
+  });
+}
+async function podPrepAngles(guestId){
+  const g=podGuests().find(x=>x.id===guestId); if(!g) return;
+  const box=document.getElementById('pod-prep-ai'); if(!box) return;
+  box.innerHTML='<div style="color:var(--mut)">Thinking about angles…</div>';
+  try{
+    const data=await claudeCall({model:'claude-haiku-4-5-20251001',max_tokens:1000,messages:[{role:'user',content:'You prep Danny, host of The Ultimate Founder podcast. He interviews founders and is warm, high energy, direct and commercially grounded. From this brief, give five interview angles as short lines Danny could open with, each specific to this guest, none generic. British English. No hyphens and no dashes anywhere.\n\n'+podPrepBriefText(g)}]});
+    const txt=(data&&data.content&&data.content[0]&&data.content[0].text)||'';
+    box.innerHTML='<div style="font-size:10px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--mut);margin:10px 0 4px">Suggested angles</div><div style="white-space:pre-wrap">'+escHtml(txt)+'</div>';
+  }catch(e){ box.innerHTML='<div style="color:var(--red);font-size:12px">Could not fetch angles: '+escHtml(e.message||String(e))+'</div>'; }
+}
+// Transcript miner: the transcript is never stored, only the mined result.
+function podMineTrim(text){
+  const CAP=150000;
+  text=String(text||'');
+  if(text.length<=CAP) return {text:text,truncated:false};
+  return {text:text.slice(0,CAP),truncated:true};
+}
+async function podMineRun(epId){
+  const ta=document.getElementById('pod-mine-txt'); if(!ta) return;
+  const raw=ta.value.trim();
+  if(raw.length<400){ alert('Paste the full transcript in first. This needs the whole conversation to mine.'); return; }
+  const btn=document.getElementById('pod-mine-btn'); if(btn){ btn.disabled=true; btn.textContent='Mining…'; }
+  const trimmed=podMineTrim(raw);
+  const epA=podEps().find(e=>e.id===epId); if(!epA) return;
+  try{
+    const prompt=[
+      'You are the content miner for The Ultimate Founder podcast. Danny is the host: warm, high energy, direct, commercially grounded. Below is the transcript of Ep '+epA.number+' with '+(epA.guestName||'the guest')+(epA.company?' of '+epA.company:'')+'.',
+      epA.note?('EPISODE RESTRICTIONS, these outrank everything else: '+epA.note):'',
+      'Mine the transcript for five kinds of moments: a reframe that flips how a founder sees a problem, a recurring founder struggle, a win or result, a question that was asked, and a story or analogy that landed.',
+      'Then report under these exact plain text headings.',
+      'THE STANCE: the one point of view this episode argues, in two or three sentences. The position Danny repeats everywhere when talking about this episode.',
+      'STORIES: three to five moments worth retelling. For each give the verbatim trigger quote with the speaker named, never a reconstructed quote, roughly where it sits in the episode, and one line on why it lands. Mark any quote where speaker attribution looks uncertain.',
+      'PROMO HOOKS: five spoken hooks, the first three seconds out of Danny’s mouth to camera, built from words actually said in the episode. Short, punchy, written for the mouth not the page. Type each one POV, promo or proof, weighted toward POV.',
+      'CLIP MOMENTS: three to five self contained stretches that would cut into a strong clip, each with the opening quote and the payoff.',
+      'Rules: British English. No hyphens and no dashes anywhere. Verbatim quotes or nothing. The guest took part on the record so no anonymisation is needed, but if a moment makes a claim about a third party or a specific figure, mark it CLEARANCE NEEDED. Only ideas that earn their place; three strong angles beat ten thin ones.',
+      'TRANSCRIPT:\n'+trimmed.text+(trimmed.truncated?'\n\n[Transcript truncated for length. Mine what is here.]':'')
+    ].filter(Boolean).join('\n\n');
+    const data=await claudeCall({model:'claude-haiku-4-5-20251001',max_tokens:4000,messages:[{role:'user',content:prompt}]});
+    const out=(data&&data.content&&data.content[0]&&data.content[0].text)||'';
+    if(!out) throw new Error('Empty response');
+    const eps=podEps(); const ep=eps.find(e=>e.id===epId); if(!ep) return;
+    ep.contentMine={at:new Date().toISOString(),by:CURRENT_USER,truncated:trimmed.truncated,text:out};
+    ls.set('tuf_pod_eps',eps);
+    addNotif('Episode mined: stance, stories, hooks and clip moments saved');
+    renderPodcast();
+  }catch(e){
+    alert('Mining failed: '+(e.isRateLimit?'the AI is busy right now, try again in a minute.':(e.message||e)));
+    if(btn){ btn.disabled=false; btn.textContent='Mine this episode'; }
+  }
+}
+function podMineCopy(){
+  const el=document.getElementById('pod-mine-out'); if(!el) return;
+  navigator.clipboard.writeText(el.innerText).then(()=>addNotif('Copied')).catch(()=>{});
+}
 function podNav(v){ podView=v; if(v!=='eps') podSelId=null; renderPodcast(); }
 function renderPodcast(){
   const host=document.getElementById('podcast-render'); if(!host) return;
@@ -7114,6 +7316,7 @@ function renderPodcast(){
   const ta=document.getElementById('topbar-actions');
   if(ta) ta.innerHTML=podView==='pipe'?`<button class="btn btn-k btn-sm" onclick="podGuestModal()">+ Add guest</button>`:`<button class="btn btn-k btn-sm" onclick="podEpNewModal()">+ Add episode</button>`;
   podStart48();
+  podThumbFill();
 }
 // ── Episodes list ──
 function podJobTag(job){ return job==='Ideal fit'?'<span class="tag tag-y" style="font-size:9px">Ideal fit</span>':'<span class="tag tag-k" style="font-size:9px">Authority</span>'; }
@@ -7133,6 +7336,7 @@ function podEpsView(){
     const late=podEpOverdue(ep,today);
     return `<div class="card" style="margin-bottom:8px;cursor:pointer;${late?'border-left:4px solid var(--red);background:var(--rbg)':''}" onclick="podSelId='${ep.id}';renderPodcast()">
       <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+        ${ep.thumbPath?`<img data-podthumb="${ep.id}" alt="" style="display:none;width:53px;height:30px;object-fit:cover;border-radius:5px;border:1px solid var(--bdr);flex-shrink:0">`:''}
         <span style="font-family:Montserrat,sans-serif;font-weight:800;font-size:16px">${escHtml(ep.number)}</span>
         <div style="flex:1;min-width:180px">
           <div style="font-weight:700">${escHtml(ep.guestName)}<span style="color:var(--mut);font-weight:500;font-size:12px"> · ${escHtml(ep.company||'')}</span></div>
@@ -7147,6 +7351,16 @@ function podEpsView(){
   return `
     ${decisions.length?`<div class="card" style="border-left:4px solid var(--amb);margin-bottom:12px"><div style="font-size:10px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--amb);margin-bottom:6px">Open decisions, not yet resolved</div>${decisions.map(d=>`<div style="font-size:12.5px;padding:3px 0;line-height:1.5">· ${escHtml(d)}</div>`).join('')}</div>`:''}
     ${clashes.length?`<div class="card" style="border-left:4px solid var(--amb);margin-bottom:12px"><div style="font-size:12.5px"><b>More than one Authority episode in the same month:</b> ${clashes.map(c=>c.month+' ('+c.eps.map(e=>'Ep '+e.number).join(', ')+')').join(' · ')}. Authority episodes do not count toward the ideal fit measure, so two in one month crowds out the founders the show exists for.</div></div>`:''}
+    <div class="card" style="margin-bottom:12px">
+      <div class="card-title">Publish calendar</div>
+      <div style="display:flex;gap:8px;overflow-x:auto;padding-bottom:4px">
+        ${podCalendarMonths(podEps(),today).map(m=>`<div style="flex:1;min-width:104px;border:1px solid ${m.clash?'var(--red)':'var(--bdr)'};border-radius:8px;padding:8px;${m.clash?'background:var(--rbg)':''}">
+          <div style="font-size:10.5px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:${m.clash?'var(--red)':'var(--mut)'}">${m.label}</div>
+          ${m.eps.length?m.eps.map(e=>`<div style="margin-top:6px;font-size:11px;line-height:1.4"><b>Ep ${escHtml(e.number)}</b> ${escHtml(e.guestName||'')}<div style="margin-top:2px">${podJobTag(e.guestJob)}</div></div>`).join(''):'<div style="margin-top:6px;font-size:11px;color:var(--grn);font-weight:700">Free</div>'}
+        </div>`).join('')}
+      </div>
+      <div style="font-size:10.5px;color:var(--mut);margin-top:6px">A red month breaks the one Authority episode a month rule. Free months are where the next booking lands.</div>
+    </div>
     ${eps.length?eps.map(row).join(''):'<div class="empty">No episodes yet.</div>'}
   `;
 }
@@ -7169,7 +7383,7 @@ function podEpNewModal(){
       <div class="form-row"><label class="form-label">Studio</label><input class="form-input" id="pe-studio" value="Podshop"></div>
     </div>
     <div class="form-row"><label class="form-label">Episode note (restrictions, angles, anything the team must know)</label><textarea class="form-textarea" id="pe-note" style="min-height:60px"></textarea></div>
-    <div style="font-size:11px;color:var(--mut)">The standard 20 step checklist is created automatically with the episode.</div>
+    <div style="font-size:11px;color:var(--mut)">The standard 25 step checklist, production plus promotion, is created automatically with the episode.</div>
   `,`<button class="btn btn-ghost" onclick="closeModal()">Cancel</button><button class="btn btn-k" onclick="podEpNewSave()">Add episode</button>`);
 }
 function podEpNewSave(){
@@ -7181,7 +7395,8 @@ function podEpNewSave(){
   eps.push({id:uid(),number,guestName:guest,company:g('pe-co'),guestJob:document.getElementById('pe-job').value,status:'Booked',
     recordDate:g('pe-record'),publishDate:g('pe-publish'),teaserStartDate:g('pe-teaser'),studio:g('pe-studio'),
     guestConfirmedAt:null,note:g('pe-note'),links:{dossier:'',brief:'',master:'',youtube:'',audio:''},
-    steps:tpl.map(s=>({n:s.n,text:s.text,phase:s.phase,owner:s.owner==='Podshop'?'Podshop':'James',due:s.due==='confirmed+48h'?'confirmed+48h':'',done:false,doneBy:'',doneAt:'',taskId:'',sop:s.sop||''})),
+    steps:tpl.map(s=>({n:s.n,text:s.text,phase:s.phase,owner:s.owner==='Podshop'?'Podshop':'James',due:s.due==='confirmed+48h'?'confirmed+48h':'',done:false,doneBy:'',doneAt:'',taskId:'',sop:s.sop||''}))
+      .concat(POD_PROMO_STEPS.map(t=>({n:t.n,text:t.text,phase:'Promotion',owner:t.owner,due:t.n===21?g('pe-record'):g('pe-publish'),done:false,doneBy:'',doneAt:'',taskId:'',sop:t.sop||''}))),
     metrics:{viewsD7:null,watchTimeAvg:null,downloadsD7:null,downloadsD30:null,clipViews:null,linkClicks:null,scorecardOrApplications:null},
     debriefNote:'',createdBy:CURRENT_USER,createdAt:new Date().toISOString()});
   ls.set('tuf_pod_eps',eps);
@@ -7209,7 +7424,8 @@ function podEpDetail(){
   if(!ep){ podSelId=null; return podEpsView(); }
   const today=new Date().toISOString().slice(0,10);
   const tasks=ls.get('tuf_tasks',[])||[];
-  const phases=['Prep','Record','Post','Publish','Review'];
+  const phases=['Prep','Record','Post','Publish','Promotion','Review'];
+  const prepG=podGuests().find(g=>(g.episodeId&&g.episodeId===ep.number)||(g.name&&ep.guestName&&g.name.trim().toLowerCase()===ep.guestName.trim().toLowerCase()));
   const stepRow=s=>{
     const dueIso=podStepDue(ep,s); const late=podStepOverdue(ep,s,today);
     const dueTxt=s.due==='confirmed+48h'?(dueIso?fmtShort(String(dueIso).slice(0,10))+' (confirmed +'+POD_PACK_HOURS+'h)':'guest confirmed +'+POD_PACK_HOURS+'h'):(s.due?fmtShort(s.due):'');
@@ -7241,7 +7457,25 @@ function podEpDetail(){
         <div style="font-weight:800;font-size:17px">${escHtml(ep.guestName)} <span style="font-weight:500;color:var(--mut);font-size:13px">· ${escHtml(ep.company||'')}</span></div>
       </div>
       ${podJobTag(ep.guestJob)}
+      ${prepG?`<button class="btn btn-ghost btn-sm" onclick="podPrepBrief('${prepG.id}')">Prep brief</button>`:''}
       <select class="form-select" style="width:auto;padding:4px 10px;font-size:12px" onchange="podSetStatus('${ep.id}',this.value)">${POD_EP_STATUSES.map(x=>`<option${x===ep.status?' selected':''}>${x}</option>`).join('')}</select>
+    </div>
+    <div class="card" style="margin-bottom:12px">
+      <div class="card-title">Thumbnail</div>
+      <div style="display:flex;gap:14px;align-items:center;flex-wrap:wrap">
+        ${ep.thumbPath
+          ?`<img data-podthumb="${ep.id}" alt="Episode thumbnail" style="display:none;width:160px;max-width:44vw;aspect-ratio:16/9;object-fit:cover;border-radius:8px;border:1px solid var(--bdr)">`
+          :`<div style="width:160px;max-width:44vw;aspect-ratio:16/9;border-radius:8px;border:1px dashed var(--bdr);display:flex;align-items:center;justify-content:center;color:var(--mut);font-size:11px">No thumbnail yet</div>`}
+        <div style="flex:1;min-width:180px">
+          <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+            <button class="btn btn-ghost btn-sm" onclick="podThumbUpload('${ep.id}')">${ep.thumbPath?'Replace':'Upload thumbnail'}</button>
+            ${ep.thumbPath?`<span style="display:inline-flex;gap:8px;align-items:center"><span class="chk-box" style="flex-shrink:0" onclick="podThumbApprove('${ep.id}')">${ep.thumbApprovedAt?'✓':''}</span><b style="font-size:12.5px">Danny approved</b></span>`:''}
+          </div>
+          <div style="font-size:10.5px;color:var(--mut);margin-top:6px">${ep.thumbApprovedAt
+            ?('Approved by '+escHtml(ep.thumbApprovedBy||'')+' · '+fmtShort(String(ep.thumbApprovedAt).slice(0,10))+'. Replacing the image clears approval.')
+            :(ep.thumbPath?'Waiting for sign off. Going Live without an approved thumbnail asks for a second confirmation.':'Upload the final artwork here so Danny can sign it off before the episode goes Live.')}</div>
+        </div>
+      </div>
     </div>
     <div class="card" style="border-left:4px solid var(--amb);margin-bottom:12px">
       <div style="font-size:10px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--amb);margin-bottom:4px">Episode note, read before touching the edit or any clip</div>
@@ -7270,6 +7504,20 @@ function podEpDetail(){
       const done=list.filter(s=>s.done).length;
       return `<div class="card" style="margin-bottom:10px"><div class="card-title">${ph} <span style="font-weight:500;color:var(--mut);font-size:11px">${done}/${list.length}</span></div>${list.map(stepRow).join('')}</div>`;
     }).join('')}
+    <div class="card" style="margin-bottom:10px">
+      <div class="card-title">What to say about this episode</div>
+      ${ep.contentMine&&ep.contentMine.text?`
+        <div style="font-size:10.5px;color:var(--mut);margin-bottom:6px">Mined ${fmtShort(String(ep.contentMine.at).slice(0,10))} by ${escHtml(ep.contentMine.by||'')}${ep.contentMine.truncated?' · the transcript was truncated for length':''}. Mining again replaces this.</div>
+        <div id="pod-mine-out" style="white-space:pre-wrap;font-size:12.5px;line-height:1.65;background:var(--bg);border:1px solid var(--bdr);border-radius:8px;padding:12px;max-height:60vh;overflow:auto">${escHtml(ep.contentMine.text)}</div>
+        <div style="display:flex;gap:8px;margin-top:8px"><button class="btn btn-ghost btn-sm" onclick="podMineCopy()">Copy</button></div>
+        <details style="margin-top:10px"><summary style="font-size:12px;font-weight:700;cursor:pointer">Mine a new transcript</summary>
+          <textarea class="form-textarea" id="pod-mine-txt" style="min-height:120px;margin-top:8px" placeholder="Paste the full episode transcript here"></textarea>
+          <button class="btn btn-k btn-sm" id="pod-mine-btn" style="margin-top:8px" onclick="podMineRun('${ep.id}')">Mine this episode</button>
+        </details>`
+      :`<div style="font-size:12px;color:var(--mut);margin-bottom:8px">Paste the episode transcript and get back the stance the episode argues, the stories worth retelling, spoken promo hooks for Danny and the strongest clip moments. The transcript itself is never stored, only the result.</div>
+        <textarea class="form-textarea" id="pod-mine-txt" style="min-height:140px" placeholder="Paste the full episode transcript here"></textarea>
+        <button class="btn btn-k btn-sm" id="pod-mine-btn" style="margin-top:8px" onclick="podMineRun('${ep.id}')">Mine this episode</button>`}
+    </div>
     <div class="card" style="margin-bottom:10px">
       <div class="card-title">Metrics <span style="font-weight:500;color:var(--mut);font-size:11px">typed in by hand, seven numbers, one week and one month after going live</span></div>
       <div class="grid-4">
@@ -7339,7 +7587,7 @@ function podPipeView(){
     </div>
     ${g.nextAction?`<div style="font-size:10px;color:var(--mut);margin-top:4px">${escHtml(g.nextAction)}${g.nextActionDate?` <b>· ${fmtShort(g.nextActionDate)}</b>`:''}</div>`:''}
     ${g.fitNote?`<div style="font-size:9.5px;color:var(--mut);margin-top:3px">${escHtml(g.fitNote.slice(0,90))}</div>`:''}
-    <div style="font-size:9px;color:var(--mut);margin-top:4px">${escHtml(g.owner||'')}${g.source?' · '+escHtml(g.source):''}</div>
+    <div style="display:flex;gap:6px;align-items:center;margin-top:4px"><span style="font-size:9px;color:var(--mut);flex:1">${escHtml(g.owner||'')}${g.source?' · '+escHtml(g.source):''}</span>${(g.stage==='Agreed'||g.stage==='Booked'||g.stage==='Recorded')&&g.name?`<button class="btn btn-ghost btn-sm" style="padding:1px 8px;font-size:9.5px" onclick="event.stopPropagation();podPrepBrief('${g.id}')">Prep brief</button>`:''}</div>
   </div>`;
   return `
     <div class="card" style="border-left:4px solid ${bad?'var(--red)':'var(--grn)'};margin-bottom:12px">
