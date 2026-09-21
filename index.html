@@ -768,13 +768,7 @@ details>summary::-webkit-details-marker{display:none}
     <div class="page" id="page-growthplan"><div id="growth-content"></div></div>
 
     <!-- ═══ PODCAST ═══ -->
-    <div class="page" id="page-podcast">
-      <div id="pod-plan"></div>
-      <div class="grid-4" id="pod-stats" style="margin-bottom:14px"></div>
-      <div id="pod-schedule" style="margin-bottom:14px"></div>
-      <div id="podcast-list" style="margin-bottom:14px"></div>
-      <div id="pod-checklist"></div>
-    </div>
+    <div class="page" id="page-podcast"><div id="podcast-render"></div></div>
 
     <!-- ═══ IP REGISTER ═══ -->
     <div class="page" id="page-ip">
@@ -1224,7 +1218,6 @@ function obDeleteStep(memberId,stepId){
   ls.set('tuf_members',members); showOnboarding(memberId); renderOnboarding();
 }
 
-const PODCAST_STATUSES = ["Not Contacted","Contacted","Confirmed","Recorded","Published"];
 const CONTENT_STATUSES = ["Idea","Drafted","Scheduled","Posted"];
 const CONTENT_STATUS_META = {
   "Idea":     {cls:'tag-b',  dot:'#2471A3'},
@@ -1465,6 +1458,7 @@ function initApp(user){
   cxV80Migrate();
   cxV82DataPass();
   cxV86LeadStages();
+  podSeedLoad();
   updateFollowupBadge();
   setTimeout(()=>{ try{ csuiteAutoRun(); }catch(e){} },8000);
   updateInboundBadge();
@@ -1695,13 +1689,6 @@ function seedDefaultData(){
       {id:uid(),title:'Embed AI tooling across all team workflows — run first team training session',owner:'James',priority:'Medium',dueDate:'2026-07-30',status:'To Do',notes:'Danny\'s vision: small team, highly profitable, AI-enabled. This is James\'s core responsibility.',createdBy:'James',createdAt:new Date().toISOString(),completedAt:null},
     ]);
   }
-  // Seed podcast guests if empty
-  if(!ls.get('tuf_podcast')){
-    ls.set('tuf_podcast',[
-      {id:'pg1',name:'Savas',co:'TBC',status:'Not Contacted',topic:'Scaling a founder-led business',notes:'Mentioned by Danny in planning session.',date:''},
-      {id:'pg2',name:'Oli Marchant',co:'TBC',status:'Not Contacted',topic:'Leadership and team building',notes:'Mentioned by Danny in planning session.',date:''},
-    ]);
-  }
   // Seed IP if empty
   if(!ls.get('tuf_ip')){
     ls.set('tuf_ip',[
@@ -1741,7 +1728,7 @@ const PAGE_TITLES = {
   boardroom:'Boardroom',crmhub:'CRM',crmclean:'CRM Cleanup',content:'Content Calendar',social:'Social Media',kpis:'KPIs',aidump:'AI Tool (Dump)',buildreq:'Build Requests',clientanalysis:'Client Analysis',emaillist:'Email List',watemplates:'WhatsApp Templates',
   testimonials:'Testimonials',
   onboarding:'Onboarding',sessions:'Session Planner',padel:'Padel Event',
-  podcast:'Podcast Pipeline',coaching:'Coaching',growthplan:'Growth Plan',ip:'IP Register',files:'Documents',
+  podcast:'Podcast',coaching:'Coaching',growthplan:'Growth Plan',ip:'IP Register',files:'Documents',
   capmap:'Capability Map',goals:'Goals & OKRs',market:'Market Intel',prospecting:'Prospecting',fourbox:'The 4 Box Model',budget:'Budget',
   teamtasks:'Team Tasks',roles:'Roles',reviews:'Weekly Review',notifs:'Notifications',
   csuite:'C-Suite',holidays:'Holidays',daily:'Daily Progress',
@@ -1942,17 +1929,28 @@ function mdDefaultModules(){ return (MYDAY_MODULE_DEFAULTS[CURRENT_USER]||[]).sl
 function mdAddModule(){ const sel=document.getElementById('md-add-module'); if(!sel||!sel.value)return; const d=mdGet(); if(!d.modules.includes(sel.value)) d.modules.push(sel.value); mdSet(d); renderMyDay(); }
 function mdRemoveModule(id){ const d=mdGet(); d.modules=d.modules.filter(m=>m!==id); mdSet(d); renderMyDay(); }
 function mdModToggle(kind,id){
-  if(kind==='podcast'){ const c=podChkGet(); if(c.done[id]) delete c.done[id]; else c.done[id]=true; podChkSet(c); }
+  if(kind==='podcast'){ const p=String(id).split('|'); podTickStep(p[0],parseInt(p[1])); }
   else if(kind==='boardroom'){ toggleBoardroomTask(id); }
   renderMyDay();
 }
 function mdModPodcastBody(){
-  const c=podChkGet(); const all=[...(c.before||[]),...(c.after||[])]; const done=all.filter(it=>c.done[it.id]).length;
-  const nd=podNextDay();
-  const ndLine=nd?`<div style="font-size:12px;font-weight:700;margin-bottom:8px">Next recording: ${fmtDate(nd.date)} · ${daysUntil(nd.date)===0?'today':'in '+daysUntil(nd.date)+'d'} · ${nd.eps.length} episode${nd.eps.length!==1?'s':''}</div>`:`<div style="font-size:12px;font-weight:700;color:var(--amb);margin-bottom:8px">No recording day booked</div>`;
-  return `${ndLine}${podChkBar(done,all.length)}
-    <div style="font-size:11px;color:var(--mut);margin:6px 0 10px">${done}/${all.length} done${c.updatedBy?' · last by '+escHtml(c.updatedBy):''}</div>
-    ${[['before','Before recording'],['after','After recording']].map(([k,t])=>{ const items=c[k]||[]; return `<div style="font-size:10px;font-weight:700;color:var(--mut);text-transform:uppercase;letter-spacing:.5px;margin:8px 0 4px">${t}</div>`+items.map(it=>`<div class="chk-row ${c.done[it.id]?'done':''}"><div class="chk-box" onclick="mdModToggle('podcast','${it.id}')">${c.done[it.id]?'✓':''}</div><span class="chk-text" style="flex:1;cursor:pointer" onclick="mdModToggle('podcast','${it.id}')">${escHtml(it.text)}</span></div>`).join(''); }).join('')}`;
+  // The next steps due across every episode, soonest first, straight from the
+  // podcast module. Ticking here is ticking the real step.
+  const today=new Date().toISOString().slice(0,10);
+  const rows=[];
+  podEps().forEach(ep=>(ep.steps||[]).forEach(s=>{
+    if(s.done) return;
+    const due=podStepDue(ep,s); if(!due) return;
+    rows.push({ep,s,due:String(due).slice(0,10)});
+  }));
+  rows.sort((a,b)=>a.due.localeCompare(b.due));
+  const n=podBookedAhead();
+  const head=`<div style="font-size:12px;font-weight:700;margin-bottom:8px;color:${n<POD_BOOKED_TARGET?'var(--red)':'var(--grn)'}">Booked ahead: ${n} of ${POD_BOOKED_TARGET}</div>`;
+  if(!rows.length) return head+'<div class="empty" style="padding:12px">No podcast steps with a due date outstanding.</div>';
+  return head+rows.slice(0,6).map(r=>`<div class="chk-row ${r.due<today?'':''}">
+    <div class="chk-box" onclick="mdModToggle('podcast','${r.ep.id}|${r.s.n}')"></div>
+    <span class="chk-text" style="flex:1;cursor:pointer" onclick="mdModToggle('podcast','${r.ep.id}|${r.s.n}')">${escHtml(r.s.text)} <span style="color:${r.due<today?'var(--red)':'var(--mut)'};font-size:10px">Ep ${escHtml(r.ep.number)} · due ${fmtShort(r.due)}</span></span>
+  </div>`).join('');
 }
 function mdModBoardroomBody(){
   const list=ls.get('tuf_boardroom_checklist',[])||[];
@@ -4091,10 +4089,14 @@ function renderHome(){
     const logged=sm[pk]&&Object.keys(sm[pk]).some(p=>Object.values(sm[pk][p]||{}).some(v=>v||v===0));
     if(!logged) pis.push({type:'info',tag:'SOCIAL',owner:'Joe',text:`Log ${pm.toLocaleString('en-GB',{month:'long'})}'s social media stats. Two minutes in Social Media.`});
   }catch(e){}
-  // Podcast plan: 2 episodes a month, recorded back to back on one day
-  { const pdd=podDue();
-    if(pdd.due) pis.push({type:pdd.urgent?'urgent':'soon',tag:'PODCAST',owner:'James',text:`No podcast recording day booked: ${pdd.monthCount} of ${pdd.target} episodes this month. Book the next batch.`});
-    else if(pdd.next){ const d=daysUntil(pdd.next.date); if(d>=0&&d<=7){ const pc=podChkGet(); const pits=[...(pc.before||[]),...(pc.after||[])]; const pdn=pits.filter(it=>pc.done[it.id]).length; pis.push({type:d<=3?'urgent':'soon',tag:'PODCAST',owner:'James',text:`Podcast recording day ${d===0?'today':'in '+d+' day'+(d!==1?'s':'')}: ${pdd.next.eps.map(e=>escHtml(e.title)).join(' + ')}. Checklist ${pdn}/${pits.length} done.`}); } }
+  // Podcast: overdue steps and the booked ahead standing rule
+  { try{
+      const ptoday=new Date().toISOString().slice(0,10);
+      const lateEps=podEps().filter(e=>podEpOverdue(e,ptoday));
+      if(lateEps.length) pis.push({type:'urgent',tag:'PODCAST',owner:'James',text:`Podcast: overdue step${lateEps.length>1?'s':''} on Ep ${lateEps.map(e=>escHtml(e.number)).join(', ')}. Open the episode and clear it.`});
+      const pba=podBookedAhead(ptoday);
+      if(pba<POD_BOOKED_TARGET) pis.push({type:'soon',tag:'PODCAST',owner:'James',text:`Podcast guests booked ahead: ${pba} of ${POD_BOOKED_TARGET}. Booking guests is the next podcast job.`});
+    }catch(e){}
   }
   // Growth Plan: weekly targets closing out + monthly scorecard reminder
   try{ const g=gpGet();
@@ -6419,6 +6421,7 @@ function linkTargets(){
   const out=[];
   ls.get('tuf_events',[]).forEach(e=>out.push({val:'event:'+e.id,label:`Event · ${e.name}${e.date?' ('+fmtShort(e.date)+')':''}`}));
   ls.get('tuf_sessions',[]).forEach(s=>out.push({val:'session:'+s.id,label:`Session · ${s.name}${s.date?' ('+fmtShort(s.date)+')':''}`}));
+  podEps().forEach(e=>out.push({val:'podcast:'+e.id,label:`Podcast · Ep ${e.number} ${e.guestName}`}));
   peopleAll().slice().sort((a,b)=>String(a.name||'').localeCompare(String(b.name||''))).forEach(p=>out.push({val:'person:'+p.id,label:`Person · ${p.name}${p.co?' ('+p.co+')':''}`}));
   return out;
 }
@@ -6964,261 +6967,422 @@ function postOwnerOptions(sel){ return TASK_PEOPLE.map(o=>`<option${o===sel?' se
 
 // ═══ CONTENT HUB — removed (rebuilding from a new prompt) ═══════════════════
 
-// ═══ PODCAST PIPELINE ════════════════════════════════════════════════════════
-// ═══ PODCAST PRODUCTION CHECKLIST ════════════════════════════════════════════
-// Evergreen and repeatable per episode. Edit these defaults freely: they seed the
-// shared store on first use. The list is also editable in the app.
-const PODCAST_CHECKLIST_DEFAULT = {
-  before: [
-    'Guest confirmed and date locked',
-    'Guest briefed on format and timing',
-    'Guest researched and questions drafted',
-    'Intro and outro talking points ready',
-    'Promo and design assets briefed to Joe',
-    'Studio booked',
-    'Croo confirmed',
-  ],
-  after: [
-    'Edit reviewed and approved',
-    'Title, description and show notes written',
-    'Social clips cut (LinkedIn and shorts)',
-    'Publish scheduled',
-    'Guest sent the published link and share assets',
-    'Added to the content calendar and repurposed',
-  ],
-};
-function podChkSeed(){ return { before:PODCAST_CHECKLIST_DEFAULT.before.map(t=>({id:uid(),text:t})), after:PODCAST_CHECKLIST_DEFAULT.after.map(t=>({id:uid(),text:t})), done:{}, updatedBy:'', updatedAt:'' }; }
-function podChkGet(){
-  let c=ls.get('tuf_podcast_checklist',null);
-  if(!c||!Array.isArray(c.before)||!Array.isArray(c.after)){ c=podChkSeed(); ls.set('tuf_podcast_checklist',c); }
-  if(!c.done||typeof c.done!=='object') c.done={};
-  return c;
-}
-function podChkSet(c){ c.updatedBy=CURRENT_USER||''; c.updatedAt=new Date().toISOString(); ls.set('tuf_podcast_checklist',c); renderPodcastChecklist(); }
+// ═══ PODCAST (v95) — episodes, guest pipeline, measures ══════════════════════
+// Replaces the old pipeline page. Three screens, one rule above all: this is
+// NOT a second to do list. A step either links a real team task via taskId
+// (the Growth Plan pattern) or is a simple tick. Steps with a taskId show the
+// task's live status and tick themselves when the task completes.
+// Seed content lives in ufhq_podcast_module_seed.json in the repo; embedded
+// below verbatim so the app can load it (one shot, ledger tuf_pod_seeded).
 function podChkBar(done,total){ const pct=total?Math.round((done/total)*100):0; return `<div style="height:8px;background:var(--bg);border-radius:4px;overflow:hidden;margin-top:6px"><div style="height:100%;width:${pct}%;background:var(--grn);transition:width .2s"></div></div>`; }
-function podChkGroup(c,key,title){
-  const items=c[key]||[]; const done=items.filter(it=>c.done[it.id]).length;
-  return `<div style="margin-bottom:4px">
-    <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:2px">
-      <div style="font-family:'Montserrat',sans-serif;font-weight:700;font-size:13px">${title}</div>
-      <span style="font-size:11px;color:var(--mut)">${done}/${items.length}</span>
-    </div>
-    ${podChkBar(done,items.length)}
-  </div>
-  ${items.map(it=>`<div class="chk-row ${c.done[it.id]?'done':''}">
-      <div class="chk-box" onclick="podChkToggle('${it.id}')">${c.done[it.id]?'✓':''}</div>
-      <span class="chk-text" style="flex:1;cursor:pointer" onclick="podChkToggle('${it.id}')">${escHtml(it.text)}</span>
-      <button class="btn btn-ghost btn-sm" style="padding:2px 7px;font-size:10px" onclick="podChkEditItem('${key}','${it.id}')">edit</button>
-      <button class="btn btn-ghost btn-sm" style="padding:2px 7px;font-size:10px" onclick="podChkDeleteItem('${key}','${it.id}')">✕</button>
-    </div>`).join('')}
-  <div style="display:flex;gap:6px;margin:8px 0 4px">
-    <input id="pod-add-${key}" class="form-input" placeholder="Add an item…" style="flex:1;font-size:12px" onkeydown="if(event.key==='Enter')podChkAddItem('${key}')">
-    <button class="btn btn-ghost btn-sm" onclick="podChkAddItem('${key}')">Add</button>
-  </div>`;
+const POD_SEED={"_readme": "Seed content for the UFHQ Podcast module. Shapes follow TUF_UFHQ_Podcast_Module_Spec.md. Dates are real, from TUF_Podcast_Episode_Tracker.md. teaserStartDate for ep001 is unconfirmed - see _openDecisions.", "_openDecisions": ["Publish weekday: 15 and 29 Oct 2026 are THURSDAYS. The go-live plan says Wednesday. Resolve before seeding.", "Ep001 teaserStartDate: 2026-10-01 as planned leaves zero slack after sign-off on 30 Sep. Recommended alternative 2026-10-05."], "episodes": [{"number": "001", "guestName": "Ollie Marchon", "company": "MARCHON", "guestJob": "Ideal fit", "status": "In edit", "recordDate": "2026-09-18", "publishDate": "2026-10-15", "teaserStartDate": "2026-10-01", "studio": "Podshop", "guestConfirmedAt": null, "note": "Category proof, flagship. The 2022 letter moment and the growth figures did NOT happen - no permission sought, neither came up. Nothing referencing either may appear in the edit, a clip, a caption or a thumbnail.", "links": {"dossier": "TUF_Guest_Dossier_Ollie_Marchon.md", "brief": "TUF_Podcast_Ep_Brief_Ollie_Marchon_18Sep2026.md", "master": "", "youtube": "", "audio": ""}, "steps": [{"n": 1, "text": "Guest agreed and record date set", "phase": "Prep", "owner": "James", "due": "2026-08-20", "done": true, "doneBy": "James", "doneAt": "", "taskId": "", "sop": ""}, {"n": 2, "text": "Dossier and question sheet built", "phase": "Prep", "owner": "James", "due": "2026-09-11", "done": true, "doneBy": "James", "doneAt": "", "taskId": "", "sop": "TUF_Guest_Dossier_*.md"}, {"n": 3, "text": "Theme list to guest (never verbatim questions)", "phase": "Prep", "owner": "James", "due": "2026-09-13", "done": true, "doneBy": "James", "doneAt": "", "taskId": "", "sop": ""}, {"n": 4, "text": "Brief and questions to Danny", "phase": "Prep", "owner": "James", "due": "2026-09-15", "done": true, "doneBy": "James", "doneAt": "", "taskId": "", "sop": ""}, {"n": 5, "text": "Run sheet confirmed with studio", "phase": "Prep", "owner": "James", "due": "2026-09-16", "done": true, "doneBy": "James", "doneAt": "", "taskId": "", "sop": "TUF_Podcast_Studio_Day_18Sep2026_Run_Sheet.md"}, {"n": 6, "text": "Recorded", "phase": "Record", "owner": "James", "due": "2026-09-18", "done": true, "doneBy": "James", "doneAt": "", "taskId": "", "sop": ""}, {"n": 7, "text": "Delivery date confirmed with studio in writing", "phase": "Post", "owner": "James", "due": "2026-09-22", "done": false, "doneBy": "", "doneAt": "", "taskId": "", "sop": "TUF_Podshop_Edit_Brief_Ep001_002.md"}, {"n": 8, "text": "Edit received from Podshop", "phase": "Post", "owner": "Podshop", "due": "2026-09-25", "done": false, "doneBy": "", "doneAt": "", "taskId": "", "sop": ""}, {"n": 9, "text": "Edit QC passed", "phase": "Post", "owner": "James", "due": "2026-09-25", "done": false, "doneBy": "", "doneAt": "", "taskId": "", "sop": "TUF_Edit_QC_Checklist.md"}, {"n": 10, "text": "Sign-off sent with deadline and clip wording", "phase": "Post", "owner": "James", "due": "2026-09-25", "done": false, "doneBy": "", "doneAt": "", "taskId": "", "sop": "TUF_Guest_Signoff_Emails.md"}, {"n": 11, "text": "GUEST CONFIRMED — starts the 48h clock", "phase": "Post", "owner": "Ollie", "due": "2026-09-30", "done": false, "doneBy": "", "doneAt": "", "taskId": "", "sop": ""}, {"n": 12, "text": "Eight clips cut (5 teaser, 3 payoff)", "phase": "Post", "owner": "James", "due": "2026-10-01", "done": false, "doneBy": "", "doneAt": "", "taskId": "", "sop": "TUF_Clip_Selection_Method.md"}, {"n": 13, "text": "Pack to Joe: 3+ clips, 2 post drafts, photos", "phase": "Post", "owner": "James", "due": "confirmed+48h", "done": false, "doneBy": "", "doneAt": "", "taskId": "", "sop": "TUF_Clip_Selection_Method.md"}, {"n": 14, "text": "Thumbnail final", "phase": "Post", "owner": "James", "due": "2026-10-02", "done": false, "doneBy": "", "doneAt": "", "taskId": "", "sop": "TUF_Thumbnail_System_Spec.md"}, {"n": 15, "text": "Teaser drip started", "phase": "Publish", "owner": "James", "due": "2026-10-01", "done": false, "doneBy": "", "doneAt": "", "taskId": "", "sop": "TUF_Podcast_Go_Live_Plan.md"}, {"n": 16, "text": "Premiere and audio scheduled", "phase": "Publish", "owner": "James", "due": "2026-10-13", "done": false, "doneBy": "", "doneAt": "", "taskId": "", "sop": "TUF_Podcast_Go_Live_Plan.md"}, {"n": 17, "text": "Live — guest share pack sent", "phase": "Publish", "owner": "James", "due": "2026-10-15", "done": false, "doneBy": "", "doneAt": "", "taskId": "", "sop": "TUF_Podcast_Go_Live_Plan.md"}, {"n": 18, "text": "Payoff clips dripped", "phase": "Publish", "owner": "James", "due": "2026-10-28", "done": false, "doneBy": "", "doneAt": "", "taskId": "", "sop": "TUF_Clip_Selection_Method.md"}, {"n": 19, "text": "Metrics entered", "phase": "Review", "owner": "James", "due": "2026-10-22", "done": false, "doneBy": "", "doneAt": "", "taskId": "", "sop": ""}, {"n": 20, "text": "Debrief note written", "phase": "Review", "owner": "James", "due": "2026-10-23", "done": false, "doneBy": "", "doneAt": "", "taskId": "", "sop": ""}], "metrics": {"viewsD7": null, "watchTimeAvg": null, "downloadsD7": null, "downloadsD30": null, "clipViews": null, "linkClicks": null, "scorecardOrApplications": null}, "debriefNote": ""}, {"number": "002", "guestName": "Savvas Fellas", "company": "MrQ", "guestJob": "Authority", "status": "In edit", "recordDate": "2026-09-18", "publishDate": "2026-10-29", "teaserStartDate": "2026-10-15", "studio": "Podshop", "guestConfirmedAt": null, "note": "Authority episode - does NOT count toward the two ideal-fit founders per month measure. Routed via Stephanie. No figures, no regulation, no competitor talk in any clip or caption.", "links": {"dossier": "TUF_Guest_Dossier_Savvas_Fellas_MrQ.md", "brief": "TUF_Podcast_Ep_Brief_Savvas_MrQ_18Sep2026.md", "master": "", "youtube": "", "audio": ""}, "steps": [{"n": 1, "text": "Guest agreed and record date set", "phase": "Prep", "owner": "James", "due": "2026-08-20", "done": true, "doneBy": "James", "doneAt": "", "taskId": "", "sop": ""}, {"n": 2, "text": "Dossier and question sheet built", "phase": "Prep", "owner": "James", "due": "2026-09-11", "done": true, "doneBy": "James", "doneAt": "", "taskId": "", "sop": "TUF_Guest_Dossier_*.md"}, {"n": 3, "text": "Theme list to guest (never verbatim questions)", "phase": "Prep", "owner": "James", "due": "2026-09-13", "done": true, "doneBy": "James", "doneAt": "", "taskId": "", "sop": ""}, {"n": 4, "text": "Brief and questions to Danny", "phase": "Prep", "owner": "James", "due": "2026-09-15", "done": true, "doneBy": "James", "doneAt": "", "taskId": "", "sop": ""}, {"n": 5, "text": "Run sheet confirmed with studio", "phase": "Prep", "owner": "James", "due": "2026-09-16", "done": true, "doneBy": "James", "doneAt": "", "taskId": "", "sop": "TUF_Podcast_Studio_Day_18Sep2026_Run_Sheet.md"}, {"n": 6, "text": "Recorded", "phase": "Record", "owner": "James", "due": "2026-09-18", "done": true, "doneBy": "James", "doneAt": "", "taskId": "", "sop": ""}, {"n": 7, "text": "Delivery date confirmed with studio in writing", "phase": "Post", "owner": "James", "due": "2026-09-22", "done": false, "doneBy": "", "doneAt": "", "taskId": "", "sop": "TUF_Podshop_Edit_Brief_Ep001_002.md"}, {"n": 8, "text": "Edit received from Podshop", "phase": "Post", "owner": "Podshop", "due": "2026-09-25", "done": false, "doneBy": "", "doneAt": "", "taskId": "", "sop": ""}, {"n": 9, "text": "Edit QC passed", "phase": "Post", "owner": "James", "due": "2026-09-28", "done": false, "doneBy": "", "doneAt": "", "taskId": "", "sop": "TUF_Edit_QC_Checklist.md"}, {"n": 10, "text": "Sign-off sent with deadline and clip wording", "phase": "Post", "owner": "James", "due": "2026-09-28", "done": false, "doneBy": "", "doneAt": "", "taskId": "", "sop": "TUF_Guest_Signoff_Emails.md"}, {"n": 11, "text": "GUEST CONFIRMED — starts the 48h clock", "phase": "Post", "owner": "Savvas", "due": "2026-09-30", "done": false, "doneBy": "", "doneAt": "", "taskId": "", "sop": ""}, {"n": 12, "text": "Eight clips cut (5 teaser, 3 payoff)", "phase": "Post", "owner": "James", "due": "2026-10-09", "done": false, "doneBy": "", "doneAt": "", "taskId": "", "sop": "TUF_Clip_Selection_Method.md"}, {"n": 13, "text": "Pack to Joe: 3+ clips, 2 post drafts, photos", "phase": "Post", "owner": "James", "due": "confirmed+48h", "done": false, "doneBy": "", "doneAt": "", "taskId": "", "sop": "TUF_Clip_Selection_Method.md"}, {"n": 14, "text": "Thumbnail final", "phase": "Post", "owner": "James", "due": "2026-10-09", "done": false, "doneBy": "", "doneAt": "", "taskId": "", "sop": "TUF_Thumbnail_System_Spec.md"}, {"n": 15, "text": "Teaser drip started", "phase": "Publish", "owner": "James", "due": "2026-10-15", "done": false, "doneBy": "", "doneAt": "", "taskId": "", "sop": "TUF_Podcast_Go_Live_Plan.md"}, {"n": 16, "text": "Premiere and audio scheduled", "phase": "Publish", "owner": "James", "due": "2026-10-27", "done": false, "doneBy": "", "doneAt": "", "taskId": "", "sop": "TUF_Podcast_Go_Live_Plan.md"}, {"n": 17, "text": "Live — guest share pack sent", "phase": "Publish", "owner": "James", "due": "2026-10-29", "done": false, "doneBy": "", "doneAt": "", "taskId": "", "sop": "TUF_Podcast_Go_Live_Plan.md"}, {"n": 18, "text": "Payoff clips dripped", "phase": "Publish", "owner": "James", "due": "2026-11-11", "done": false, "doneBy": "", "doneAt": "", "taskId": "", "sop": "TUF_Clip_Selection_Method.md"}, {"n": 19, "text": "Metrics entered", "phase": "Review", "owner": "James", "due": "2026-11-05", "done": false, "doneBy": "", "doneAt": "", "taskId": "", "sop": ""}, {"n": 20, "text": "Debrief note written", "phase": "Review", "owner": "James", "due": "2026-11-06", "done": false, "doneBy": "", "doneAt": "", "taskId": "", "sop": ""}], "metrics": {"viewsD7": null, "watchTimeAvg": null, "downloadsD7": null, "downloadsD30": null, "clipViews": null, "linkClicks": null, "scorecardOrApplications": null}, "debriefNote": ""}], "guests": [{"name": "", "company": "", "guestJob": "Ideal fit", "stage": "Idea", "fitNote": "", "source": "", "owner": "James", "nextAction": "Shortlist from Boardroom members and alumni", "nextActionDate": "2026-09-30", "episodeId": "003"}, {"name": "", "company": "", "guestJob": "Ideal fit", "stage": "Idea", "fitNote": "", "source": "", "owner": "James", "nextAction": "", "nextActionDate": "", "episodeId": "004"}, {"name": "", "company": "", "guestJob": "Ideal fit", "stage": "Idea", "fitNote": "", "source": "", "owner": "James", "nextAction": "", "nextActionDate": "", "episodeId": "005"}, {"name": "", "company": "", "guestJob": "Ideal fit", "stage": "Idea", "fitNote": "", "source": "", "owner": "James", "nextAction": "", "nextActionDate": "", "episodeId": "006"}], "ideasBench": [{"name": "Viki", "company": "Rave Coffee", "fitNote": "Boardroom member, fact find on file. Member guest doubles as category proof the way Ollie does.", "source": "Boardroom"}, {"name": "Simon", "company": "", "fitNote": "Named in the referral plan. Confirm fit against the ideal-fit test before approaching.", "source": "Referral plan"}, {"name": "Jack", "company": "", "fitNote": "Named in the referral plan. Confirm fit before approaching.", "source": "Referral plan"}], "measures": [{"key": "shippedOnSchedule", "label": "Every episode ships on schedule", "compute": "episodes reaching Live on or before publishDate / all published"}, {"key": "bookedAhead", "label": "Guests booked four ahead", "compute": "count of guests at stage Booked with a future record date", "target": 4, "today": 0}, {"key": "idealFitPerMonth", "label": "Two or more ideal-fit founders per month", "compute": "episodes recorded per calendar month where guestJob = Ideal fit. Authority episodes excluded.", "target": 2}, {"key": "packOnTime", "label": "Pack to Joe on time", "compute": "step 13 doneAt minus guestConfirmedAt <= 48h"}]};
+const POD_EP_STATUSES=["Booked","Recorded","In edit","With guest","Approved","Scheduled","Live","Closed"];
+const POD_GUEST_STAGES=["Idea","Approached","Agreed","Booked","Recorded","Live"];
+const POD_PACK_HOURS=48; // pack to Joe deadline, from guest confirmation
+const POD_BOOKED_TARGET=4;
+let podView='eps', podSelId=null, __pod48Int=null;
+function podEps(){ return ls.get('tuf_pod_eps',[])||[]; }
+function podGuests(){ return ls.get('tuf_pod_guests',[])||[]; }
+function podIdeas(){ return ls.get('tuf_pod_ideas',[])||[]; }
+function podSeedLoad(){
+  try{
+    if(!sbLoadOK) return;
+    if(ls.get('tuf_pod_seeded',null)) return;
+    if(podEps().length){ ls.set('tuf_pod_seeded',{at:new Date().toISOString(),note:'episodes already present'}); return; }
+    ls.set('tuf_pod_eps',POD_SEED.episodes.map(e=>({id:uid(),...e,steps:e.steps.map(s=>({...s})),createdBy:'seed',createdAt:new Date().toISOString()})));
+    ls.set('tuf_pod_guests',POD_SEED.guests.map(g=>({id:uid(),...g})));
+    ls.set('tuf_pod_ideas',POD_SEED.ideasBench.map(i=>({id:uid(),...i})));
+    ls.set('tuf_pod_seeded',{at:new Date().toISOString(),by:CURRENT_USER});
+    addNotif('Podcast module loaded: both episodes, the booking pipeline and the ideas bench');
+  }catch(e){ console.warn('podSeedLoad failed',e); }
 }
-function renderPodcastChecklist(){
-  const el=document.getElementById('pod-checklist'); if(!el) return;
-  const c=podChkGet();
-  const all=[...(c.before||[]),...(c.after||[])];
-  const totalDone=all.filter(it=>c.done[it.id]).length;
-  const stamp=c.updatedBy?`Last updated by ${escHtml(c.updatedBy)} at ${new Date(c.updatedAt).toLocaleString('en-GB',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})}`:'Not started yet';
-  el.innerHTML=`<div class="card">
-    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
-      <div class="card-title" style="margin:0">Episode production checklist</div>
-      <span style="font-size:13px;font-weight:700;color:${(totalDone===all.length&&all.length)?'var(--grn)':'var(--txt)'}">${totalDone}/${all.length} done</span>
-    </div>
-    ${podChkBar(totalDone,all.length)}
-    <div style="font-size:11px;color:var(--mut);margin:8px 0 14px">${stamp}</div>
-    <div class="grid-2">
-      <div>${podChkGroup(c,'before','Before recording')}</div>
-      <div>${podChkGroup(c,'after','After recording')}</div>
-    </div>
-    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;border-top:1px solid var(--bdr);padding-top:12px">
-      <button class="btn btn-k btn-sm" onclick="podChkReset()">Reset for next episode</button>
-      <button class="btn btn-ghost btn-sm" onclick="podChkRestoreDefault()">Restore default list</button>
-    </div>
-  </div>`;
+// Effective due date for a step. 'confirmed+48h' only becomes a date once the
+// guest has confirmed; before that the step has no deadline at all.
+function podStepDue(ep,s){
+  if(s.due==='confirmed+48h'){
+    if(!ep.guestConfirmedAt) return '';
+    return new Date(new Date(ep.guestConfirmedAt).getTime()+POD_PACK_HOURS*3600*1000).toISOString();
+  }
+  return s.due||'';
 }
-function podChkToggle(id){ const c=podChkGet(); if(c.done[id]) delete c.done[id]; else c.done[id]=true; podChkSet(c); }
-function podChkAddItem(key){ const inp=document.getElementById('pod-add-'+key); if(!inp) return; const v=(inp.value||'').trim(); if(!v) return; const c=podChkGet(); (c[key]=c[key]||[]).push({id:uid(),text:v}); podChkSet(c); }
-function podChkEditItem(key,id){ const c=podChkGet(); const it=(c[key]||[]).find(x=>x.id===id); if(!it) return; const v=prompt('Edit item:',it.text); if(v===null) return; const t=v.trim(); if(!t) return; it.text=t; podChkSet(c); }
-function podChkDeleteItem(key,id){ if(!confirm('Delete this item from the checklist?')) return; const c=podChkGet(); c[key]=(c[key]||[]).filter(x=>x.id!==id); delete c.done[id]; podChkSet(c); }
-function podChkReset(){ if(!confirm('Reset the checklist for the next episode? This clears all ticks but keeps the items.')) return; const c=podChkGet(); c.done={}; podChkSet(c); }
-function podChkRestoreDefault(){ if(!confirm('Restore the default checklist? This replaces the current items and clears all ticks.')) return; podChkSet(podChkSeed()); }
-
-function renderPodcast(){
-  const list=ls.get('tuf_podcast',[]);
-  const eps=podEpisodes();
-  const today=new Date().toISOString().slice(0,10);
-  const pd=podDue(); const next=pd.next;
-  const c=podChkGet(); const allItems=[...(c.before||[]),...(c.after||[])]; const chkDone=allItems.filter(it=>c.done[it.id]).length;
-  // Next recording day hero
-  const dtxt=d=>d===0?'today':'in '+d+' day'+(d!==1?'s':'');
-  document.getElementById('pod-plan').innerHTML = next?`
-    <div class="card" style="border-left:4px solid var(--y);margin-bottom:14px">
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap">
-        <div>
-          <div style="font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--mut)">Next recording day</div>
-          <div style="font-size:20px;font-weight:800;margin:4px 0 2px">${fmtDate(next.date)} · ${dtxt(daysUntil(next.date))}</div>
-          <div style="font-size:13px;color:var(--mut)">${next.eps.length} episode${next.eps.length!==1?'s':''} booked${next.eps.length<POD_PER_MONTH?' · room for '+(POD_PER_MONTH-next.eps.length)+' more':''}</div>
-        </div>
-        <button class="btn btn-k btn-sm" onclick="podEpModal()">+ Add episode</button>
-      </div>
-      <div style="margin-top:10px">
-        ${next.eps.map(e=>`<div style="display:flex;gap:10px;align-items:center;padding:6px 0;border-top:1px solid #EEE;font-size:13px"><span style="font-weight:700">${escHtml(e.title)}</span>${e.guestName?`<span style="color:var(--mut)">with ${escHtml(e.guestName)}</span>`:''}<span style="flex:1"></span><button class="btn btn-ghost btn-sm" onclick="podEpModal('${e.id}')">Edit</button></div>`).join('')}
-      </div>
-      <div style="margin-top:10px">${podChkBar(chkDone,allItems.length)}<div style="font-size:11px;color:var(--mut);margin-top:4px">Production checklist: ${chkDone}/${allItems.length} done</div></div>
-    </div>`:`
-    <div class="card" style="border-left:4px solid ${pd.urgent?'var(--red)':'var(--amb)'};margin-bottom:14px">
-      <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
-        <div>
-          <div style="font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:${pd.urgent?'var(--red)':'var(--amb)'}">No recording day booked</div>
-          <div style="font-size:14px;margin-top:4px">The rhythm is ${POD_PER_MONTH} episodes a month, recorded back to back. ${pd.monthCount} of ${POD_PER_MONTH} this month.</div>
-        </div>
-        <button class="btn btn-k btn-sm" onclick="podEpModal()">+ Plan episodes</button>
-      </div>
-    </div>`;
-  // Stats
-  const upBooked=eps.filter(e=>e.recordDate&&e.recordDate>=today&&e.status==='Planned').length;
-  const pubEps=eps.filter(e=>e.status==='Published').length;
-  const published=pubEps||list.filter(g=>g.status==='Published').length;
-  document.getElementById('pod-stats').innerHTML=`
-    <div class="stat ${pd.monthCount>=POD_PER_MONTH?'g':pd.monthCount?'y':'r'}"><div class="n">${pd.monthCount}/${POD_PER_MONTH}</div><div class="l">This Month</div></div>
-    <div class="stat ${upBooked?'g':'r'}"><div class="n">${upBooked}</div><div class="l">Booked Ahead</div></div>
-    <div class="stat g"><div class="n">${published}</div><div class="l">Published</div></div>
-    <div class="stat ${list.length<10?'r':'g'}"><div class="n">${list.length}/20</div><div class="l">Guest Pipeline</div></div>
-  `;
-  // Episode schedule
-  const upcoming=eps.filter(e=>e.status!=='Published'&&(!e.recordDate||e.recordDate>=today));
-  const past=eps.filter(e=>upcoming.indexOf(e)<0).slice().reverse();
-  const epCard=e=>`
-    <div class="card" style="margin-bottom:8px;border-left:4px solid ${e.status==='Published'?'var(--grn)':e.status==='Recorded'?'var(--amb)':'var(--y)'}">
-      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
-        <div style="flex:1;min-width:200px">
-          <div style="font-weight:700;font-size:14px">${escHtml(e.title)}</div>
-          <div style="font-size:12px;color:var(--mut)">${e.guestName?'With '+escHtml(e.guestName)+' · ':''}${e.recordDate?'Record '+fmtShort(e.recordDate):'No date'}${e.publishDate?' · Publish '+fmtShort(e.publishDate):''}</div>
-        </div>
-        <select class="form-select" style="width:auto;padding:4px 8px;font-size:11px" onchange="podEpStatus('${e.id}',this.value)">${POD_EP_STATUSES.map(s=>`<option${s===e.status?' selected':''}>${s}</option>`).join('')}</select>
-        <button class="btn btn-ghost btn-sm" onclick="podEpModal('${e.id}')">Edit</button>
-      </div>
-      ${e.notes?`<div style="font-size:12px;color:var(--mut);margin-top:6px">${escHtml(e.notes)}</div>`:''}
-    </div>`;
-  document.getElementById('pod-schedule').innerHTML=`
-    <div class="sec-hdr">Episode schedule</div>
-    ${upcoming.length?upcoming.map(epCard).join(''):'<div class="empty">No upcoming episodes planned. Book the next recording day.</div>'}
-    ${past.length?`<div class="sec-hdr" style="margin-top:14px">Published and past (${past.length})</div>`+past.map(e=>`<div style="display:flex;gap:10px;align-items:center;padding:6px 10px;border-bottom:1px solid #EEE;font-size:12.5px"><span class="tag ${e.status==='Published'?'tag-g':'tag-a'}" style="font-size:9px">${e.status}</span><span style="font-weight:600">${escHtml(e.title)}</span>${e.guestName?`<span style="color:var(--mut)">· ${escHtml(e.guestName)}</span>`:''}<span style="flex:1"></span><span style="color:var(--mut)">${e.recordDate?fmtShort(e.recordDate):''}</span><button class="btn btn-ghost btn-sm" style="padding:1px 8px" onclick="podEpModal('${e.id}')">Edit</button></div>`).join(''):''}
-  `;
-  // Guest pipeline
-  document.getElementById('podcast-list').innerHTML='<div class="sec-hdr">Guest pipeline</div>'+(list.length
-    ? `<table class="tbl"><thead><tr><th>Guest</th><th>Topic</th><th>Status</th><th>Date</th><th>Notes</th><th></th></tr></thead><tbody>
-      ${list.map(g=>`<tr>
-        <td><strong>${escHtml(g.name)}</strong><div style="font-size:10px;color:var(--mut)">${escHtml(g.co||'')}</div></td>
-        <td style="font-size:11px">${escHtml(g.topic||'')}</td>
-        <td><select class="form-select" style="padding:4px 6px;font-size:11px" onchange="updatePodStatus('${g.id}',this.value)">${PODCAST_STATUSES.map(s=>`<option${s===g.status?' selected':''}>${s}</option>`).join('')}</select></td>
-        <td style="font-size:11px">${g.date?fmtShort(g.date):''}</td>
-        <td style="font-size:11px;color:var(--mut)">${escHtml(g.notes||'')}</td>
-        <td style="white-space:nowrap">${g.status==='Confirmed'?`<button class="btn btn-ghost btn-sm" onclick="podEpModal(null,'${g.id}')" title="Book an episode with this guest">Book</button>`:''}<button class="btn btn-ghost btn-sm" onclick="editGuestModal('${g.id}')">Edit</button></td>
-      </tr>`).join('')}
-      </tbody></table>`
-    : '<div class="empty">No podcast guests yet. Target: 20+ in the pipeline.</div>');
-  document.getElementById('topbar-actions').innerHTML=`<button class="btn btn-k btn-sm" onclick="podEpModal()">+ Add Episode</button><button class="btn btn-ghost btn-sm" onclick="addGuestModal()">+ Add Guest</button>`;
-  renderPodcastChecklist();
+function podStepOverdue(ep,s,today){
+  if(s.done) return false;
+  const d=podStepDue(ep,s); if(!d) return false;
+  return String(d).slice(0,10)<(today||new Date().toISOString().slice(0,10));
 }
-function updatePodStatus(id,val){const list=ls.get('tuf_podcast',[]);const i=list.findIndex(x=>x.id===id);if(i<0)return;list[i].status=val;ls.set('tuf_podcast',list);if(val==='Confirmed')addNotif(`Podcast guest confirmed: ${list[i].name}`);renderPodcast();}
-function addGuestModal(){showModal('Add Podcast Guest',`
-  <div class="form-row"><label class="form-label">Name</label><input class="form-input" id="ng-name"></div>
-  <div class="form-row"><label class="form-label">Company / Context</label><input class="form-input" id="ng-co"></div>
-  <div class="form-row"><label class="form-label">Topic</label><input class="form-input" id="ng-topic"></div>
-  <div class="form-row"><label class="form-label">Status</label><select class="form-select" id="ng-status">${PODCAST_STATUSES.map(s=>`<option>${s}</option>`).join('')}</select></div>
-  <div class="form-row"><label class="form-label">Recording Date</label><input class="form-input" type="date" id="ng-date"></div>
-  <div class="form-row"><label class="form-label">Notes</label><textarea class="form-textarea" id="ng-notes"></textarea></div>
-`,`<button class="btn btn-ghost" onclick="closeModal()">Cancel</button><button class="btn btn-k" onclick="saveGuest()">Save</button>`);}
-function saveGuest(){const name=document.getElementById('ng-name').value.trim();if(!name)return;const list=ls.get('tuf_podcast',[]);list.push({id:uid(),name,co:document.getElementById('ng-co').value.trim(),topic:document.getElementById('ng-topic').value.trim(),status:document.getElementById('ng-status').value,date:document.getElementById('ng-date').value,notes:document.getElementById('ng-notes').value.trim()});ls.set('tuf_podcast',list);closeModal();renderPodcast();}
-function editGuestModal(id){const g=ls.get('tuf_podcast',[]).find(x=>x.id===id);if(!g)return;showModal(g.name,`
-  <div class="form-row"><label class="form-label">Topic</label><input class="form-input" id="eg-topic" value="${escHtml(g.topic||'')}"></div>
-  <div class="form-row"><label class="form-label">Status</label><select class="form-select" id="eg-status">${PODCAST_STATUSES.map(s=>`<option${s===g.status?' selected':''}>${s}</option>`).join('')}</select></div>
-  <div class="form-row"><label class="form-label">Recording Date</label><input class="form-input" type="date" id="eg-date" value="${g.date||''}"></div>
-  <div class="form-row"><label class="form-label">Notes</label><textarea class="form-textarea" id="eg-notes">${escHtml(g.notes||'')}</textarea></div>
-`,`<button class="btn btn-red btn-sm" onclick="deleteGuest('${id}')">Delete</button><button class="btn btn-ghost" onclick="closeModal()">Cancel</button><button class="btn btn-k" onclick="updateGuest('${id}')">Save</button>`);}
-function updateGuest(id){const list=ls.get('tuf_podcast',[]);const i=list.findIndex(x=>x.id===id);if(i<0)return;list[i]={...list[i],topic:document.getElementById('eg-topic').value.trim(),status:document.getElementById('eg-status').value,date:document.getElementById('eg-date').value,notes:document.getElementById('eg-notes').value.trim()};ls.set('tuf_podcast',list);closeModal();renderPodcast();}
-function deleteGuest(id){if(!confirm('Delete?'))return;ls.set('tuf_podcast',ls.get('tuf_podcast',[]).filter(x=>x.id!==id));closeModal();renderPodcast();}
-
-// ── Podcast episodes: the plan. The rhythm is 2 episodes a month, recorded
-// back to back on one recording day. tuf_episodes:
-// [{id,title,guestId,guestName,recordDate,publishDate,status,notes}]
-const POD_PER_MONTH=2;
-const POD_EP_STATUSES=['Planned','Recorded','Published'];
-function podEpisodes(){ return (ls.get('tuf_episodes',[])||[]).slice().sort((a,b)=>(a.recordDate||'').localeCompare(b.recordDate||'')); }
-function podNextDay(){
-  const today=new Date().toISOString().slice(0,10);
-  const up=podEpisodes().filter(e=>e.recordDate&&e.recordDate>=today&&e.status==='Planned');
-  if(!up.length) return null;
-  const date=up[0].recordDate;
-  return {date, eps:up.filter(e=>e.recordDate===date)};
+function podEpOverdue(ep,today){ return (ep.steps||[]).some(s=>podStepOverdue(ep,s,today)); }
+function podBookedAhead(today){
+  today=today||new Date().toISOString().slice(0,10);
+  const eps=podEps();
+  return podGuests().filter(g=>{
+    if(g.stage!=='Booked') return false;
+    const ep=eps.find(e=>e.number===g.episodeId);
+    // a Booked guest with no episode row yet still counts: booked means a future recording
+    return ep&&ep.recordDate?ep.recordDate>=today:true;
+  }).length;
 }
-function podMonthCount(){
-  const m=new Date().toISOString().slice(0,7);
-  return podEpisodes().filter(e=>(e.recordDate||'').slice(0,7)===m).length;
+function podBookedPill(){
+  const n=podBookedAhead(); const bad=n<POD_BOOKED_TARGET;
+  return `<span style="display:inline-flex;align-items:center;gap:6px;border-radius:20px;padding:5px 14px;font-size:11.5px;font-weight:800;letter-spacing:.02em;background:${bad?'var(--rbg)':'#E8F6EE'};color:${bad?'var(--red)':'var(--grn)'};border:1px solid ${bad?'var(--red)':'var(--grn)'}">Booked ahead: ${n} of ${POD_BOOKED_TARGET}</span>`;
 }
-function podDue(){
-  const next=podNextDay(); const monthCount=podMonthCount();
-  const due=!next&&monthCount<POD_PER_MONTH;
-  const urgent=due&&monthCount===0;
-  return {monthCount,target:POD_PER_MONTH,next,due,urgent};
+// One source of truth: any step whose linked task is Done ticks itself.
+function podSyncFromTasks(){
+  const eps=podEps(); const tasks=ls.get('tuf_tasks',[])||[]; let touched=false;
+  eps.forEach(ep=>(ep.steps||[]).forEach(s=>{
+    if(s.taskId&&!s.done){
+      const t=tasks.find(x=>x.id===s.taskId);
+      if(t&&t.status==='Done'){ s.done=true; s.doneBy=t.owner||'task'; s.doneAt=t.completedAt||new Date().toISOString(); touched=true; }
+    }
+  }));
+  if(touched) ls.set('tuf_pod_eps',eps);
 }
-// Moving an episode to Recorded/Published pulls the linked guest forward
-// through the pipeline too (never backwards).
-function podGuestAdvance(e){
-  if(!e||!e.guestId) return;
-  const want=e.status==='Recorded'?'Recorded':e.status==='Published'?'Published':null;
-  if(!want) return;
-  const guests=ls.get('tuf_podcast',[])||[]; const g=guests.find(x=>x.id===e.guestId); if(!g) return;
-  if(PODCAST_STATUSES.indexOf(want)>PODCAST_STATUSES.indexOf(g.status)){ g.status=want; ls.set('tuf_podcast',guests); }
-}
-function podEpModal(id,guestId){
-  const eps=ls.get('tuf_episodes',[])||[]; const e=id?eps.find(x=>x.id===id):null;
-  const guests=ls.get('tuf_podcast',[])||[];
-  const g=!e&&guestId?guests.find(x=>x.id===guestId):null;
-  const selGuest=e?e.guestId:(g?g.id:'');
-  showModal(e?'Edit episode':'Plan an episode',`
-    <div class="form-row"><label class="form-label">Episode title</label><input class="form-input" id="ep-title" value="${escHtml(e?e.title:(g?('Episode with '+g.name):''))}" placeholder="e.g. Scaling past yourself"></div>
-    <div class="form-row"><label class="form-label">Guest</label><select class="form-select" id="ep-guest">
-      <option value="">No guest / solo</option>
-      ${guests.map(x=>`<option value="${x.id}"${selGuest===x.id?' selected':''}>${escHtml(x.name)}${x.co?' ('+escHtml(x.co)+')':''}</option>`).join('')}
-    </select></div>
-    <div class="grid-2">
-      <div class="form-row"><label class="form-label">Recording date</label><input class="form-input" type="date" id="ep-record" value="${e?e.recordDate||'':''}"></div>
-      <div class="form-row"><label class="form-label">Publish date (optional)</label><input class="form-input" type="date" id="ep-publish" value="${e?e.publishDate||'':''}"></div>
-    </div>
-    <div class="form-row"><label class="form-label">Status</label><select class="form-select" id="ep-status">${POD_EP_STATUSES.map(s=>`<option${e&&e.status===s?' selected':''}>${s}</option>`).join('')}</select></div>
-    <div class="form-row"><label class="form-label">Notes</label><textarea class="form-textarea" id="ep-notes">${escHtml(e?e.notes||'':'')}</textarea></div>
-  `,`${e?`<button class="btn btn-red btn-sm" onclick="podEpDelete('${e.id}')">Delete</button>`:''}<button class="btn btn-ghost" onclick="closeModal()">Cancel</button><button class="btn btn-k" onclick="podEpSave('${e?e.id:''}')">Save</button>`);
-}
-function podEpSave(id){
-  const eps=ls.get('tuf_episodes',[])||[];
-  const guests=ls.get('tuf_podcast',[])||[];
-  const gid=document.getElementById('ep-guest').value;
-  const g=guests.find(x=>x.id===gid);
-  const rec={
-    title:document.getElementById('ep-title').value.trim(),
-    guestId:gid, guestName:g?g.name:'',
-    recordDate:document.getElementById('ep-record').value,
-    publishDate:document.getElementById('ep-publish').value,
-    status:document.getElementById('ep-status').value,
-    notes:document.getElementById('ep-notes').value.trim()
-  };
-  if(!rec.title&&!rec.guestName){ alert('Give the episode a title or a guest.'); return; }
-  if(!rec.title) rec.title='Episode with '+rec.guestName;
-  if(id){ const i=eps.findIndex(x=>x.id===id); if(i<0) return; eps[i]={...eps[i],...rec}; podGuestAdvance(eps[i]); }
-  else { eps.push({id:uid(),...rec}); podGuestAdvance(eps[eps.length-1]); }
-  ls.set('tuf_episodes',eps); closeModal(); renderPodcast();
-}
-function podEpDelete(id){ if(!confirm('Delete this episode?')) return; ls.set('tuf_episodes',(ls.get('tuf_episodes',[])||[]).filter(x=>x.id!==id)); closeModal(); renderPodcast(); }
-function podEpStatus(id,val){
-  const eps=ls.get('tuf_episodes',[])||[]; const e=eps.find(x=>x.id===id); if(!e) return;
-  e.status=val; podGuestAdvance(e); ls.set('tuf_episodes',eps);
-  if(val==='Published') addNotif('Podcast episode published: '+e.title);
+function podTickStep(epId,n){
+  const eps=podEps(); const ep=eps.find(e=>e.id===epId); if(!ep) return;
+  const s=(ep.steps||[]).find(x=>x.n===n); if(!s) return;
+  if(!s.done){
+    if(n===15){
+      const s11=(ep.steps||[]).find(x=>x.n===11);
+      if(s11&&!s11.done){ alert('Not yet. The teaser drip cannot start until the guest has confirmed (step 11). The guest was promised sight of the episode before anything publishes, and that promise is in writing.'); return; }
+    }
+    s.done=true; s.doneBy=CURRENT_USER; s.doneAt=new Date().toISOString();
+    if(n===11){ ep.guestConfirmedAt=new Date().toISOString(); addNotif('Guest confirmed. The '+POD_PACK_HOURS+' hour clock to the Joe pack is now running.'); }
+  } else {
+    s.done=false; s.doneBy=''; s.doneAt='';
+    if(n===11) ep.guestConfirmedAt=null;
+  }
+  ls.set('tuf_pod_eps',eps);
   renderPodcast();
+}
+function podSetStatus(epId,val){
+  const eps=podEps(); const ep=eps.find(e=>e.id===epId); if(!ep) return;
+  if(val==='Live'){
+    const open=(ep.steps||[]).filter(s=>(s.n===9||s.n===11)&&!s.done);
+    if(open.length){ alert('This episode cannot go Live yet: '+open.map(s=>'step '+s.n+' ('+s.text+')').join(' and ')+' still open.'); renderPodcast(); return; }
+    if(!ep.liveAt) ep.liveAt=new Date().toISOString();
+  }
+  ep.status=val; ls.set('tuf_pod_eps',eps); renderPodcast();
+}
+async function podPushTask(epId,n){
+  const epsA=podEps(); const epA=epsA.find(e=>e.id===epId); const sA=epA&&(epA.steps||[]).find(x=>x.n===n); if(!sA) return;
+  if(sA.taskId){ addNotif('Already linked to a team task'); return; }
+  const id=uid(); const due=podStepDue(epA,sA);
+  await commitTasks(arr=>{ arr.push({id,title:'Podcast Ep '+epA.number+': '+sA.text,owner:(sA.owner&&TASK_PEOPLE.includes(sA.owner))?sA.owner:'James',priority:'Medium',dueDate:due?String(due).slice(0,10):'',status:'To Do',linkedTo:'podcast:'+epA.id,notes:'From the Podcast · Ep '+epA.number+' '+(epA.guestName||'')+' · step '+sA.n+(sA.sop?' · SOP: '+sA.sop:''),section:'podcast',createdBy:CURRENT_USER,createdAt:new Date().toISOString(),completedAt:null}); });
+  const eps=podEps(); const ep=eps.find(e=>e.id===epId); const s=ep&&(ep.steps||[]).find(x=>x.n===n);
+  if(s){ s.taskId=id; ls.set('tuf_pod_eps',eps); }
+  addNotif('Task created: '+sA.text.slice(0,60));
+  renderPodcast(); updateTaskBadge();
+}
+function podLinkSave(epId,key){
+  const el=document.getElementById('pod-link-'+key); if(!el) return;
+  const eps=podEps(); const ep=eps.find(e=>e.id===epId); if(!ep) return;
+  ep.links=ep.links||{}; ep.links[key]=el.value.trim(); ls.set('tuf_pod_eps',eps);
+}
+function podMetricSave(epId,key){
+  const el=document.getElementById('pod-m-'+key); if(!el) return;
+  const eps=podEps(); const ep=eps.find(e=>e.id===epId); if(!ep) return;
+  ep.metrics=ep.metrics||{}; const v=el.value.trim();
+  ep.metrics[key]=v===''?null:(isNaN(parseFloat(v))?v:parseFloat(v));
+  ls.set('tuf_pod_eps',eps);
+}
+function podDebriefSave(epId){
+  const el=document.getElementById('pod-debrief'); if(!el) return;
+  const eps=podEps(); const ep=eps.find(e=>e.id===epId); if(!ep) return;
+  ep.debriefNote=el.value; ls.set('tuf_pod_eps',eps);
+}
+function podNoteSave(epId){
+  const el=document.getElementById('pod-epnote'); if(!el) return;
+  const eps=podEps(); const ep=eps.find(e=>e.id===epId); if(!ep) return;
+  ep.note=el.value; ls.set('tuf_pod_eps',eps);
+}
+function podNav(v){ podView=v; if(v!=='eps') podSelId=null; renderPodcast(); }
+function renderPodcast(){
+  const host=document.getElementById('podcast-render'); if(!host) return;
+  if(__pod48Int){ clearInterval(__pod48Int); __pod48Int=null; }
+  podSyncFromTasks();
+  const pills=[['eps','Episodes'],['pipe','Guest pipeline'],['measures','Measures']];
+  const nav=`<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;align-items:center">${pills.map(([k,l])=>`<button class="btn btn-sm ${podView===k?'btn-k':'btn-ghost'}" onclick="podNav('${k}')">${l}</button>`).join('')}<span style="flex:1"></span>${podBookedPill()}</div>`;
+  const body=(podView==='eps'&&podSelId)?podEpDetail():podView==='pipe'?podPipeView():podView==='measures'?podMeasuresView():podEpsView();
+  host.innerHTML=nav+body;
+  const ta=document.getElementById('topbar-actions');
+  if(ta) ta.innerHTML=podView==='pipe'?`<button class="btn btn-k btn-sm" onclick="podGuestModal()">+ Add guest</button>`:`<button class="btn btn-k btn-sm" onclick="podEpNewModal()">+ Add episode</button>`;
+  podStart48();
+}
+// ── Episodes list ──
+function podJobTag(job){ return job==='Ideal fit'?'<span class="tag tag-y" style="font-size:9px">Ideal fit</span>':'<span class="tag tag-k" style="font-size:9px">Authority</span>'; }
+function podStatusTag(st){ const cls=st==='Live'?'tag-g':st==='Closed'?'tag-k':st==='Approved'||st==='Scheduled'?'tag-b':'tag-a'; return `<span class="tag ${cls}" style="font-size:9px">${escHtml(st)}</span>`; }
+function podAuthorityClash(){
+  const byMonth={};
+  podEps().filter(e=>e.status!=='Closed'&&e.guestJob==='Authority'&&e.publishDate).forEach(e=>{ const m=e.publishDate.slice(0,7); (byMonth[m]=byMonth[m]||[]).push(e); });
+  return Object.keys(byMonth).filter(m=>byMonth[m].length>1).map(m=>({month:m,eps:byMonth[m]}));
+}
+function podEpsView(){
+  const today=new Date().toISOString().slice(0,10);
+  const eps=podEps().slice().sort((a,b)=>(b.number||'').localeCompare(a.number||''));
+  const clashes=podAuthorityClash();
+  const decisions=(POD_SEED._openDecisions||[]);
+  const row=ep=>{
+    const total=(ep.steps||[]).length, done=(ep.steps||[]).filter(s=>s.done).length;
+    const late=podEpOverdue(ep,today);
+    return `<div class="card" style="margin-bottom:8px;cursor:pointer;${late?'border-left:4px solid var(--red);background:var(--rbg)':''}" onclick="podSelId='${ep.id}';renderPodcast()">
+      <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+        <span style="font-family:Montserrat,sans-serif;font-weight:800;font-size:16px">${escHtml(ep.number)}</span>
+        <div style="flex:1;min-width:180px">
+          <div style="font-weight:700">${escHtml(ep.guestName)}<span style="color:var(--mut);font-weight:500;font-size:12px"> · ${escHtml(ep.company||'')}</span></div>
+          <div style="font-size:11.5px;color:var(--mut)">Publish ${ep.publishDate?fmtShort(ep.publishDate):'not set'}${late?' · <b style="color:var(--red)">overdue step</b>':''}</div>
+        </div>
+        ${podJobTag(ep.guestJob)}
+        ${podStatusTag(ep.status)}
+        <span style="font-size:12px;font-weight:700;color:${done===total?'var(--grn)':'var(--mut)'}">${done}/${total} steps</span>
+      </div>
+    </div>`;
+  };
+  return `
+    ${decisions.length?`<div class="card" style="border-left:4px solid var(--amb);margin-bottom:12px"><div style="font-size:10px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--amb);margin-bottom:6px">Open decisions, not yet resolved</div>${decisions.map(d=>`<div style="font-size:12.5px;padding:3px 0;line-height:1.5">· ${escHtml(d)}</div>`).join('')}</div>`:''}
+    ${clashes.length?`<div class="card" style="border-left:4px solid var(--amb);margin-bottom:12px"><div style="font-size:12.5px"><b>More than one Authority episode in the same month:</b> ${clashes.map(c=>c.month+' ('+c.eps.map(e=>'Ep '+e.number).join(', ')+')').join(' · ')}. Authority episodes do not count toward the ideal fit measure, so two in one month crowds out the founders the show exists for.</div></div>`:''}
+    ${eps.length?eps.map(row).join(''):'<div class="empty">No episodes yet.</div>'}
+  `;
+}
+function podEpNewModal(){
+  showModal('Add an episode',`
+    <div class="grid-2">
+      <div class="form-row"><label class="form-label">Number</label><input class="form-input" id="pe-number" placeholder="003"></div>
+      <div class="form-row"><label class="form-label">Guest</label><input class="form-input" id="pe-guest"></div>
+    </div>
+    <div class="grid-2">
+      <div class="form-row"><label class="form-label">Company</label><input class="form-input" id="pe-co"></div>
+      <div class="form-row"><label class="form-label">Guest job</label><select class="form-select" id="pe-job"><option>Ideal fit</option><option>Authority</option></select></div>
+    </div>
+    <div class="grid-2">
+      <div class="form-row"><label class="form-label">Record date</label><input class="form-input" type="date" id="pe-record"></div>
+      <div class="form-row"><label class="form-label">Publish date</label><input class="form-input" type="date" id="pe-publish"></div>
+    </div>
+    <div class="grid-2">
+      <div class="form-row"><label class="form-label">Teaser start</label><input class="form-input" type="date" id="pe-teaser"></div>
+      <div class="form-row"><label class="form-label">Studio</label><input class="form-input" id="pe-studio" value="Podshop"></div>
+    </div>
+    <div class="form-row"><label class="form-label">Episode note (restrictions, angles, anything the team must know)</label><textarea class="form-textarea" id="pe-note" style="min-height:60px"></textarea></div>
+    <div style="font-size:11px;color:var(--mut)">The standard 20 step checklist is created automatically with the episode.</div>
+  `,`<button class="btn btn-ghost" onclick="closeModal()">Cancel</button><button class="btn btn-k" onclick="podEpNewSave()">Add episode</button>`);
+}
+function podEpNewSave(){
+  const g=x=>document.getElementById(x)?.value.trim()||'';
+  const number=g('pe-number'); const guest=g('pe-guest');
+  if(!number||!guest){ alert('Number and guest are both needed.'); return; }
+  const tpl=(POD_SEED.episodes[0]&&POD_SEED.episodes[0].steps)||[];
+  const eps=podEps();
+  eps.push({id:uid(),number,guestName:guest,company:g('pe-co'),guestJob:document.getElementById('pe-job').value,status:'Booked',
+    recordDate:g('pe-record'),publishDate:g('pe-publish'),teaserStartDate:g('pe-teaser'),studio:g('pe-studio'),
+    guestConfirmedAt:null,note:g('pe-note'),links:{dossier:'',brief:'',master:'',youtube:'',audio:''},
+    steps:tpl.map(s=>({n:s.n,text:s.text,phase:s.phase,owner:s.owner==='Podshop'?'Podshop':'James',due:s.due==='confirmed+48h'?'confirmed+48h':'',done:false,doneBy:'',doneAt:'',taskId:'',sop:s.sop||''})),
+    metrics:{viewsD7:null,watchTimeAvg:null,downloadsD7:null,downloadsD30:null,clipViews:null,linkClicks:null,scorecardOrApplications:null},
+    debriefNote:'',createdBy:CURRENT_USER,createdAt:new Date().toISOString()});
+  ls.set('tuf_pod_eps',eps);
+  closeModal(); renderPodcast();
+}
+// ── Episode detail ──
+function podStart48(){
+  const el=document.getElementById('pod-48'); if(!el) return;
+  const paint=()=>{
+    const ep=podEps().find(e=>e.id===podSelId); if(!ep||!ep.guestConfirmedAt) return;
+    const deadline=new Date(ep.guestConfirmedAt).getTime()+POD_PACK_HOURS*3600*1000;
+    const s13=(ep.steps||[]).find(x=>x.n===13);
+    if(s13&&s13.done){ el.innerHTML='<span style="color:var(--grn);font-weight:700">Pack sent to Joe ✓</span>'; return; }
+    const ms=deadline-Date.now();
+    const h=Math.floor(Math.abs(ms)/3600000), m=Math.floor((Math.abs(ms)%3600000)/60000);
+    el.innerHTML=ms>=0
+      ?`<span style="color:${ms<12*3600000?'var(--amb)':'var(--grn)'};font-weight:800">${h}h ${m}m left</span> <span style="color:var(--mut)">to send the pack to Joe</span>`
+      :`<span style="color:var(--red);font-weight:800">Pack to Joe overdue by ${h}h ${m}m</span>`;
+  };
+  paint();
+  __pod48Int=setInterval(()=>{ if(!document.getElementById('pod-48')){ clearInterval(__pod48Int); __pod48Int=null; return; } paint(); },60000);
+}
+function podEpDetail(){
+  const ep=podEps().find(e=>e.id===podSelId);
+  if(!ep){ podSelId=null; return podEpsView(); }
+  const today=new Date().toISOString().slice(0,10);
+  const tasks=ls.get('tuf_tasks',[])||[];
+  const phases=['Prep','Record','Post','Publish','Review'];
+  const stepRow=s=>{
+    const dueIso=podStepDue(ep,s); const late=podStepOverdue(ep,s,today);
+    const dueTxt=s.due==='confirmed+48h'?(dueIso?fmtShort(String(dueIso).slice(0,10))+' (confirmed +'+POD_PACK_HOURS+'h)':'guest confirmed +'+POD_PACK_HOURS+'h'):(s.due?fmtShort(s.due):'');
+    const t=s.taskId?tasks.find(x=>x.id===s.taskId):null;
+    const taskBit=s.taskId
+      ?(t?`<span class="tag ${t.status==='Done'?'tag-g':t.status==='In Progress'?'tag-b':'tag-a'}" style="font-size:9px" title="Linked team task">Task: ${escHtml(t.status)}</span>`:'<span class="tag tag-a" style="font-size:9px">Task missing</span>')
+      :(s.done?'':`<button class="btn btn-ghost btn-sm" style="padding:1px 8px;font-size:10px" onclick="event.stopPropagation();podPushTask('${ep.id}',${s.n})">→ Make a task</button>`);
+    return `<div style="display:flex;gap:10px;align-items:flex-start;padding:8px 0;border-bottom:1px solid var(--bdr);${late?'background:var(--rbg);margin:0 -8px;padding-left:8px;padding-right:8px;border-radius:6px':''}">
+      <div class="chk-box" style="margin-top:1px;flex-shrink:0" onclick="podTickStep('${ep.id}',${s.n})">${s.done?'✓':''}</div>
+      <div style="flex:1;min-width:200px">
+        <div style="font-size:12.5px;${s.done?'color:var(--mut);text-decoration:line-through':''}"><b>${s.n}.</b> ${escHtml(s.text)}</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;font-size:10.5px;color:var(--mut);margin-top:3px">
+          <span>${escHtml(s.owner||'')}</span>
+          ${dueTxt?`<span style="${late?'color:var(--red);font-weight:700':''}">due ${dueTxt}</span>`:''}
+          ${s.done&&s.doneBy?`<span style="color:var(--grn)">done by ${escHtml(s.doneBy)}${s.doneAt?' · '+fmtShort(String(s.doneAt).slice(0,10)):''}</span>`:''}
+          ${s.sop?`<span class="tag tag-k" style="font-size:9px" title="The document that tells you how to do this step">SOP: ${escHtml(s.sop)}</span>`:''}
+          ${taskBit}
+        </div>
+      </div>
+    </div>`;
+  };
+  const link=(key,label)=>{ const v=(ep.links||{})[key]||''; return `<div class="form-row" style="margin-bottom:6px"><label class="form-label">${label}</label><div style="display:flex;gap:6px"><input class="form-input" id="pod-link-${key}" value="${escAttr(v)}" placeholder="Link or filename" onchange="podLinkSave('${ep.id}','${key}')" style="font-size:11.5px">${/^https?:\/\//.test(v)?`<a class="btn btn-ghost btn-sm" href="${escAttr(v)}" target="_blank" rel="noopener">Open</a>`:''}</div></div>`; };
+  const metric=(key,label)=>{ const v=(ep.metrics||{})[key]; return `<div class="form-row" style="margin-bottom:6px"><label class="form-label">${label}</label><input class="form-input" id="pod-m-${key}" value="${v===null||v===undefined?'':escAttr(String(v))}" onchange="podMetricSave('${ep.id}','${key}')" style="font-size:12px"></div>`; };
+  return `
+    <span style="display:inline-block;font-size:12px;font-weight:700;color:var(--mut);cursor:pointer;margin-bottom:10px" onclick="podSelId=null;renderPodcast()">← All episodes</span>
+    <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:10px">
+      <span style="font-family:Montserrat,sans-serif;font-weight:800;font-size:24px">Ep ${escHtml(ep.number)}</span>
+      <div style="flex:1;min-width:200px">
+        <div style="font-weight:800;font-size:17px">${escHtml(ep.guestName)} <span style="font-weight:500;color:var(--mut);font-size:13px">· ${escHtml(ep.company||'')}</span></div>
+      </div>
+      ${podJobTag(ep.guestJob)}
+      <select class="form-select" style="width:auto;padding:4px 10px;font-size:12px" onchange="podSetStatus('${ep.id}',this.value)">${POD_EP_STATUSES.map(x=>`<option${x===ep.status?' selected':''}>${x}</option>`).join('')}</select>
+    </div>
+    <div class="card" style="border-left:4px solid var(--amb);margin-bottom:12px">
+      <div style="font-size:10px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--amb);margin-bottom:4px">Episode note, read before touching the edit or any clip</div>
+      <textarea class="form-textarea" id="pod-epnote" style="min-height:56px;font-size:12.5px" onchange="podNoteSave('${ep.id}')">${escHtml(ep.note||'')}</textarea>
+    </div>
+    ${ep.guestConfirmedAt?`<div class="card" style="border-left:4px solid var(--y);margin-bottom:12px"><div id="pod-48" style="font-size:14px"></div><div style="font-size:10.5px;color:var(--mut);margin-top:2px">Guest confirmed ${fmtDate(String(ep.guestConfirmedAt).slice(0,10))}. The pack to Joe is due ${POD_PACK_HOURS} hours after confirmation.</div></div>`:''}
+    <div class="grid-2" style="align-items:start;margin-bottom:12px">
+      <div class="card" style="margin-bottom:0">
+        <div class="card-title">Dates</div>
+        <div style="font-size:12.5px;line-height:2">
+          Record: <b>${ep.recordDate?fmtDate(ep.recordDate):'not set'}</b><br>
+          Publish: <b>${ep.publishDate?fmtDate(ep.publishDate):'not set'}</b><br>
+          Teaser start: <b>${ep.teaserStartDate?fmtDate(ep.teaserStartDate):'not set'}</b><br>
+          Studio: <b>${escHtml(ep.studio||'')}</b><br>
+          Guest confirmed: <b>${ep.guestConfirmedAt?fmtDate(String(ep.guestConfirmedAt).slice(0,10)):'not yet, step 11'}</b>
+        </div>
+      </div>
+      <div class="card" style="margin-bottom:0">
+        <div class="card-title">Links</div>
+        ${link('dossier','Guest dossier')}${link('brief','Episode brief')}${link('master','Master file')}${link('youtube','YouTube')}${link('audio','Audio')}
+      </div>
+    </div>
+    ${phases.map(ph=>{
+      const list=(ep.steps||[]).filter(s=>s.phase===ph);
+      if(!list.length) return '';
+      const done=list.filter(s=>s.done).length;
+      return `<div class="card" style="margin-bottom:10px"><div class="card-title">${ph} <span style="font-weight:500;color:var(--mut);font-size:11px">${done}/${list.length}</span></div>${list.map(stepRow).join('')}</div>`;
+    }).join('')}
+    <div class="card" style="margin-bottom:10px">
+      <div class="card-title">Metrics <span style="font-weight:500;color:var(--mut);font-size:11px">typed in by hand, seven numbers, one week and one month after going live</span></div>
+      <div class="grid-4">
+        ${metric('viewsD7','Views day 7')}${metric('watchTimeAvg','Avg watch time')}${metric('downloadsD7','Downloads day 7')}${metric('downloadsD30','Downloads day 30')}
+      </div>
+      <div class="grid-4">
+        ${metric('clipViews','Clip views')}${metric('linkClicks','Link clicks')}${metric('scorecardOrApplications','Scorecards or applications')}<div></div>
+      </div>
+      <div class="form-row"><label class="form-label">Debrief note</label><textarea class="form-textarea" id="pod-debrief" style="min-height:60px" onchange="podDebriefSave('${ep.id}')">${escHtml(ep.debriefNote||'')}</textarea></div>
+    </div>
+  `;
+}
+// ── Guest pipeline ──
+function podGuestModal(id){
+  const g=id?podGuests().find(x=>x.id===id):null;
+  showModal(g?('Guest · '+(g.name||'Episode '+(g.episodeId||'')+' slot')):'Add a guest',`
+    <div class="grid-2">
+      <div class="form-row"><label class="form-label">Name</label><input class="form-input" id="pg-name" value="${escAttr(g?g.name:'')}"></div>
+      <div class="form-row"><label class="form-label">Company</label><input class="form-input" id="pg-co" value="${escAttr(g?g.company:'')}"></div>
+    </div>
+    <div class="grid-2">
+      <div class="form-row"><label class="form-label">Guest job</label><select class="form-select" id="pg-job"><option${g&&g.guestJob==='Ideal fit'?' selected':''}>Ideal fit</option><option${g&&g.guestJob==='Authority'?' selected':''}>Authority</option></select></div>
+      <div class="form-row"><label class="form-label">Stage</label><select class="form-select" id="pg-stage">${POD_GUEST_STAGES.map(s=>`<option${g&&g.stage===s?' selected':''}>${s}</option>`).join('')}</select></div>
+    </div>
+    <div class="grid-2">
+      <div class="form-row"><label class="form-label">Owner</label><select class="form-select" id="pg-owner">${TASK_PEOPLE.map(p=>`<option${(g?g.owner===p:p==='James')?' selected':''}>${p}</option>`).join('')}</select></div>
+      <div class="form-row"><label class="form-label">Source</label><input class="form-input" id="pg-source" value="${escAttr(g?g.source:'')}"></div>
+    </div>
+    <div class="form-row"><label class="form-label">Fit note, why they pass the ideal fit test</label><textarea class="form-textarea" id="pg-fit" style="min-height:50px">${escHtml(g?g.fitNote:'')}</textarea></div>
+    <div class="grid-2">
+      <div class="form-row"><label class="form-label">Next action</label><input class="form-input" id="pg-next" value="${escAttr(g?g.nextAction:'')}"></div>
+      <div class="form-row"><label class="form-label">Next action date</label><input class="form-input" type="date" id="pg-nextdate" value="${g?g.nextActionDate:''}"></div>
+    </div>
+    <div class="form-row"><label class="form-label">Episode number this guest is slotted for (optional)</label><input class="form-input" id="pg-epid" value="${escAttr(g?g.episodeId:'')}" placeholder="003"></div>
+  `,`<button class="btn btn-ghost" onclick="closeModal()">Cancel</button>${g?`<button class="btn btn-red btn-sm" onclick="podGuestDelete('${g.id}')">Delete</button>`:''}<button class="btn btn-k" onclick="podGuestSave('${id||''}')">Save</button>`);
+}
+function podGuestSave(id){
+  const g=x=>document.getElementById(x)?.value||'';
+  const list=podGuests();
+  const rec=id?list.find(x=>x.id===id):null;
+  const vals={name:g('pg-name').trim(),company:g('pg-co').trim(),guestJob:g('pg-job'),stage:g('pg-stage'),owner:g('pg-owner'),source:g('pg-source').trim(),fitNote:g('pg-fit').trim(),nextAction:g('pg-next').trim(),nextActionDate:g('pg-nextdate'),episodeId:g('pg-epid').trim()};
+  if(rec) Object.assign(rec,vals); else list.push({id:uid(),...vals});
+  ls.set('tuf_pod_guests',list);
+  closeModal(); renderPodcast();
+}
+function podGuestDelete(id){
+  if(!confirm('Remove this guest from the pipeline?')) return;
+  ls.set('tuf_pod_guests',podGuests().filter(x=>x.id!==id));
+  closeModal(); renderPodcast();
+}
+function podIdeaPromote(id){
+  const ideas=podIdeas(); const it=ideas.find(x=>x.id===id); if(!it) return;
+  const list=podGuests();
+  list.push({id:uid(),name:it.name||'',company:it.company||'',guestJob:'Ideal fit',stage:'Idea',fitNote:it.fitNote||'',source:it.source||'',owner:'James',nextAction:'Confirm fit against the ideal fit test',nextActionDate:'',episodeId:''});
+  ls.set('tuf_pod_guests',list);
+  ls.set('tuf_pod_ideas',ideas.filter(x=>x.id!==id));
+  addNotif((it.name||'Idea')+' moved into the pipeline');
+  renderPodcast();
+}
+function podPipeView(){
+  const n=podBookedAhead(); const bad=n<POD_BOOKED_TARGET;
+  const guests=podGuests(); const ideas=podIdeas();
+  const card=g=>`<div class="k-card" onclick="podGuestModal('${g.id}')">
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:6px">
+      <div><div class="k-name">${escHtml(g.name||('Episode '+(g.episodeId||'?')+' slot'))}</div><div class="k-co">${escHtml(g.company||'')}</div></div>
+      ${podJobTag(g.guestJob)}
+    </div>
+    ${g.nextAction?`<div style="font-size:10px;color:var(--mut);margin-top:4px">${escHtml(g.nextAction)}${g.nextActionDate?` <b>· ${fmtShort(g.nextActionDate)}</b>`:''}</div>`:''}
+    ${g.fitNote?`<div style="font-size:9.5px;color:var(--mut);margin-top:3px">${escHtml(g.fitNote.slice(0,90))}</div>`:''}
+    <div style="font-size:9px;color:var(--mut);margin-top:4px">${escHtml(g.owner||'')}${g.source?' · '+escHtml(g.source):''}</div>
+  </div>`;
+  return `
+    <div class="card" style="border-left:4px solid ${bad?'var(--red)':'var(--grn)'};margin-bottom:12px">
+      <div style="font-size:16px;font-weight:800;color:${bad?'var(--red)':'var(--grn)'}">Booked ahead: ${n} of ${POD_BOOKED_TARGET}</div>
+      <div style="font-size:12px;color:var(--mut);margin-top:2px">The standing rule: four guests booked with future record dates at all times. Below four, booking guests IS the next podcast job.</div>
+    </div>
+    <div class="kanban" style="grid-template-columns:repeat(${POD_GUEST_STAGES.length},1fr)">
+      ${POD_GUEST_STAGES.map(st=>{
+        const cards=guests.filter(g=>g.stage===st);
+        return `<div class="k-col"><div class="k-col-hdr">${st}<span>${cards.length}</span></div>${cards.map(card).join('')}</div>`;
+      }).join('')}
+    </div>
+    <div class="sec-hdr" style="margin-top:16px">Ideas bench</div>
+    ${ideas.length?ideas.map(it=>`<div class="card" style="margin-bottom:6px"><div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+      <div style="flex:1;min-width:180px"><b>${escHtml(it.name)}</b>${it.company?` <span style="color:var(--mut);font-size:12px">· ${escHtml(it.company)}</span>`:''}<div style="font-size:11.5px;color:var(--mut)">${escHtml(it.fitNote||'')}${it.source?' · from '+escHtml(it.source):''}</div></div>
+      <button class="btn btn-ghost btn-sm" onclick="podIdeaPromote('${it.id}')">Move into pipeline</button>
+    </div></div>`).join(''):'<div class="empty">No ideas on the bench.</div>'}
+  `;
+}
+// ── Measures ──
+function podMeasures(today){
+  today=today||new Date().toISOString().slice(0,10);
+  const eps=podEps();
+  const published=eps.filter(e=>e.status==='Live'||e.status==='Closed');
+  const onTime=published.filter(e=>{ const lv=e.liveAt?String(e.liveAt).slice(0,10):e.publishDate; return e.publishDate&&lv<=e.publishDate; });
+  const recorded=eps.filter(e=>{ const s6=(e.steps||[]).find(x=>x.n===6); return s6&&s6.done&&e.recordDate; });
+  const byMonth={};
+  recorded.filter(e=>e.guestJob==='Ideal fit').forEach(e=>{ const m=e.recordDate.slice(0,7); byMonth[m]=(byMonth[m]||0)+1; });
+  const packs=eps.filter(e=>e.guestConfirmedAt&&(e.steps||[]).some(x=>x.n===13&&x.done&&x.doneAt));
+  const packsOnTime=packs.filter(e=>{ const s13=e.steps.find(x=>x.n===13); return (new Date(s13.doneAt)-new Date(e.guestConfirmedAt))<=POD_PACK_HOURS*3600*1000; });
+  return {published:published.length,onTime:onTime.length,bookedAhead:podBookedAhead(today),idealByMonth:byMonth,packs:packs.length,packsOnTime:packsOnTime.length};
+}
+function podMeasuresView(){
+  const m=podMeasures();
+  const months=Object.keys(m.idealByMonth).sort().slice(-4);
+  const mCard=(title,big,sub,ok)=>`<div class="card" style="margin-bottom:0;border-left:4px solid ${ok===null?'var(--bdr)':ok?'var(--grn)':'var(--red)'}">
+    <div style="font-size:10px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--mut)">${title}</div>
+    <div style="font-family:Montserrat,sans-serif;font-size:26px;font-weight:800;margin:4px 0;color:${ok===null?'var(--k)':ok?'var(--grn)':'var(--red)'}">${big}</div>
+    <div style="font-size:11.5px;color:var(--mut);line-height:1.5">${sub}</div>
+  </div>`;
+  return `
+    <div class="grid-2" style="margin-bottom:12px">
+      ${mCard('Episodes ship on schedule',m.published?`${m.onTime}/${m.published}`:'No episodes published yet',m.published?'Reached Live on or before their publish date.':'This starts counting when the first episode goes Live.',m.published?m.onTime===m.published:null)}
+      ${mCard('Guests booked four ahead',`${m.bookedAhead} of ${POD_BOOKED_TARGET}`,'Guests at stage Booked with a future record date. The standing rule of the booking pipeline.',m.bookedAhead>=POD_BOOKED_TARGET)}
+    </div>
+    <div class="grid-2">
+      ${mCard('Ideal fit founders per month',months.length?months.map(mo=>`${mo}: ${m.idealByMonth[mo]}`).join(' · '):'None recorded yet','Episodes recorded per calendar month with an Ideal fit guest. Authority episodes are deliberately excluded.',months.length?months.every(mo=>m.idealByMonth[mo]>=2):null)}
+      ${mCard('Pack to Joe on time',m.packs?`${m.packsOnTime}/${m.packs}`:'No packs sent yet',`Step 13 done within ${POD_PACK_HOURS} hours of the guest confirming (step 11).`,m.packs?m.packsOnTime===m.packs:null)}
+    </div>
+    <div style="font-size:11px;color:var(--mut);margin-top:12px">All four are computed from the episode and pipeline records, never self reported. The seven per episode metrics are typed in by hand on each episode's Metrics card.</div>
+  `;
 }
 
 // ═══ IP REGISTER ═════════════════════════════════════════════════════════════
@@ -10394,9 +10558,9 @@ function renderKPIs(){
   const tasks=(ls.get('tuf_tasks',[])||[]).filter(utIsBoard);
   const openT=tasks.filter(t=>t.status!=='Done');
   const overdueT=openT.filter(t=>t.dueDate&&t.dueDate<today).length;
-  const eps=ls.get('tuf_episodes',[])||[];
-  const epsPub=eps.filter(e=>e.status==='Published').length;
-  const epsMonth=eps.filter(e=>(e.recordDate||'').slice(0,7)===today.slice(0,7)).length;
+  const eps=podEps();
+  const epsPub=eps.filter(e=>e.status==='Live'||e.status==='Closed').length;
+  const epsMonth=eps.filter(e=>(e.recordDate||'').slice(0,7)===today.slice(0,7)&&(e.steps||[]).some(s=>s.n===6&&s.done)).length;
   const sessAhead=(ls.get('tuf_sessions',[])||[]).filter(x=>x.date&&x.date>=today).length;
   const kpis=ls.get('tuf_kpis',{});
   const stat=(n,l,cls)=>`<div class="stat ${cls||''}"><div class="n">${n}</div><div class="l">${l}</div></div>`;
