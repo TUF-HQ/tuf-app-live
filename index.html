@@ -7210,6 +7210,11 @@ function podPrepBriefText(g){
   if(g.source) lines.push('Source: '+g.source);
   if(g.fitNote) lines.push('Why they fit: '+g.fitNote);
   if(g.nextAction) lines.push('Next action: '+g.nextAction+(g.nextActionDate?' by '+g.nextActionDate:''));
+  if(g.radar&&(g.radar.evidence||[]).length){
+    lines.push('');
+    lines.push('EVIDENCE FROM THE GUEST RADAR:');
+    g.radar.evidence.forEach(e=>lines.push('· '+e.desc+' · '+e.url));
+  }
   if(ep){
     lines.push('');
     lines.push('EPISODE '+ep.number+(ep.recordDate?' · records '+ep.recordDate:'')+(ep.publishDate?' · publishes '+ep.publishDate:''));
@@ -7304,19 +7309,412 @@ function podMineCopy(){
   const el=document.getElementById('pod-mine-out'); if(!el) return;
   navigator.clipboard.writeText(el.innerText).then(()=>addNotif('Copied')).catch(()=>{});
 }
+// ── v98 Guest Radar ──────────────────────────────────────────────────────────
+// Hunts one precisely stated, publicly filed signal: a founder led company
+// appointing or losing a non founder director, the founder to CEO transition
+// happening right now. HARD RULE: the Radar never generates candidate names.
+// Names come from Companies House, a pasted list or a person; no AI call in
+// this feature suggests people, and a candidate cannot be promoted without at
+// least one evidence entry. Companies House calls go through the ch-proxy edge
+// function (the key never lives in this file; the CH API has no CORS anyway).
+let podRadarTab='radar', podRadarMin=0, podRadarRecent=false, __podRadarBusy=false;
+const POD_RADAR_AXES=[['signal','Signal'],['reach','Reach'],['unasked','Unasked'],['route','Route']];
+function podRadar(){ return ls.get('tuf_pod_radar',[])||[]; }
+function podWatch(){ return ls.get('tuf_pod_watch',[])||[]; }
+function podSignals(){ return ls.get('tuf_pod_signals',[])||[]; }
+async function chCall(path){
+  const {data,error}=await sb.functions.invoke('ch-proxy',{body:{path}});
+  if(error){
+    let msg=error.message||'Companies House call failed';
+    try{ const ctx=await error.context?.json?.(); if(ctx&&ctx.error) msg=ctx.error; }catch(_){ }
+    throw new Error(msg);
+  }
+  if(data&&data.error) throw new Error(data.error);
+  return data;
+}
+function podRadarTotal(c){ const s=(c&&c.scores)||{}; return POD_RADAR_AXES.reduce((t,a)=>t+((s[a[0]]&&s[a[0]].v)||0),0); }
+function podRadarSorted(list){
+  return (list||podRadar()).filter(c=>!c.promotedGuestId&&!c.archived).slice().sort((a,b)=>{
+    const d=podRadarTotal(b)-podRadarTotal(a); if(d) return d;
+    return ((b.evidence||[]).length)-((a.evidence||[]).length);
+  });
+}
+// Pure diff of a watch entry against fresh officer data. First ever sweep of a
+// watch entry (empty snapshot) only seeds the snapshot, it raises nothing: the
+// human saw the officer history when adding the company.
+function podRadarDiff(watch,officers,today){
+  const norm=o=>({name:String(o.name||'').trim(),role:String(o.officer_role||o.role||'').toLowerCase(),appointedOn:o.appointed_on||o.appointedOn||'',resignedOn:o.resigned_on||o.resignedOn||''});
+  const items=(officers||[]).map(norm);
+  const founders=(watch.founderNames||[]).map(n=>String(n).trim().toLowerCase());
+  const isFounder=n=>founders.includes(String(n||'').trim().toLowerCase());
+  const isDirector=r=>String(r||'').includes('director')||String(r||'').includes('llp-member');
+  const prev=(watch.officersSnapshot||[]).map(norm);
+  if(!prev.length) return {signals:[],snapshot:items};
+  const key=o=>o.name.toLowerCase()+'|'+(o.appointedOn||'');
+  const prevSet=new Set(prev.map(key));
+  const prevResigned=new Set(prev.filter(o=>o.resignedOn).map(o=>o.name.toLowerCase()));
+  const link='https://find-and-update.company-information.service.gov.uk/company/'+watch.companyNumber+'/officers';
+  const sigs=[];
+  items.forEach(o=>{
+    if(!isDirector(o.role)||isFounder(o.name)) return;
+    if(!prevSet.has(key(o))&&!o.resignedOn) sigs.push({event:'Non founder director appointed',officerName:o.name,filingDate:o.appointedOn||today,link});
+    if(o.resignedOn&&!prevResigned.has(o.name.toLowerCase())) sigs.push({event:'Non founder director resigned',officerName:o.name,filingDate:o.resignedOn,link});
+  });
+  const activeNow=items.filter(o=>isDirector(o.role)&&!o.resignedOn).length;
+  const activePrev=prev.filter(o=>isDirector(o.role)&&!o.resignedOn).length;
+  if(activePrev<=2&&activeNow>=3) sigs.push({event:'Leadership team expanded from '+activePrev+' to '+activeNow+' active directors',officerName:'',filingDate:today,link});
+  return {signals:sigs,snapshot:items};
+}
+async function podRadarCheck(force){
+  if(__podRadarBusy) return;
+  const watches=podWatch(); if(!watches.length) return;
+  if(!force){
+    const oldest=watches.reduce((m,w)=>{ const t=w.lastChecked||''; return (m===null||t<m)?t:m; },null);
+    if(oldest&&(Date.now()-new Date(oldest).getTime())<20*3600*1000) return;
+  }
+  __podRadarBusy=true;
+  const st=document.getElementById('pod-radar-status'); if(st) st.textContent='Checking Companies House…';
+  const today=new Date().toISOString().slice(0,10);
+  let newCount=0;
+  try{
+    const seen=ls.get('tuf_pod_sigseen',{})||{};
+    const sigs=podSignals();
+    for(const w of watches){
+      try{
+        const data=await chCall('/company/'+w.companyNumber+'/officers?items_per_page=50');
+        const res=podRadarDiff(w,(data&&data.items)||[],today);
+        res.signals.forEach(s=>{
+          const k=w.companyNumber+'|'+(s.officerName||'')+'|'+s.event+'|'+s.filingDate;
+          if(seen[k]) return; // includes everything ever dismissed: a dismissed signal never comes back
+          seen[k]=true; newCount++;
+          sigs.push({id:uid(),companyNumber:w.companyNumber,companyName:w.name,event:s.event,officerName:s.officerName,filingDate:s.filingDate,link:s.link,raisedAt:new Date().toISOString(),dismissed:false});
+        });
+        w.officersSnapshot=res.snapshot; w.lastChecked=new Date().toISOString();
+      }catch(e){ console.warn('Radar check failed for '+w.name,e); }
+    }
+    ls.set('tuf_pod_watch',watches);
+    ls.set('tuf_pod_signals',sigs);
+    ls.set('tuf_pod_sigseen',seen);
+    if(newCount) addNotif(newCount+' new Companies House signal'+(newCount===1?'':'s')+' on the Guest radar');
+  } finally { __podRadarBusy=false; }
+  if(podView==='radar') renderPodcast();
+}
+// ── Watchlist ──
+function podWatchAddModal(){
+  showModal('Watch a company',`
+    <div style="font-size:12px;color:var(--mut);margin-bottom:8px">Type the company name as registered at Companies House. Pick the right match, confirm who the founders are, and the Radar watches its filings for leadership changes.</div>
+    <div style="display:flex;gap:8px"><input class="form-input" id="pw-q" placeholder="Company name" onkeydown="if(event.key==='Enter')podWatchSearch()"><button class="btn btn-k btn-sm" onclick="podWatchSearch()">Search</button></div>
+    <div id="pw-results" style="margin-top:10px"></div>
+  `,`<button class="btn btn-ghost" onclick="closeModal()">Close</button>`);
+}
+async function podWatchSearch(){
+  const q=document.getElementById('pw-q')?.value.trim(); if(!q) return;
+  const box=document.getElementById('pw-results'); if(!box) return;
+  box.innerHTML='<div style="color:var(--mut);font-size:12px">Searching…</div>';
+  try{
+    const data=await chCall('/search/companies?q='+encodeURIComponent(q)+'&items_per_page=5');
+    const items=(data&&data.items)||[];
+    window.__pwResults=items;
+    box.innerHTML=items.length?items.map((it,i)=>`<div class="card" style="margin-bottom:6px;cursor:pointer" onclick="podWatchPick(${i})">
+      <b>${escHtml(it.title||'')}</b> <span class="tag ${it.company_status==='active'?'tag-g':'tag-a'}" style="font-size:9px">${escHtml(it.company_status||'')}</span>
+      <div style="font-size:11px;color:var(--mut)">${escHtml(it.company_number||'')} · ${escHtml(String(it.address_snippet||'').slice(0,80))}</div>
+    </div>`).join(''):'<div class="empty">No matches at Companies House.</div>';
+  }catch(e){ box.innerHTML='<div style="color:var(--red);font-size:12px">'+escHtml(e.message||String(e))+'</div>'; }
+}
+async function podWatchPick(i){
+  const it=(window.__pwResults||[])[i]; if(!it) return;
+  if(podWatch().some(w=>w.companyNumber===it.company_number)){ alert('Already on the watchlist.'); return; }
+  const box=document.getElementById('pw-results'); if(!box) return;
+  box.innerHTML='<div style="color:var(--mut);font-size:12px">Fetching officers…</div>';
+  try{
+    const data=await chCall('/company/'+it.company_number+'/officers?items_per_page=50');
+    const items=(data&&data.items)||[];
+    window.__pwPick={company:it,officers:items};
+    const inc=it.date_of_creation||'';
+    const isEarly=o=>o.appointed_on&&inc&&(new Date(o.appointed_on)-new Date(inc))<=60*24*3600*1000;
+    box.innerHTML=`<div style="font-weight:700;margin-bottom:6px">${escHtml(it.title||'')} · ${escHtml(it.company_number||'')}</div>
+      <div style="font-size:11.5px;color:var(--mut);margin-bottom:8px">Tick everyone who is a founder. Officers appointed within 60 days of incorporation are preticked. Anyone unticked counts as a non founder, and their comings and goings raise signals.</div>
+      ${items.map((o,j)=>`<label style="display:flex;gap:8px;align-items:center;padding:4px 0;font-size:12.5px;cursor:pointer"><input type="checkbox" id="pw-f-${j}"${isEarly(o)?' checked':''}> <b>${escHtml(o.name||'')}</b> <span style="color:var(--mut);font-size:11px">${escHtml(o.officer_role||'')} · appointed ${escHtml(o.appointed_on||'?')}${o.resigned_on?' · resigned '+escHtml(o.resigned_on):''}</span></label>`).join('')||'<div class="empty">No officers listed.</div>'}
+      <button class="btn btn-k btn-sm" style="margin-top:10px" onclick="podWatchConfirm()">Add to watchlist</button>`;
+  }catch(e){ box.innerHTML='<div style="color:var(--red);font-size:12px">'+escHtml(e.message||String(e))+'</div>'; }
+}
+function podWatchConfirm(){
+  const p=window.__pwPick; if(!p) return;
+  const founders=p.officers.filter((o,j)=>document.getElementById('pw-f-'+j)?.checked).map(o=>o.name||'');
+  const list=podWatch();
+  list.push({id:uid(),name:p.company.title||'',companyNumber:p.company.company_number||'',addedAt:new Date().toISOString(),addedBy:CURRENT_USER,
+    founderNames:founders,
+    officersSnapshot:p.officers.map(o=>({name:String(o.name||'').trim(),role:String(o.officer_role||'').toLowerCase(),appointedOn:o.appointed_on||'',resignedOn:o.resigned_on||''})),
+    lastChecked:new Date().toISOString()});
+  ls.set('tuf_pod_watch',list);
+  window.__pwPick=null; window.__pwResults=null;
+  closeModal(); addNotif((p.company.title||'Company')+' added to the watchlist'); renderPodcast();
+}
+function podWatchRemove(id){
+  if(!confirm('Stop watching this company? Its existing signals stay.')) return;
+  ls.set('tuf_pod_watch',podWatch().filter(w=>w.id!==id)); renderPodcast();
+}
+// ── Signals ──
+function podSigDismiss(id){
+  const sigs=podSignals(); const s=sigs.find(x=>x.id===id); if(!s) return;
+  s.dismissed=true; ls.set('tuf_pod_signals',sigs); renderPodcast();
+}
+function podSigToCandidate(id){
+  const s=podSignals().find(x=>x.id===id); if(!s) return;
+  podRadarCandModal('',{company:s.companyName,companyNumber:s.companyNumber,signalId:s.id});
+}
+// ── Candidates ──
+function podRadarCandModal(id,pre){
+  const c=id?podRadar().find(x=>x.id===id):null;
+  const sc=k=>((c&&c.scores&&c.scores[k])||{v:0,why:''});
+  const axisRow=(k,label,hint)=>`<div style="display:flex;gap:8px;align-items:center;margin-bottom:6px">
+    <span style="width:60px;font-size:11px;font-weight:800;flex-shrink:0">${label}</span>
+    <select class="form-select" style="width:58px;padding:4px;flex-shrink:0" id="rc-s-${k}">${[0,1,2,3].map(v=>`<option${sc(k).v===v?' selected':''}>${v}</option>`).join('')}</select>
+    <input class="form-input" id="rc-w-${k}" value="${escAttr(sc(k).why||'')}" placeholder="${escAttr(hint)}" style="font-size:11.5px">
+  </div>`;
+  const evRows=(c&&(c.evidence||[]).length)?(c.evidence||[]).map(e=>`<div style="display:flex;gap:8px;align-items:center;padding:3px 0;font-size:11.5px"><a href="${escAttr(e.url)}" target="_blank" rel="noopener" style="max-width:38%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escHtml(e.url)}</a><span style="flex:1">${escHtml(e.desc)}</span><span style="cursor:pointer;color:var(--mut)" onclick="podRadarEvDel('${c.id}','${e.id}')">✕</span></div>`).join(''):'';
+  showModal(c?('Candidate · '+(c.name||'')):'Add a candidate',`
+    <div class="grid-2">
+      <div class="form-row"><label class="form-label">Name, a real person from a filing, a list or a referral</label><input class="form-input" id="rc-name" value="${escAttr(c?c.name:'')}"></div>
+      <div class="form-row"><label class="form-label">Company</label><input class="form-input" id="rc-co" value="${escAttr(c?c.company||'':(pre&&pre.company)||'')}"></div>
+    </div>
+    <div class="grid-2">
+      <div class="form-row"><label class="form-label">Company number (optional)</label><input class="form-input" id="rc-num" value="${escAttr(c?c.companyNumber||'':(pre&&pre.companyNumber)||'')}"></div>
+      <div class="form-row"><label class="form-label">Audience, typed by a human</label><input class="form-input" id="rc-aud" value="${escAttr(c?c.audienceSize||'':'')}" placeholder="e.g. 120k LinkedIn, mostly founders"></div>
+    </div>
+    <div style="font-size:10px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--mut);margin:8px 0 4px">Scores, 0 to 3, the reason typed alongside</div>
+    ${axisRow('signal','Signal','Documented transition in the last 18 months, with a link')}
+    ${axisRow('reach','Reach','Size × how much they share × how founder heavy the audience')}
+    ${axisRow('unasked','Unasked','Has anyone asked them about the handover, or only the product')}
+    ${axisRow('route','Route','Warm introduction through the Boardroom, Danny or a mutual')}
+    <div style="font-size:10px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--mut);margin:10px 0 4px">Evidence · no evidence, no approach</div>
+    ${c?(evRows||'<div style="font-size:11.5px;color:var(--mut)">None yet. A candidate cannot be promoted without at least one entry.</div>'):'<div style="font-size:11.5px;color:var(--mut)">Save the candidate first, then attach evidence.</div>'}
+    ${c?`<div style="display:flex;gap:6px;margin-top:6px;flex-wrap:wrap"><input class="form-input" id="rc-ev-url" placeholder="https://…" style="flex:1;min-width:140px"><input class="form-input" id="rc-ev-desc" placeholder="One line: what this shows" style="flex:1;min-width:140px"><button class="btn btn-ghost btn-sm" onclick="podRadarEvAdd('${c.id}')">Add</button></div>`:''}
+  `,`<button class="btn btn-ghost" onclick="closeModal()">Cancel</button>${c?`<button class="btn btn-red btn-sm" onclick="podRadarCandDel('${c.id}')">Delete</button><button class="btn btn-ghost" onclick="podRadarBrief('${c.id}')">Research brief</button><button class="btn btn-ghost" onclick="podRadarPromote('${c.id}')">Promote to pipeline</button>`:''}<button class="btn btn-k" onclick="podRadarCandSave('${id||''}','${(pre&&pre.signalId)||''}')">Save</button>`);
+}
+function podRadarCandSave(id,signalId){
+  const g=x=>document.getElementById(x)?.value||'';
+  const name=g('rc-name').trim();
+  if(!name){ alert('The candidate needs a name. Names come from a filing, a list or a person, never a guess.'); return; }
+  const scores={}; let missing=null;
+  POD_RADAR_AXES.forEach(a=>{
+    const v=parseInt(g('rc-s-'+a[0]),10)||0; const why=g('rc-w-'+a[0]).trim();
+    if(v>0&&!why&&!missing) missing=a[1];
+    scores[a[0]]={v:v,why:why};
+  });
+  if(missing){ alert('A score needs its reason. Type why '+missing+' scores what it scores.'); return; }
+  const list=podRadar();
+  const rec=id?list.find(x=>x.id===id):null;
+  const vals={name:name,company:g('rc-co').trim(),companyNumber:g('rc-num').trim(),audienceSize:g('rc-aud').trim(),scores:scores};
+  if(rec) Object.assign(rec,vals);
+  else list.push({id:uid(),...vals,source:signalId?'ch':'manual',evidence:[],latestSignalId:signalId||'',addedAt:new Date().toISOString(),addedBy:CURRENT_USER});
+  ls.set('tuf_pod_radar',list);
+  closeModal(); renderPodcast();
+}
+function podRadarEvAdd(id){
+  const url=document.getElementById('rc-ev-url')?.value.trim()||'';
+  const desc=document.getElementById('rc-ev-desc')?.value.trim()||'';
+  if(!/^https?:\/\//.test(url)){ alert('Evidence needs a full link, starting https.'); return; }
+  if(!desc){ alert('Evidence needs the one line saying what the link shows.'); return; }
+  const list=podRadar(); const c=list.find(x=>x.id===id); if(!c) return;
+  (c.evidence=c.evidence||[]).push({id:uid(),url:url,desc:desc,at:new Date().toISOString(),by:CURRENT_USER});
+  ls.set('tuf_pod_radar',list);
+  podRadarCandModal(id);
+}
+function podRadarEvDel(id,evId){
+  const list=podRadar(); const c=list.find(x=>x.id===id); if(!c) return;
+  c.evidence=(c.evidence||[]).filter(e=>e.id!==evId);
+  ls.set('tuf_pod_radar',list);
+  podRadarCandModal(id);
+}
+function podRadarCandDel(id){
+  if(!confirm('Delete this candidate and its evidence?')) return;
+  ls.set('tuf_pod_radar',podRadar().filter(x=>x.id!==id));
+  closeModal(); renderPodcast();
+}
+// The only route from the Radar into the pipeline. Refuses without evidence.
+function podRadarPromote(id){
+  const c=podRadar().find(x=>x.id===id); if(!c) return;
+  if(!(c.evidence&&c.evidence.length)){ alert('No evidence, no approach. Attach at least one link with a line on what it shows before this candidate can enter the pipeline.'); return; }
+  const sig=c.latestSignalId?podSignals().find(s=>s.id===c.latestSignalId):null;
+  const gid=uid();
+  const guests=podGuests();
+  guests.push({id:gid,name:c.name,company:c.company||'',guestJob:'Ideal fit',stage:'Approached',owner:'James',source:'Guest radar',
+    fitNote:(((c.evidence[0]||{}).desc)||'')+(sig?(' · Signal: '+sig.event+' filed '+fmtShort(sig.filingDate)):''),
+    nextAction:'Draft the approach from the evidence',nextActionDate:'',episodeId:'',
+    radar:{candidateId:c.id,evidence:(c.evidence||[]).map(e=>({...e})),scores:JSON.parse(JSON.stringify(c.scores||{}))}});
+  ls.set('tuf_pod_guests',guests);
+  const list=podRadar(); const c2=list.find(x=>x.id===id); if(c2) c2.promotedGuestId=gid;
+  ls.set('tuf_pod_radar',list);
+  closeModal(); addNotif(c.name+' promoted into the guest pipeline at Approached');
+  renderPodcast();
+}
+// ── Research brief (copyable text, not an in app search) ──
+function podRadarBriefText(c){
+  const sig=c.latestSignalId?podSignals().find(s=>s.id===c.latestSignalId):null;
+  const lines=[];
+  lines.push('GUEST RESEARCH BRIEF · '+c.name+(c.company?' · '+c.company:'')+(c.companyNumber?' · Companies House '+c.companyNumber:''));
+  if(sig) lines.push('Latest signal: '+sig.event+(sig.officerName?' ('+sig.officerName+')':'')+' · filed '+sig.filingDate+' · '+sig.link);
+  (c.evidence||[]).forEach(e=>lines.push('Known already: '+e.desc+' · '+e.url));
+  lines.push('');
+  lines.push('The podcast is about one thing: the move from the founder who does everything to the CEO who runs the business. Answer these, with a link for every claim.');
+  lines.push('1. What has this person said publicly about handing over, stepping back, hiring leadership, or a hard year? Links.');
+  lines.push('2. Where is their audience, roughly how big, and is it founders or consumers?');
+  lines.push('3. Have they appeared on podcasts? What did they actually talk about?');
+  lines.push('4. Any warm route in, through the Boardroom, Danny, or a mutual?');
+  lines.push('5. What is the question nobody has asked them?');
+  lines.push('');
+  lines.push('Paste findings back as evidence entries on the candidate, one link and one line each, then score the four axes with reasons.');
+  return lines.join('\n');
+}
+function podRadarBrief(id){
+  const c=podRadar().find(x=>x.id===id); if(!c) return;
+  showModal('Research brief · '+c.name,
+    `<pre id="pod-rb-txt" style="white-space:pre-wrap;font-family:inherit;font-size:12.5px;line-height:1.6;background:var(--bg);border:1px solid var(--bdr);border-radius:8px;padding:12px;max-height:55vh;overflow:auto;margin:0">${escHtml(podRadarBriefText(c))}</pre>`,
+    `<button class="btn btn-ghost" onclick="podRadarCandModal('${c.id}')">Back</button><button class="btn btn-k" onclick="podRadarBriefCopy()">Copy</button>`);
+}
+function podRadarBriefCopy(){
+  const el=document.getElementById('pod-rb-txt'); if(!el) return;
+  navigator.clipboard.writeText(el.innerText).then(()=>addNotif('Brief copied')).catch(()=>{});
+}
+// ── List ingestion (FEBE, Sunday Times, award lists; a few times a year) ──
+function podRadarParseList(text){
+  const existing=new Set([].concat(
+    podRadar().map(c=>(c.name||'').trim().toLowerCase()),
+    podGuests().map(g=>(g.name||'').trim().toLowerCase()),
+    podIdeas().map(i=>(i.name||'').trim().toLowerCase())
+  ).filter(Boolean));
+  const add=[],skip=[];
+  String(text||'').split('\n').map(l=>l.trim()).filter(Boolean).forEach(l=>{
+    const parts=l.split(/\t|,/); const name=(parts[0]||'').trim(); const company=parts.slice(1).join(',').trim();
+    if(!name) return;
+    if(existing.has(name.toLowerCase())){ skip.push(name); return; }
+    existing.add(name.toLowerCase());
+    add.push({name:name,company:company});
+  });
+  return {add:add,skip:skip};
+}
+function podRadarPasteModal(){
+  showModal('Paste a list',`
+    <div style="font-size:12px;color:var(--mut);margin-bottom:8px">One candidate per line, name then company, separated by a comma or a tab. FEBE Growth 100, Sunday Times 100, award finalists. Anyone already in the Radar, the pipeline or the ideas bench is skipped.</div>
+    <textarea class="form-textarea" id="rp-txt" style="min-height:140px" placeholder="Jane Smith, Smith Foods"></textarea>
+    <div id="rp-preview" style="margin-top:8px;font-size:12px"></div>
+  `,`<button class="btn btn-ghost" onclick="closeModal()">Cancel</button><button class="btn btn-ghost" onclick="podRadarPastePreview()">Preview</button><button class="btn btn-k" onclick="podRadarPasteSave()">Add candidates</button>`);
+}
+function podRadarPastePreview(){
+  const r=podRadarParseList(document.getElementById('rp-txt')?.value);
+  const box=document.getElementById('rp-preview'); if(!box) return;
+  box.innerHTML=`<b>${r.add.length}</b> to add${r.skip.length?` · <b>${r.skip.length}</b> skipped as already known (${r.skip.slice(0,6).map(escHtml).join(', ')}${r.skip.length>6?'…':''})`:''}`;
+}
+function podRadarPasteSave(){
+  const r=podRadarParseList(document.getElementById('rp-txt')?.value);
+  if(!r.add.length){ alert(r.skip.length?'Every name on that list is already in the module.':'Nothing to add. One candidate per line, name first.'); return; }
+  const list=podRadar();
+  r.add.forEach(x=>list.push({id:uid(),name:x.name,company:x.company,companyNumber:'',source:'list',audienceSize:'',scores:{},evidence:[],latestSignalId:'',addedAt:new Date().toISOString(),addedBy:CURRENT_USER}));
+  ls.set('tuf_pod_radar',list);
+  closeModal(); addNotif(r.add.length+' candidate'+(r.add.length===1?'':'s')+' added to the Radar'+(r.skip.length?', '+r.skip.length+' duplicates skipped':''));
+  renderPodcast();
+}
+// ── Radar screens ──
+function podRadarView(){
+  const tabs=[['radar','Radar'],['signals','Signals'],['watch','Watchlist']];
+  const sigsOpen=podSignals().filter(s=>!s.dismissed).length;
+  const nav=`<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;align-items:center">${tabs.map(t=>`<button class="btn btn-sm ${podRadarTab===t[0]?'btn-k':'btn-ghost'}" onclick="podRadarTab='${t[0]}';renderPodcast()">${t[1]}${t[0]==='signals'&&sigsOpen?` <span style="background:var(--amb);color:#fff;border-radius:10px;padding:0 6px;font-size:10px">${sigsOpen}</span>`:''}</button>`).join('')}<span style="flex:1"></span><span id="pod-radar-status" style="font-size:11px;color:var(--mut)"></span><button class="btn btn-ghost btn-sm" onclick="podRadarCheck(true)">Check now</button></div>`;
+  const body=podRadarTab==='signals'?podSignalsView():podRadarTab==='watch'?podWatchView():podRadarListView();
+  return nav+body;
+}
+function podRadarListView(){
+  const sigs=podSignals();
+  const recentCut=new Date(Date.now()-90*24*3600*1000).toISOString().slice(0,10);
+  const list=podRadarSorted().filter(c=>{
+    if(podRadarTotal(c)<podRadarMin) return false;
+    if(podRadarRecent){
+      const sig=c.latestSignalId?sigs.find(s=>s.id===c.latestSignalId):null;
+      if(!sig||sig.filingDate<recentCut) return false;
+    }
+    return true;
+  });
+  const promoted=podRadar().filter(c=>c.promotedGuestId);
+  const chip=(k,lbl,c)=>{ const s=((c.scores||{})[k])||{v:0}; const zr=k==='route'&&!s.v; return `<span class="tag ${zr?'tag-a':s.v>=3?'tag-g':s.v>=1?'tag-b':'tag-k'}" style="font-size:9px" title="${escAttr(s.why||'no reason typed yet')}">${lbl} ${s.v||0}</span>`; };
+  const noRouteCount=list.filter(c=>!(((c.scores||{}).route||{}).v)).length;
+  const row=c=>{
+    const sig=c.latestSignalId?sigs.find(s=>s.id===c.latestSignalId):null;
+    const noRoute=!(((c.scores||{}).route||{}).v);
+    return `<div class="card" style="margin-bottom:8px;cursor:pointer${noRoute?';border-left:4px solid var(--amb)':''}" onclick="podRadarCandModal('${c.id}')">
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+        <span style="font-family:Montserrat,sans-serif;font-weight:800;font-size:18px;min-width:28px;text-align:center">${podRadarTotal(c)}</span>
+        <div style="flex:1;min-width:170px">
+          <div style="font-weight:700">${escHtml(c.name)}<span style="color:var(--mut);font-weight:500;font-size:12px">${c.company?' · '+escHtml(c.company):''}</span></div>
+          <div style="font-size:11px;color:var(--mut)">${sig?escHtml(sig.event)+' · filed '+fmtShort(sig.filingDate):'No signal yet'} · ${(c.evidence||[]).length} evidence</div>
+        </div>
+        ${chip('signal','S',c)}${chip('reach','R',c)}${chip('unasked','U',c)}${chip('route','Rt',c)}
+        ${noRoute?'<span class="tag tag-a" style="font-size:9px">No route in</span>':''}
+      </div>
+    </div>`;
+  };
+  return `
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;align-items:center">
+      ${[[0,'All'],[6,'Score 6+'],[9,'Score 9+']].map(f=>`<button class="btn btn-sm ${podRadarMin===f[0]?'btn-k':'btn-ghost'}" onclick="podRadarMin=${f[0]};renderPodcast()">${f[1]}</button>`).join('')}
+      <button class="btn btn-sm ${podRadarRecent?'btn-k':'btn-ghost'}" onclick="podRadarRecent=!podRadarRecent;renderPodcast()">Signal in last 90 days</button>
+      <span style="flex:1"></span>
+      <button class="btn btn-ghost btn-sm" onclick="podRadarPasteModal()">Paste a list</button>
+      <button class="btn btn-k btn-sm" onclick="podRadarCandModal('')">+ Add candidate</button>
+    </div>
+    <div style="font-size:11px;color:var(--mut);margin-bottom:8px">Ranked on Signal, Reach, Unasked and Route together, best evidenced first, never fame. Names only ever come from Companies House, a pasted list or a person.${list.length?' '+noRouteCount+' of the '+list.length+' shown have no route in.':''}</div>
+    ${list.length?list.map(row).join(''):'<div class="empty">No candidates match. Add one, paste a list, or watch companies so signals surface people.</div>'}
+    ${promoted.length?`<details style="margin-top:12px"><summary style="font-size:12px;font-weight:700;cursor:pointer;color:var(--mut)">Promoted to the pipeline (${promoted.length})</summary>${promoted.map(c=>`<div style="font-size:12px;padding:4px 0;color:var(--mut)">${escHtml(c.name)}${c.company?' · '+escHtml(c.company):''}</div>`).join('')}</details>`:''}
+  `;
+}
+function podSignalsView(){
+  const sigs=podSignals().filter(s=>!s.dismissed).slice().sort((a,b)=>(b.filingDate||'').localeCompare(a.filingDate||''));
+  return `
+    <div style="font-size:11.5px;color:var(--mut);margin-bottom:10px">Raw Companies House events from the watchlist, newest filing first. The filing date is the hook: three weeks ago is a live conversation, four years ago is history. Dismissing one is permanent.</div>
+    ${sigs.length?sigs.map(s=>`<div class="card" style="margin-bottom:8px">
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+        <div style="flex:1;min-width:180px">
+          <div style="font-weight:700">${escHtml(s.companyName)}</div>
+          <div style="font-size:12px">${escHtml(s.event)}${s.officerName?': <b>'+escHtml(s.officerName)+'</b>':''}</div>
+          <div style="font-size:11px;color:var(--mut)">Filed ${fmtShort(s.filingDate)} · <a href="${escAttr(s.link)}" target="_blank" rel="noopener">View at Companies House</a></div>
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="podSigToCandidate('${s.id}')">Raise a candidate</button>
+        <button class="btn btn-ghost btn-sm" onclick="podSigDismiss('${s.id}')">Dismiss</button>
+      </div>
+    </div>`).join(''):'<div class="empty">No open signals. Watch companies and the filings do the finding.</div>'}
+  `;
+}
+function podWatchView(){
+  const sigs=podSignals();
+  const list=podWatch();
+  return `
+    <div style="display:flex;gap:8px;margin-bottom:10px;align-items:center;flex-wrap:wrap"><span style="flex:1;font-size:11.5px;color:var(--mut);min-width:200px">Founder led companies watched for leadership changes. Checked when the Radar opens, at most daily; these are filings, not prices.</span><button class="btn btn-k btn-sm" onclick="podWatchAddModal()">+ Watch a company</button></div>
+    ${list.length?list.map(w=>{
+      const latest=sigs.filter(s=>s.companyNumber===w.companyNumber).sort((a,b)=>(b.filingDate||'').localeCompare(a.filingDate||''))[0];
+      return `<div class="card" style="margin-bottom:8px"><div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+        <div style="flex:1;min-width:180px">
+          <div style="font-weight:700">${escHtml(w.name)} <span style="color:var(--mut);font-weight:500;font-size:11px">· ${escHtml(w.companyNumber)}</span></div>
+          <div style="font-size:11px;color:var(--mut)">Founders: ${escHtml((w.founderNames||[]).join(', ')||'none marked')} · ${(w.officersSnapshot||[]).filter(o=>!o.resignedOn).length} active officers</div>
+          <div style="font-size:11px;color:var(--mut)">Last checked ${w.lastChecked?fmtShort(String(w.lastChecked).slice(0,10)):'never'}${latest?' · latest signal '+fmtShort(latest.filingDate)+', '+escHtml(latest.event):''}</div>
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="podWatchRemove('${w.id}')">Remove</button>
+      </div></div>`;
+    }).join(''):'<div class="empty">No companies watched yet. Add the founder led companies worth listening for.</div>'}
+  `;
+}
 function podNav(v){ podView=v; if(v!=='eps') podSelId=null; renderPodcast(); }
 function renderPodcast(){
   const host=document.getElementById('podcast-render'); if(!host) return;
   if(__pod48Int){ clearInterval(__pod48Int); __pod48Int=null; }
   podSyncFromTasks();
-  const pills=[['eps','Episodes'],['pipe','Guest pipeline'],['measures','Measures']];
-  const nav=`<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;align-items:center">${pills.map(([k,l])=>`<button class="btn btn-sm ${podView===k?'btn-k':'btn-ghost'}" onclick="podNav('${k}')">${l}</button>`).join('')}<span style="flex:1"></span>${podBookedPill()}</div>`;
-  const body=(podView==='eps'&&podSelId)?podEpDetail():podView==='pipe'?podPipeView():podView==='measures'?podMeasuresView():podEpsView();
+  const pills=[['eps','Episodes'],['pipe','Guest pipeline'],['radar','Guest radar'],['measures','Measures']];
+  const sigsOpen=podSignals().filter(s=>!s.dismissed).length;
+  const nav=`<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;align-items:center">${pills.map(([k,l])=>`<button class="btn btn-sm ${podView===k?'btn-k':'btn-ghost'}" onclick="podNav('${k}')">${l}${k==='radar'&&sigsOpen?` <span style="background:var(--amb);color:#fff;border-radius:10px;padding:0 6px;font-size:10px">${sigsOpen}</span>`:''}</button>`).join('')}<span style="flex:1"></span>${podBookedPill()}</div>`;
+  const body=(podView==='eps'&&podSelId)?podEpDetail():podView==='pipe'?podPipeView():podView==='radar'?podRadarView():podView==='measures'?podMeasuresView():podEpsView();
   host.innerHTML=nav+body;
   const ta=document.getElementById('topbar-actions');
-  if(ta) ta.innerHTML=podView==='pipe'?`<button class="btn btn-k btn-sm" onclick="podGuestModal()">+ Add guest</button>`:`<button class="btn btn-k btn-sm" onclick="podEpNewModal()">+ Add episode</button>`;
+  if(ta) ta.innerHTML=podView==='pipe'?`<button class="btn btn-k btn-sm" onclick="podGuestModal()">+ Add guest</button>`:podView==='radar'?'':`<button class="btn btn-k btn-sm" onclick="podEpNewModal()">+ Add episode</button>`;
   podStart48();
   podThumbFill();
+  if(podView==='radar') podRadarCheck(false);
 }
 // ── Episodes list ──
 function podJobTag(job){ return job==='Ideal fit'?'<span class="tag tag-y" style="font-size:9px">Ideal fit</span>':'<span class="tag tag-k" style="font-size:9px">Authority</span>'; }
@@ -7583,7 +7981,7 @@ function podPipeView(){
   const card=g=>`<div class="k-card" onclick="podGuestModal('${g.id}')">
     <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:6px">
       <div><div class="k-name">${escHtml(g.name||('Episode '+(g.episodeId||'?')+' slot'))}</div><div class="k-co">${escHtml(g.company||'')}</div></div>
-      ${podJobTag(g.guestJob)}
+      <div style="display:flex;flex-direction:column;gap:3px;align-items:flex-end">${podJobTag(g.guestJob)}${g.radar?'<span class="tag tag-b" style="font-size:9px" title="Promoted from the Guest radar with evidence and scores attached">via Radar</span>':''}</div>
     </div>
     ${g.nextAction?`<div style="font-size:10px;color:var(--mut);margin-top:4px">${escHtml(g.nextAction)}${g.nextActionDate?` <b>· ${fmtShort(g.nextActionDate)}</b>`:''}</div>`:''}
     ${g.fitNote?`<div style="font-size:9.5px;color:var(--mut);margin-top:3px">${escHtml(g.fitNote.slice(0,90))}</div>`:''}
