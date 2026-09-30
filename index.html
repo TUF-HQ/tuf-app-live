@@ -1468,10 +1468,15 @@ function initApp(user){
   renderNotifBadge();
   updateTaskBadge();
   subscribeToChanges();
-  // Danny lands on the Team Overview ("what everyone has on"); everyone else lands on their My Day.
+  // Danny lands on the Team Overview ("what everyone has on"); Chloe lands on
+  // Coaching, because sending the session summaries is her job and she was
+  // having to find it among the whole sidebar first; everyone else on My Day.
   if(CURRENT_USER==='Danny'){
     const el=document.querySelector('[data-page=teamoverview]');
     if(el) nav('teamoverview', el);
+  } else if(CURRENT_USER==='Chloe'){
+    const el=document.querySelector('[data-page=coaching]');
+    if(el) nav('coaching', el);
   } else {
     const el=document.querySelector('[data-page=myday]');
     if(el) nav('myday', el);
@@ -3299,7 +3304,9 @@ function waTplLog(id){
 // the recap agent and the app can write at the same time without clobbering
 // each other. One-time SQL lives in COACHING_SETUP.md. Files go to the private
 // tuf-coaching bucket, opened with 1-hour signed URLs.
-let coView='list', coPersonId=null;
+// Coaching opens on Chloe's view: the short list of recaps with a Summary and
+// a Send button on each. Getting a summary out is the job this page exists for.
+let coView='send', coPersonId=null;
 let coData={people:[],sessions:[],actions:[],files:[],loaded:false};
 const CO_BUCKET='tuf-coaching';
 const CO_STALE_DAYS=30;
@@ -3416,33 +3423,36 @@ function coSendView(){
   const ready=coData.sessions.filter(s=>s.status==='approved').slice().sort(byDate);
   const waiting=coData.sessions.filter(s=>s.status==='draft').slice().sort(byDate);
   const sent=coData.sessions.filter(s=>s.status==='sent').slice().sort((a,b)=>(b.sent_at||'').localeCompare(a.sent_at||'')).slice(0,15);
-  const bigCard=(s,canSend)=>{
+  // One line per recap: who it is, when, Summary to read it, Send to send it.
+  // The recap text itself stays behind the Summary button, because having six
+  // full recaps on screen at once is what made this page hard to use.
+  const row=s=>{
     const p=coPerson(s.person_id);
     const first=((p&&p.name)||'the client').split(' ')[0];
-    const recap=(s.recap_md||'').trim();
-    return `<div class="card" style="margin-bottom:14px;border-left:5px solid ${canSend?'var(--y)':'var(--amb)'};padding:18px 20px">
-      <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:6px">
+    return `<div class="card" style="margin-bottom:10px;border-left:5px solid var(--y);padding:16px 20px">
+      <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
         <div style="flex:1;min-width:200px">
           <div style="font-size:17px;font-weight:800">${escHtml((p&&p.name)||'Unknown')}${p&&p.company?` <span style="font-weight:500;color:var(--mut);font-size:13px">· ${escHtml(p.company)}</span>`:''}</div>
           <div style="font-size:12.5px;color:var(--mut)">Session on ${fmtDate(s.session_date)}${p&&p.email?` · goes to ${escHtml(p.email)}`:' · <span style="color:var(--amb)">no email on file yet, you can type it when you send</span>'}</div>
         </div>
-        ${canSend?`<button class="btn btn-y" style="font-size:14px;padding:10px 22px" onclick="coSimpleSendModal('${s.id}')">Send to ${escHtml(first)}</button>`:'<span class="tag tag-a" style="font-size:10px">Waiting for Danny</span>'}
+        ${coSummaryBtn(s.id,'big')}
+        <button class="btn btn-k" style="font-size:14px;padding:10px 22px" onclick="coSimpleSendModal('${s.id}')">Send to ${escHtml(first)}</button>
       </div>
-      ${recap?`<div style="font-size:13px;line-height:1.65;white-space:pre-wrap;background:var(--bg);border:1px solid var(--bdr);border-radius:10px;padding:12px 14px;max-height:320px;overflow-y:auto">${escHtml(recap)}</div>`:'<div style="font-size:12px;color:var(--mut);font-style:italic">No written recap on this session.</div>'}
-      ${canSend?'':'<div style="font-size:11.5px;color:var(--mut);margin-top:8px">Danny checks this first. It moves up to Ready as soon as he approves it.</div>'}
     </div>`;
   };
+  const quiet=s=>{const p=coPerson(s.person_id);return `<div style="font-size:12.5px;color:var(--mut);padding:5px 2px">${escHtml((p&&p.name)||'Unknown')} · ${fmtDate(s.session_date)}</div>`;};
   return `
     <div class="sec-hdr">Ready to send (${ready.length})</div>
-    ${ready.length?ready.map(s=>bigCard(s,true)).join(''):'<div class="card" style="margin-bottom:14px"><div style="font-size:13.5px;color:var(--mut);line-height:1.6">Nothing waiting to send right now. When Danny approves a recap it appears here with a big yellow button.</div></div>'}
-    <div class="sec-hdr">Waiting for Danny to approve (${waiting.length})</div>
-    ${waiting.length?waiting.map(s=>bigCard(s,false)).join(''):'<div class="card" style="margin-bottom:14px"><div style="font-size:13px;color:var(--mut)">Nothing waiting on Danny.</div></div>'}
-    <div class="sec-hdr">Already sent</div>
-    ${sent.length?sent.map(s=>{const p=coPerson(s.person_id);return `<div class="card" style="margin-bottom:6px;padding:10px 16px"><div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;font-size:12.5px">
-      <span style="color:var(--grn);font-weight:800">✓</span>
-      <b>${escHtml((p&&p.name)||'Unknown')}</b>
-      <span style="color:var(--mut)">session ${fmtDate(s.session_date)} · sent ${s.sent_at?fmtDate(String(s.sent_at).slice(0,10)):''}${s.sent_to&&s.sent_to.length?' to '+escHtml(s.sent_to.join(', ')):''}</span>
-    </div></div>`;}).join(''):'<div class="card"><div style="font-size:12.5px;color:var(--mut)">Nothing sent yet.</div></div>'}
+    ${ready.length?ready.map(row).join(''):'<div class="card" style="margin-bottom:14px"><div style="font-size:13.5px;color:var(--mut);line-height:1.6">Nothing to send right now. When Danny approves a recap it appears here with a Send button.</div></div>'}
+    <details style="margin-top:18px">
+      <summary style="cursor:pointer;font-size:12.5px;color:var(--mut);padding:6px 0">Waiting for Danny (${waiting.length}) and already sent (${sent.length})</summary>
+      <div style="padding:8px 0 4px">
+        <div style="font-size:10px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--mut);margin-bottom:4px">Waiting for Danny to approve</div>
+        ${waiting.length?waiting.map(quiet).join(''):'<div style="font-size:12.5px;color:var(--mut)">Nothing waiting on Danny.</div>'}
+        <div style="font-size:10px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--mut);margin:12px 0 4px">Already sent</div>
+        ${sent.length?sent.map(s=>{const p=coPerson(s.person_id);return `<div style="font-size:12.5px;color:var(--mut);padding:5px 2px"><span style="color:var(--grn);font-weight:800">✓</span> ${escHtml((p&&p.name)||'Unknown')} · sent ${s.sent_at?fmtDate(String(s.sent_at).slice(0,10)):''}</div>`;}).join(''):'<div style="font-size:12.5px;color:var(--mut)">Nothing sent yet.</div>'}
+      </div>
+    </details>
   `;
 }
 function coSimpleSendModal(id){
@@ -3575,8 +3585,6 @@ function renderCoaching(){
   const ta=document.getElementById('topbar-actions'); if(ta) ta.innerHTML='';
   coLoad().then(r=>{
     const still=document.getElementById('coaching-content'); if(!still) return;
-    // Chloe's job here is sending recaps: land her straight on the simple view.
-    if(CURRENT_USER==='Chloe'&&!window.__coChloeLanded){ window.__coChloeLanded=true; coView='send'; }
     if(!r.ok){
       still.innerHTML = r.reason==='setup'
         ? `<div class="card" style="border-left:4px solid var(--amb)"><div style="font-weight:800;margin-bottom:6px">One-time setup needed</div><div style="font-size:13px;line-height:1.6">The coaching tables do not exist yet. Run <b>COACHING_SETUP.md</b> in the Supabase dashboard (SQL editor + one storage bucket), then reload this page. Nothing else in the app is affected.</div></div>`
@@ -3590,7 +3598,7 @@ function coNav(v){ coView=v; if(v!=='person') coPersonId=null; coDraw(); }
 function coOpenPerson(id){ coPersonId=id; coView='person'; coDraw(); }
 function coDraw(){
   const el=document.getElementById('coaching-content'); if(!el) return;
-  const pills=[['list','People'],['send','Send recaps'],['danny','Danny view']];
+  const pills=[['send',"Chloe's view"],['list','People'],['danny','Danny view']];
   const nav=`<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px">${pills.map(([k,l])=>`<button class="btn btn-sm ${coView===k?'btn-k':'btn-ghost'}" onclick="coNav('${k}')">${l}</button>`).join('')}</div>`;
   const body=(coView==='person'&&coPersonId)?coPersonView():coView==='danny'?coDannyView():coView==='send'?coSendView():coListView();
   el.innerHTML=nav+body;
@@ -3691,6 +3699,7 @@ function coPersonView(){
           <div style="font-weight:700">Session ${s.session_no||'?'} · ${fmtDate(s.session_date)} <span style="color:var(--mut);font-weight:500">· ${escHtml(s.meeting_type)}</span></div>
           <div style="font-size:11.5px;color:var(--mut);display:flex;gap:8px;align-items:center;flex-wrap:wrap">${coStatusStrip(s)}<span>${s.sent_at?'Sent '+fmtDate(String(s.sent_at).slice(0,10))+(s.sent_to&&s.sent_to.length?' to '+escHtml(s.sent_to.join(', ')):''):s.sent_to&&s.sent_to.length?'To send to '+escHtml(s.sent_to.join(', ')):''}${s.read_ai_meeting_id?' · Read AI linked':''}</span></div>
         </div>
+        ${coSummaryBtn(s.id)}
         ${s.status==='draft'?`<button class="btn btn-k btn-sm" onclick="coSessStatus('${s.id}','approved')">✓ Approve</button>`:s.status==='approved'?`<button class="btn btn-k btn-sm" onclick="coSendModal('${s.id}')">Send recap</button>`:''}
         <select class="form-select" style="width:auto;padding:3px 8px;font-size:11px" onchange="coSessStatus('${s.id}',this.value)">${CO_SESSION_STATUSES.map(x=>`<option${x===s.status?' selected':''}>${x}</option>`).join('')}</select>
         <button class="btn btn-ghost btn-sm" onclick="coSessModal('${s.id}')">Edit</button>
@@ -3698,7 +3707,7 @@ function coPersonView(){
       ${recap?`<div style="font-size:12.5px;color:var(--mut);margin-top:8px;white-space:pre-wrap">${escHtml(recap.slice(0,280))}${recap.length>280?'… ':''}</div>${recap.length>280?`<button class="btn btn-ghost btn-sm" style="margin-top:4px;padding:1px 8px" onclick="coRecapModal('${s.id}')">View full recap</button>`:''}`:''}
       <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;font-size:12px">
         ${s.recording_url?`<a href="${escHtml(s.recording_url)}" target="_blank" rel="noopener" class="btn btn-ghost btn-sm">▶ Recording</a>`:''}
-        ${fl.map(f=>`<button class="btn btn-ghost btn-sm" onclick="coFileOpen('${f.id}')">${f.kind==='recap_pdf'?'':f.kind==='transcript'?'':''} ${escHtml(f.name||f.kind)}</button>`).join('')}
+        ${fl.map(f=>`<button class="btn btn-ghost btn-sm" onclick="coFileOpen('${f.id}')">${f.kind==='recap_pdf'?'📄':f.kind==='transcript'?'📝':'📎'} ${escHtml(f.name||f.kind)}</button>`).join('')}
         <button class="btn btn-ghost btn-sm" onclick="coUploadFile('${s.id}','recap_pdf')">+ Recap PDF</button>
         <button class="btn btn-ghost btn-sm" onclick="coUploadFile('${s.id}','transcript')">+ Transcript file</button>
         <button class="btn btn-ghost btn-sm" onclick="coPasteTranscript('${s.id}')">+ Paste transcript</button>
@@ -3738,6 +3747,25 @@ function coRecapModal(sid){
   const s=coData.sessions.find(x=>x.id===sid); if(!s) return;
   const p=coPerson(s.person_id);
   showModal('Session '+(s.session_no||'?')+' recap · '+escHtml(p?p.name:''),`<div style="white-space:pre-wrap;font-size:13px;line-height:1.6">${escHtml(s.recap_md||'')}</div>`,`<button class="btn btn-ghost" onclick="closeModal()">Close</button>`);
+}
+// One obvious way to get a summary, wherever you are: the recap PDF if the
+// agent filed one, otherwise the written recap. Every Summary button routes
+// here so nobody has to know which of the two exists.
+function coHasSummary(sid){
+  const s=coData.sessions.find(x=>x.id===sid);
+  return !!(coData.files.some(f=>f.session_id===sid&&f.kind==='recap_pdf')||(s&&String(s.recap_md||'').trim()));
+}
+function coSummaryOpen(sid){
+  const pdf=coData.files.find(f=>f.session_id===sid&&f.kind==='recap_pdf');
+  if(pdf) return coFileOpen(pdf.id);
+  const s=coData.sessions.find(x=>x.id===sid);
+  if(s&&String(s.recap_md||'').trim()) return coRecapModal(sid);
+  addNotif('No summary on this session yet');
+}
+function coSummaryBtn(sid,size){
+  if(!coHasSummary(sid)) return '';
+  const big=size==='big';
+  return `<button class="btn btn-y${big?'':' btn-sm'}" style="${big?'font-size:14px;padding:10px 22px':'font-weight:800'}" onclick="event.stopPropagation();coSummaryOpen('${sid}')">Summary</button>`;
 }
 // ── Session CRUD ──
 function coSessModal(id,personId){
@@ -3944,6 +3972,26 @@ function coDannyView(){
     <div class="stat ${openTotal?'y':'g'}"><div class="n">${openTotal}</div><div class="l">Open actions</div></div>
     <div class="stat ${stuck.length?'r':'g'}"><div class="n">${stuck.length}</div><div class="l">Carried 2+ times</div></div>
   </div>
+  ${(()=>{
+    // Top of the page, before anything else: the last few summaries, one press
+    // each. Previously this meant opening a person and scrolling to Session history.
+    const recent=coData.sessions.filter(s=>coHasSummary(s.id)).slice()
+      .sort((a,b)=>(b.session_date||'').localeCompare(a.session_date||'')).slice(0,6);
+    if(!recent.length) return '';
+    return `<div class="sec-hdr">Latest summaries</div>`+recent.map(s=>{
+      const p=coPerson(s.person_id);
+      return `<div class="card" style="margin-bottom:8px;padding:12px 16px">
+        <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+          <div style="flex:1;min-width:180px">
+            <div style="font-weight:700">${escHtml(p?p.name:'Unknown')}${p&&p.company?` <span style="color:var(--mut);font-weight:500;font-size:12.5px">· ${escHtml(p.company)}</span>`:''}</div>
+            <div style="font-size:12px;color:var(--mut)">Session ${s.session_no||'?'} · ${fmtDate(s.session_date)}</div>
+          </div>
+          ${coSummaryBtn(s.id,'big')}
+          <button class="btn btn-ghost btn-sm" onclick="coOpenPerson('${s.person_id}')">Open</button>
+        </div>
+      </div>`;
+    }).join('');
+  })()}
   ${(()=>{const drafts=coData.sessions.filter(s=>s.status==='draft').slice().sort((a,b)=>(b.session_date||'').localeCompare(a.session_date||''));
     return drafts.length?`<div class="sec-hdr">Awaiting approval (${drafts.length})</div>`+drafts.map(s=>{const p=coPerson(s.person_id);const preview=(s.recap_md||'').trim().slice(0,160);
     return `<div class="card" style="margin-bottom:8px;border-left:4px solid var(--y)">
