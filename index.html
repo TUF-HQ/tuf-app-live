@@ -3748,16 +3748,33 @@ function coRecapModal(sid){
 // One obvious way to get a summary, wherever you are: the recap PDF if the
 // agent filed one, otherwise the written recap. Every Summary button routes
 // here so nobody has to know which of the two exists.
+// The recaps are stored as markdown. Nobody reading a summary wants to see
+// ## and ** on screen, so strip the markers and bold what they marked. Escape
+// first, so this can never inject markup from the recap text.
+function coMdLite(md){
+  return escHtml(String(md||''))
+    .replace(/^#{1,4} +(.*)$/gm,'<b>$1</b>')
+    .replace(/\*\*(.+?)\*\*/g,'<b>$1</b>');
+}
 function coHasSummary(sid){
   const s=coData.sessions.find(x=>x.id===sid);
   return !!(coData.files.some(f=>f.session_id===sid&&f.kind==='recap_pdf')||(s&&String(s.recap_md||'').trim()));
 }
 function coSummaryOpen(sid){
+  const s=coData.sessions.find(x=>x.id===sid); if(!s) return;
+  const p=coPerson(s.person_id);
   const pdf=coData.files.find(f=>f.session_id===sid&&f.kind==='recap_pdf');
-  if(pdf) return coFileOpen(pdf.id);
-  const s=coData.sessions.find(x=>x.id===sid);
-  if(s&&String(s.recap_md||'').trim()) return coRecapModal(sid);
-  addNotif('No summary on this session yet');
+  const txt=String(s.recap_md||'').trim();
+  if(!txt&&!pdf){ addNotif('No summary on this session yet'); return; }
+  // Show the summary IN the page. This used to jump straight to the PDF in a
+  // new tab, which a popup blocker can stop dead with no tab and no error, so
+  // the button looked broken. A modal cannot be blocked, so pressing Summary
+  // always shows something; the PDF is then one deliberate click away.
+  showModal('Summary · '+escHtml((p&&p.name)||'')+' · '+fmtDate(s.session_date),
+    txt?`<div style="white-space:pre-wrap;font-size:13.5px;line-height:1.7">${coMdLite(txt)}</div>`
+       :`<div style="font-size:13px;color:var(--mut);line-height:1.6">No written summary saved on this session, but there is a PDF.</div>`,
+    `<button class="btn btn-ghost" onclick="closeModal()">Close</button>`+
+    (pdf?`<button class="btn btn-y" onclick="coFileOpen('${pdf.id}')">Open the PDF</button>`:''));
 }
 function coSummaryBtn(sid,size){
   if(!coHasSummary(sid)) return '';
