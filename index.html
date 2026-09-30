@@ -3875,9 +3875,24 @@ async function coPasteTranscriptSave(sessionId){
 }
 async function coFileOpen(id){
   const f=coData.files.find(x=>x.id===id); if(!f) return;
+  // The tab MUST be opened inside the click itself. Signing the URL is async,
+  // and if we wait for it first the browser no longer sees a user gesture and
+  // blocks the window.open silently: no tab, no error, button looks dead.
+  // So open a blank tab now and point it at the URL once it comes back.
+  let w=null;
+  try{ w=window.open('','_blank'); }catch(e){}
+  if(w){ try{ w.document.write('<title>Opening…</title><p style="font:14px -apple-system,system-ui;padding:28px;color:#555">Opening '+escHtml(f.name||'file')+'…</p>'); }catch(e){} }
   const {data,error}=await sb.storage.from(CO_BUCKET).createSignedUrl(f.path,3600);
-  if(error||!data||!data.signedUrl){ alert('Could not open the file: '+((error&&error.message)||'unknown error')); return; }
-  window.open(data.signedUrl,'_blank');
+  if(error||!data||!data.signedUrl){
+    if(w){ try{ w.close(); }catch(e){} }
+    alert('Could not open the file: '+((error&&error.message)||'unknown error'));
+    return;
+  }
+  if(w){ try{ w.location.href=data.signedUrl; return; }catch(e){} }
+  // Popup blocked outright: hand over a link, because clicking it is a gesture.
+  showModal(escHtml(f.name||'File'),
+    `<div style="font-size:13px;line-height:1.6;color:var(--mut)">Your browser blocked the new tab. Use the button below to open it.</div>`,
+    `<button class="btn btn-ghost" onclick="closeModal()">Cancel</button><a class="btn btn-y" href="${escHtml(data.signedUrl)}" target="_blank" rel="noopener" onclick="closeModal()">Open ${escHtml(f.name||'file')}</a>`);
 }
 // ── Prep briefs: everything Danny needs before a session, assembled from the
 // person's history and open actions, with AI suggested angles on top. ──
