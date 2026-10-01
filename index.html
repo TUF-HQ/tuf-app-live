@@ -3418,41 +3418,38 @@ function coSendBody(sess,p){
 // One job: see what is ready, read it, send it. No statuses, no editing, no
 // clutter. Reuses coSendClient/coMailto/coMarkSent untouched via the same
 // element ids the full send modal uses.
-// Who has had their recap this month. Fed entirely by the sent stamp Chloe
-// already presses (Done, mark as sent); resets itself on the 1st. Pure so it
-// can be unit tested. States: sent (this month), waiting (a session this month
-// has an unsent recap), none (no session logged this month, nothing to do).
-function coMonthStatus(people,sessions,ym){
-  return (people||[]).filter(p=>p.status==='active').map(p=>{
-    const mine=(sessions||[]).filter(s=>s.person_id===p.id);
-    const sent=mine.filter(s=>s.status==='sent'&&String(s.sent_at||'').slice(0,7)===ym)
-      .sort((a,b)=>(b.sent_at||'').localeCompare(a.sent_at||''))[0];
-    const waiting=!sent&&mine.some(s=>s.status!=='sent'&&s.status!=='failed'&&String(s.session_date||'').slice(0,7)===ym);
-    return {name:p.name||'',company:p.company||'',state:sent?'sent':(waiting?'waiting':'none'),sentAt:sent?String(sent.sent_at).slice(0,10):''};
-  }).sort((a,b)=>{
-    const o={waiting:0,none:1,sent:2};
-    return (o[a.state]-o[b.state])||a.name.localeCompare(b.name);
-  });
+// Chloe's monthly tick list: every active coaching client with a plain tick
+// box next to the name. She ticks a name once their recap has gone; pressing
+// Done, mark as sent on a recap ticks its person automatically. Ticks live in
+// tuf_co_month_sent keyed by month, so the list starts fresh on the 1st.
+function coMonthTick(pid){
+  const ym=new Date().toISOString().slice(0,7);
+  const all=ls.get('tuf_co_month_sent',{})||{};
+  const m=all[ym]=all[ym]||{};
+  if(m[pid]) delete m[pid];
+  else m[pid]={by:CURRENT_USER,at:new Date().toISOString().slice(0,10)};
+  ls.set('tuf_co_month_sent',all);
+  coDraw();
 }
 function coMonthCard(){
   const now=new Date(); const ym=now.toISOString().slice(0,7);
   const monthName=['January','February','March','April','May','June','July','August','September','October','November','December'][now.getMonth()];
-  const rows=coMonthStatus(coData.people,coData.sessions,ym);
-  if(!rows.length) return '';
-  const sentN=rows.filter(r=>r.state==='sent').length;
-  const row=r=>{
-    const tag=r.state==='sent'?`<span style="color:var(--grn);font-weight:800;font-size:12px">✓ sent ${fmtShort(r.sentAt)}</span>`
-      :r.state==='waiting'?'<span class="tag tag-a" style="font-size:9px">recap ready, not sent yet</span>'
-      :'<span style="color:var(--mut);font-size:11px">no session yet this month</span>';
-    return `<div style="display:flex;gap:10px;align-items:center;padding:5px 0;border-bottom:1px solid var(--bdr);font-size:12.5px;flex-wrap:wrap">
-      <span style="flex:1;min-width:140px;font-weight:700">${escHtml(r.name)}${r.company?` <span style="font-weight:500;color:var(--mut);font-size:11px">· ${escHtml(r.company)}</span>`:''}</span>
-      ${tag}
+  const people=coData.people.filter(p=>p.status==='active').slice().sort((a,b)=>(a.name||'').localeCompare(b.name||''));
+  if(!people.length) return '';
+  const ticks=(ls.get('tuf_co_month_sent',{})||{})[ym]||{};
+  const n=people.filter(p=>ticks[p.id]).length;
+  const row=p=>{
+    const t=ticks[p.id];
+    return `<div style="display:flex;gap:12px;align-items:center;padding:7px 0;border-bottom:1px solid var(--bdr);font-size:13.5px">
+      <div class="chk-box" style="flex-shrink:0" onclick="coMonthTick('${p.id}')">${t?'✓':''}</div>
+      <span style="flex:1;font-weight:700;${t?'color:var(--mut)':''}">${escHtml(p.name)}${p.company?` <span style="font-weight:500;color:var(--mut);font-size:11px">· ${escHtml(p.company)}</span>`:''}</span>
+      ${t?`<span style="color:var(--grn);font-size:11.5px;font-weight:700">sent ${fmtShort(t.at)}</span>`:''}
     </div>`;
   };
   return `<div class="card" style="margin-bottom:14px;border-left:5px solid var(--grn)">
-    <div class="card-title">${monthName} · ${sentN} of ${rows.length} sent</div>
-    ${rows.map(row).join('')}
-    <div style="font-size:10.5px;color:var(--mut);margin-top:6px">Ticks come from the Done, mark as sent button on each recap. The list starts fresh on the 1st of every month.</div>
+    <div class="card-title">${monthName} · ${n} of ${people.length} ticked off</div>
+    ${people.map(row).join('')}
+    <div style="font-size:10.5px;color:var(--mut);margin-top:6px">Tick a name once their recap has gone. The list starts fresh on the 1st of every month.</div>
   </div>`;
 }
 function coSendView(){
@@ -3612,7 +3609,20 @@ function coOutlookApp(){
 }
 async function coMarkSent(id){
   const to=document.getElementById('cosnd-to').value.split(',').map(x=>x.trim().toLowerCase()).filter(Boolean);
-  if(await coUpd('coaching_sessions',id,{status:'sent',sent_at:new Date().toISOString(),sent_to:to})){ addNotif('Recap marked as sent'); closeModal(); coRefresh(); }
+  if(await coUpd('coaching_sessions',id,{status:'sent',sent_at:new Date().toISOString(),sent_to:to})){
+    // Tick the person off on the monthly list too, so marking a recap sent and
+    // the tick next to their name never disagree.
+    try{
+      const sess=coData.sessions.find(x=>x.id===id);
+      if(sess&&sess.person_id){
+        const ym=new Date().toISOString().slice(0,7);
+        const all=ls.get('tuf_co_month_sent',{})||{};
+        (all[ym]=all[ym]||{})[sess.person_id]={by:CURRENT_USER,at:new Date().toISOString().slice(0,10)};
+        ls.set('tuf_co_month_sent',all);
+      }
+    }catch(e){}
+    addNotif('Recap marked as sent'); closeModal(); coRefresh();
+  }
 }
 function renderCoaching(){
   const el=document.getElementById('coaching-content'); if(!el) return;
