@@ -3418,6 +3418,43 @@ function coSendBody(sess,p){
 // One job: see what is ready, read it, send it. No statuses, no editing, no
 // clutter. Reuses coSendClient/coMailto/coMarkSent untouched via the same
 // element ids the full send modal uses.
+// Who has had their recap this month. Fed entirely by the sent stamp Chloe
+// already presses (Done, mark as sent); resets itself on the 1st. Pure so it
+// can be unit tested. States: sent (this month), waiting (a session this month
+// has an unsent recap), none (no session logged this month, nothing to do).
+function coMonthStatus(people,sessions,ym){
+  return (people||[]).filter(p=>p.status==='active').map(p=>{
+    const mine=(sessions||[]).filter(s=>s.person_id===p.id);
+    const sent=mine.filter(s=>s.status==='sent'&&String(s.sent_at||'').slice(0,7)===ym)
+      .sort((a,b)=>(b.sent_at||'').localeCompare(a.sent_at||''))[0];
+    const waiting=!sent&&mine.some(s=>s.status!=='sent'&&s.status!=='failed'&&String(s.session_date||'').slice(0,7)===ym);
+    return {name:p.name||'',company:p.company||'',state:sent?'sent':(waiting?'waiting':'none'),sentAt:sent?String(sent.sent_at).slice(0,10):''};
+  }).sort((a,b)=>{
+    const o={waiting:0,none:1,sent:2};
+    return (o[a.state]-o[b.state])||a.name.localeCompare(b.name);
+  });
+}
+function coMonthCard(){
+  const now=new Date(); const ym=now.toISOString().slice(0,7);
+  const monthName=['January','February','March','April','May','June','July','August','September','October','November','December'][now.getMonth()];
+  const rows=coMonthStatus(coData.people,coData.sessions,ym);
+  if(!rows.length) return '';
+  const sentN=rows.filter(r=>r.state==='sent').length;
+  const row=r=>{
+    const tag=r.state==='sent'?`<span style="color:var(--grn);font-weight:800;font-size:12px">✓ sent ${fmtShort(r.sentAt)}</span>`
+      :r.state==='waiting'?'<span class="tag tag-a" style="font-size:9px">recap ready, not sent yet</span>'
+      :'<span style="color:var(--mut);font-size:11px">no session yet this month</span>';
+    return `<div style="display:flex;gap:10px;align-items:center;padding:5px 0;border-bottom:1px solid var(--bdr);font-size:12.5px;flex-wrap:wrap">
+      <span style="flex:1;min-width:140px;font-weight:700">${escHtml(r.name)}${r.company?` <span style="font-weight:500;color:var(--mut);font-size:11px">· ${escHtml(r.company)}</span>`:''}</span>
+      ${tag}
+    </div>`;
+  };
+  return `<div class="card" style="margin-bottom:14px;border-left:5px solid var(--grn)">
+    <div class="card-title">${monthName} · ${sentN} of ${rows.length} sent</div>
+    ${rows.map(row).join('')}
+    <div style="font-size:10.5px;color:var(--mut);margin-top:6px">Ticks come from the Done, mark as sent button on each recap. The list starts fresh on the 1st of every month.</div>
+  </div>`;
+}
 function coSendView(){
   // Newest session first. Anything not yet sent is ready to send: there is no
   // approval step, so a draft from the recap agent is sendable straight away.
@@ -3442,6 +3479,7 @@ function coSendView(){
     </div>`;
   };
   return `
+    ${coMonthCard()}
     <div class="sec-hdr">To send (${ready.length})</div>
     ${ready.length?ready.map(row).join(''):'<div class="card" style="margin-bottom:14px"><div style="font-size:13.5px;color:var(--mut);line-height:1.6">Nothing to send right now. New session summaries appear here automatically, newest first.</div></div>'}
     <details style="margin-top:18px">
