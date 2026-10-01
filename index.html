@@ -5392,7 +5392,7 @@ function upsellModal(id){
 // hidden Sales Pipeline page still renders it harmlessly).
 function upsellRedraw(){
   const pg=document.querySelector('.page.active')?.id?.replace('page-','')||'';
-  if(pg==='pipeline') renderPipeline(); else renderTeamOverview();
+  if(pg==='pipeline') renderPipeline(); else if(pg==='crmhub') renderCRMHub(); else renderTeamOverview();
 }
 function upsellSave(id){
   const g=x=>document.getElementById(x)?.value||'';
@@ -13173,6 +13173,7 @@ function renderCRMHub(){
   </span>`;
   host.innerHTML=`
     <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:22px">${tiles}</div>
+    ${upsellCard()}
     <div class="sec-hdr" style="display:flex;align-items:center;gap:14px">Next Actions <span style="flex:1"></span>${legend}</div>
     <div class="card" style="padding:2px 18px 16px">
       ${naTotal?naSeg('partnerships','Partnerships')+naSeg('introducers','Introducers')+naSeg('pipeline','Leads')+naSeg('onboarding','Onboarding'):'<div style="font-size:13px;color:#9BA0A8;padding:14px 0">All clear. Log notes and actions as you go and this becomes your working day.</div>'}
