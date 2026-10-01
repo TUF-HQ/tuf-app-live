@@ -5388,6 +5388,12 @@ function upsellModal(id){
     <div class="form-row"><label class="form-label">The upsell, in a line</label><input class="form-input" id="up-what" value="${escAttr(u?u.what:'')}" placeholder="e.g. Strategy session"></div>
   `,`<button class="btn btn-ghost" onclick="closeModal()">Cancel</button>${u?`<button class="btn btn-red btn-sm" onclick="upsellDelete('${u.id}')">Delete</button>`:''}<button class="btn btn-k" onclick="upsellSave('${id||''}')">Save</button>`);
 }
+// Redraw whichever page is showing the card (Team Overview is its home; the
+// hidden Sales Pipeline page still renders it harmlessly).
+function upsellRedraw(){
+  const pg=document.querySelector('.page.active')?.id?.replace('page-','')||'';
+  if(pg==='pipeline') renderPipeline(); else renderTeamOverview();
+}
 function upsellSave(id){
   const g=x=>document.getElementById(x)?.value||'';
   const name=g('up-name').trim(); if(!name){ alert('Who is this upsell with?'); return; }
@@ -5397,29 +5403,29 @@ function upsellSave(id){
   if(rec) Object.assign(rec,vals);
   else list.push({id:uid(),...vals,status:'open',by:CURRENT_USER,addedAt:new Date().toISOString()});
   ls.set('tuf_upsells',list);
-  closeModal(); renderPipeline();
+  closeModal(); upsellRedraw();
 }
 function upsellTier(id){
   const list=upsells(); const u=list.find(x=>x.id===id); if(!u) return;
   u.tier=u.tier==='hot'?'consider':'hot';
-  ls.set('tuf_upsells',list); renderPipeline();
+  ls.set('tuf_upsells',list); upsellRedraw();
 }
 function upsellClose(id,status){
   const list=upsells(); const u=list.find(x=>x.id===id); if(!u) return;
   u.status=status; u.closedAt=new Date().toISOString(); u.closedBy=CURRENT_USER;
   ls.set('tuf_upsells',list);
   addNotif(u.name+(status==='won'?' upsell won':' upsell dropped'));
-  renderPipeline();
+  upsellRedraw();
 }
 function upsellReopen(id){
   const list=upsells(); const u=list.find(x=>x.id===id); if(!u) return;
   u.status='open'; delete u.closedAt; delete u.closedBy;
-  ls.set('tuf_upsells',list); renderPipeline();
+  ls.set('tuf_upsells',list); upsellRedraw();
 }
 function upsellDelete(id){
   if(!confirm('Delete this upsell entirely? Won or Drop keeps the record.')) return;
   ls.set('tuf_upsells',upsells().filter(x=>x.id!==id));
-  closeModal(); renderPipeline();
+  closeModal(); upsellRedraw();
 }
 function renderPipeline(){
   crmTabsMount('leads');
@@ -14070,6 +14076,7 @@ function renderTeamOverview(){
       <div class="stat ${totalOverdue?'r':''}"><div class="n">${totalOverdue}</div><div class="l">Overdue</div></div>
       <div class="stat g"><div class="n">${totalDoneToday}</div><div class="l">Done today</div></div>
     </div>
+    ${upsellCard()}
     <div class="sec-hdr" style="margin-bottom:14px">What everyone has on</div>
     ${cards}`;
 }
