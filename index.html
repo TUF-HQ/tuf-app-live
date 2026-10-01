@@ -1460,6 +1460,7 @@ function initApp(user){
   cxV86LeadStages();
   podSeedLoad();
   podV97Promo();
+  upsellSeed();
   updateFollowupBadge();
   setTimeout(()=>{ try{ csuiteAutoRun(); }catch(e){} },8000);
   updateInboundBadge();
@@ -5329,6 +5330,97 @@ function crmSegmentFixV2(){
     if(moved) addNotif(moved+' coached people moved from Private 121s back to Network. Private 121s now means paying founders only.');
   }catch(e){ console.warn('crmSegmentFixV2 failed',e); }
 }
+// ── Upsells (Danny's list, 1 Oct 2026): revenue opportunities inside current
+// clients and members, two tiers. Deliberately simple: a list, not a pipeline.
+function upsells(){ return ls.get('tuf_upsells',[])||[]; }
+function upsellSeed(){
+  try{
+    if(!sbLoadOK) return;
+    if(ls.get('tuf_upsells_seeded',null)) return;
+    if(upsells().length){ ls.set('tuf_upsells_seeded',{at:new Date().toISOString(),note:'already present'}); return; }
+    const at=new Date().toISOString();
+    ls.set('tuf_upsells',[
+      {id:uid(),tier:'hot',name:'WillU',what:'Leadership programme, with room to upsell further beyond it',status:'open',by:'Danny',addedAt:at},
+      {id:uid(),tier:'hot',name:'Oakhill',what:'Strategy session',status:'open',by:'Danny',addedAt:at},
+      {id:uid(),tier:'consider',name:'Massey',what:'Darren and Lee, scope to confirm',status:'open',by:'Danny',addedAt:at},
+      {id:uid(),tier:'consider',name:'USG',what:'Next phase. Not ideal but good money',status:'open',by:'Danny',addedAt:at},
+      {id:uid(),tier:'consider',name:'258',what:'Could return if Danny wants to follow up',status:'open',by:'Danny',addedAt:at},
+      {id:uid(),tier:'consider',name:"Shane O'Halloran",what:'Mentioned 121 coaching around exit',status:'open',by:'Danny',addedAt:at}
+    ]);
+    ls.set('tuf_upsells_seeded',{at,by:CURRENT_USER});
+  }catch(e){ console.warn('upsellSeed failed',e); }
+}
+function upsellCard(){
+  const list=upsells();
+  const open=list.filter(u=>u.status==='open');
+  const closed=list.filter(u=>u.status!=='open');
+  const row=u=>`<div style="display:flex;gap:10px;align-items:center;padding:6px 0;border-bottom:1px solid var(--bdr);font-size:12.5px;flex-wrap:wrap">
+    <div style="flex:1;min-width:170px;cursor:pointer" onclick="upsellModal('${u.id}')">
+      <b>${escHtml(u.name)}</b> <span style="color:var(--mut)">· ${escHtml(u.what)}</span>
+    </div>
+    <button class="btn btn-ghost btn-sm" style="padding:1px 8px;font-size:10px" onclick="upsellTier('${u.id}')">${u.tier==='hot'?'→ Consider':'→ Hot'}</button>
+    <button class="btn btn-ghost btn-sm" style="padding:1px 8px;font-size:10px;color:var(--grn)" onclick="upsellClose('${u.id}','won')">Won</button>
+    <button class="btn btn-ghost btn-sm" style="padding:1px 8px;font-size:10px;color:var(--mut)" onclick="upsellClose('${u.id}','dropped')">Drop</button>
+  </div>`;
+  const group=(tier,label,col)=>{
+    const g=open.filter(u=>u.tier===tier);
+    return `<div style="font-size:10px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:${col};margin:${tier==='hot'?'0':'10px'} 0 2px">${label} (${g.length})</div>
+      ${g.length?g.map(row).join(''):'<div style="font-size:11.5px;color:var(--mut);padding:4px 0">None right now.</div>'}`;
+  };
+  return `<div class="card" style="width:100%;border-left:4px solid var(--y);margin-bottom:12px;padding:14px 16px">
+    <div style="display:flex;gap:10px;align-items:center;margin-bottom:8px">
+      <div class="card-title" style="margin:0">Upsells <span style="font-weight:500;color:var(--mut);font-size:11px">revenue inside current clients and members</span></div>
+      <span style="flex:1"></span>
+      <button class="btn btn-ghost btn-sm" onclick="upsellModal('')">+ Add</button>
+    </div>
+    ${group('hot','Hot leads','var(--red)')}
+    ${group('consider','Consider','var(--mut)')}
+    ${closed.length?`<details style="margin-top:8px"><summary style="font-size:11px;color:var(--mut);cursor:pointer">Closed (${closed.length})</summary>${closed.map(u=>`<div style="font-size:11.5px;color:var(--mut);padding:3px 0">${u.status==='won'?'<b style=\"color:var(--grn)\">Won</b>':'Dropped'} · ${escHtml(u.name)} · ${escHtml(u.what)} <span style="cursor:pointer;text-decoration:underline" onclick="upsellReopen('${u.id}')">reopen</span></div>`).join('')}</details>`:''}
+  </div>`;
+}
+function upsellModal(id){
+  const u=id?upsells().find(x=>x.id===id):null;
+  showModal(u?('Upsell · '+u.name):'Add an upsell',`
+    <div class="grid-2">
+      <div class="form-row"><label class="form-label">Who (client or member)</label><input class="form-input" id="up-name" value="${escAttr(u?u.name:'')}"></div>
+      <div class="form-row"><label class="form-label">Tier</label><select class="form-select" id="up-tier"><option value="hot"${u&&u.tier==='hot'?' selected':''}>Hot lead</option><option value="consider"${!u||u.tier==='consider'?' selected':''}>Consider</option></select></div>
+    </div>
+    <div class="form-row"><label class="form-label">The upsell, in a line</label><input class="form-input" id="up-what" value="${escAttr(u?u.what:'')}" placeholder="e.g. Strategy session"></div>
+  `,`<button class="btn btn-ghost" onclick="closeModal()">Cancel</button>${u?`<button class="btn btn-red btn-sm" onclick="upsellDelete('${u.id}')">Delete</button>`:''}<button class="btn btn-k" onclick="upsellSave('${id||''}')">Save</button>`);
+}
+function upsellSave(id){
+  const g=x=>document.getElementById(x)?.value||'';
+  const name=g('up-name').trim(); if(!name){ alert('Who is this upsell with?'); return; }
+  const list=upsells();
+  const rec=id?list.find(x=>x.id===id):null;
+  const vals={name,what:g('up-what').trim(),tier:g('up-tier')};
+  if(rec) Object.assign(rec,vals);
+  else list.push({id:uid(),...vals,status:'open',by:CURRENT_USER,addedAt:new Date().toISOString()});
+  ls.set('tuf_upsells',list);
+  closeModal(); renderPipeline();
+}
+function upsellTier(id){
+  const list=upsells(); const u=list.find(x=>x.id===id); if(!u) return;
+  u.tier=u.tier==='hot'?'consider':'hot';
+  ls.set('tuf_upsells',list); renderPipeline();
+}
+function upsellClose(id,status){
+  const list=upsells(); const u=list.find(x=>x.id===id); if(!u) return;
+  u.status=status; u.closedAt=new Date().toISOString(); u.closedBy=CURRENT_USER;
+  ls.set('tuf_upsells',list);
+  addNotif(u.name+(status==='won'?' upsell won':' upsell dropped'));
+  renderPipeline();
+}
+function upsellReopen(id){
+  const list=upsells(); const u=list.find(x=>x.id===id); if(!u) return;
+  u.status='open'; delete u.closedAt; delete u.closedBy;
+  ls.set('tuf_upsells',list); renderPipeline();
+}
+function upsellDelete(id){
+  if(!confirm('Delete this upsell entirely? Won or Drop keeps the record.')) return;
+  ls.set('tuf_upsells',upsells().filter(x=>x.id!==id));
+  closeModal(); renderPipeline();
+}
 function renderPipeline(){
   crmTabsMount('leads');
   alogLoad();
@@ -5340,6 +5432,7 @@ function renderPipeline(){
   const dueCount=(ls.get('tuf_prospects',[])||[]).filter(p=>prospectDue(p,today)).length;
   const alerts=pipelineAlertsNow();
   tabBar.innerHTML=`
+    ${upsellCard()}
     ${alerts.length?`<div class="card" style="width:100%;border-left:4px solid var(--red);margin-bottom:12px;padding:12px 16px">
       <div style="font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;margin-bottom:4px">Needs attention <span style="color:var(--mut);font-weight:600">${alerts.length} prospect${alerts.length>1?'s':''} overdue or going cold</span></div>
       ${staleAlertRowsHtml(alerts,false)}
