@@ -1462,6 +1462,7 @@ function initApp(user){
   podSeedLoad();
   podV97Promo();
   upsellSeed();
+  taskResetOct19();
   updateFollowupBadge();
   setTimeout(()=>{ try{ csuiteAutoRun(); }catch(e){} },8000);
   updateInboundBadge();
@@ -5354,6 +5355,25 @@ function upsellSeed(){
     ]);
     ls.set('tuf_upsells_seeded',{at,by:CURRENT_USER});
   }catch(e){ console.warn('upsellSeed failed',e); }
+}
+// One shot (19 Oct 2026, James): the task board had gone stale, so everyone
+// starts fresh. The old board (385 tasks) is kept whole in the database under
+// tuf_tasks_archive_20261019 and in a local backup file; nothing is deleted.
+// Podcast and growth plan steps that pointed at old tasks show a Task missing
+// tag and offer Make a task again, which is their designed behaviour.
+function taskResetOct19(){
+  try{
+    if(!sbLoadOK) return;
+    if(ls.get('tuf_tasks_reset_1910',null)) return;
+    const cur=ls.get('tuf_tasks',[])||[];
+    if(cur.length){
+      ls.set('tuf_tasks_archive_20261019',cur);
+      ls.set('tuf_tasks',[]);
+    }
+    ls.set('tuf_tasks_reset_1910',{at:new Date().toISOString(),by:CURRENT_USER,archived:cur.length});
+    addNotif('Task board reset for a fresh start. The old board is archived; ask Claude if you need something back.');
+    updateTaskBadge();
+  }catch(e){ console.warn('taskResetOct19 failed',e); }
 }
 function upsellCard(){
   const list=upsells();
