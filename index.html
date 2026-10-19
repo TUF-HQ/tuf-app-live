@@ -509,11 +509,11 @@ details>summary::-webkit-details-marker{display:none}
     <div class="sb-item" data-page="coaching" onclick="nav('coaching',this)">Coaching</div>
     <div class="sb-item" data-page="prospecting" onclick="nav('prospecting',this)">Prospecting</div>
 
+    <!-- ARCHIVED v107 (19 Oct 2026, hidden, data kept): My Day (myday) and Team
+         Tasks (teamtasks) removed per James; everyone now works from Tasks. -->
     <div class="sb-section">Overview</div>
-    <div class="sb-item" data-page="myday" onclick="nav('myday',this)">My Day</div>
     <div class="sb-item active" data-page="home" onclick="nav('home',this)">Morning Brief</div>
     <div class="sb-item" data-page="teamoverview" onclick="nav('teamoverview',this)">Team Overview</div>
-    <div class="sb-item" data-page="teamtasks" onclick="nav('teamtasks',this)">Team Tasks</div>
     <div class="sb-item" data-page="transcript" onclick="nav('transcript',this)">Meeting Notes</div>
 
     <div class="sb-section">Clients & Delivery</div>
@@ -1485,8 +1485,9 @@ function initApp(user){
     const el=document.querySelector('[data-page=tasks]');
     if(el) nav('tasks', el);
   } else {
-    const el=document.querySelector('[data-page=myday]');
-    if(el) nav('myday', el);
+    // My Day is archived (v107): everyone else lands on the task board too.
+    const el=document.querySelector('[data-page=tasks]');
+    if(el) nav('tasks', el);
   }
 }
 
