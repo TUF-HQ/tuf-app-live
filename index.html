@@ -496,6 +496,13 @@ details>summary::-webkit-details-marker{display:none}
     </div>
 
     <!-- ARCHIVED v55 (hidden, data kept): budget, content (calendar), daily (progress), watemplates. v56: fourbox (its four boxes now live on the KPIs page). Restore any of them by re-adding its sb-item row. -->
+    <!-- ARCHIVED v104 (19 Oct 2026, hidden, data kept): the app was repurposed as the
+         internal team OS once GoHighLevel took over CRM and Circle took the community.
+         CRM hub (crmhub), Sales Pipeline (pipeline), Email List (emaillist), Social
+         Media (social), Padel Event (padel), Testimonials (testimonials), AI Tool
+         (aidump) and the four C Suite rows (csuite) were removed from the sidebar.
+         Every store and page still exists; restore any of them by re-adding its
+         sb-item row from git history. People were exported to GHL first. -->
     <div class="sb-section">Overview</div>
     <div class="sb-item" data-page="myday" onclick="nav('myday',this)">My Day</div>
     <div class="sb-item active" data-page="home" onclick="nav('home',this)">Morning Brief</div>
@@ -504,46 +511,38 @@ details>summary::-webkit-details-marker{display:none}
     <div class="sb-item" data-page="tasks" onclick="nav('tasks',this)">Tasks <span class="sb-badge" id="sb-tasks" style="background:var(--amb);display:none">0</span></div>
     <div class="sb-item" data-page="transcript" onclick="nav('transcript',this)">Meeting Notes</div>
 
-    <div class="sb-section">CRM</div>
-    <div class="sb-item" data-page="crmhub" onclick="nav('crmhub',this)">CRM <span class="sb-badge" id="sb-followup" style="background:var(--red);display:none">0</span> <span class="sb-badge amb" id="sb-inbound" style="display:none">0</span></div>
-    <div class="sb-item" data-page="pipeline" id="sb-item-pipeline" onclick="nav('pipeline',this)">Sales Pipeline <span class="sb-badge" id="sb-pipealerts" style="background:var(--red);display:none">0</span></div>
+    <div class="sb-section">Clients & Delivery</div>
     <div class="sb-item" data-page="coaching" onclick="nav('coaching',this)">Coaching</div>
-
-    <div class="sb-section">Products</div>
-    <div class="sb-item" data-page="padel" onclick="nav('padel',this)">Padel Event</div>
     <div class="sb-item" data-page="boardroom" onclick="nav('boardroom',this)">Boardroom</div>
     <div class="sb-item" data-page="sessions" onclick="nav('sessions',this)">Session Planning</div>
-    <div class="sb-item" data-page="ip" onclick="nav('ip',this)">IP Register</div>
+
+    <div class="sb-section">Leads</div>
+    <div class="sb-item" data-page="prospecting" onclick="nav('prospecting',this)">Prospecting</div>
+    <div class="sb-item" data-page="inbound" onclick="nav('inbound',this)">Inbound <span class="sb-badge amb" id="sb-inbound" style="display:none">0</span></div>
 
     <div class="sb-section">Marketing</div>
-    <div class="sb-item" data-page="social" onclick="nav('social',this)">Social Media</div>
     <div class="sb-item" data-page="podcast" onclick="nav('podcast',this)">Podcast</div>
     <div class="sb-item" data-page="growthplan" onclick="nav('growthplan',this)">Growth Plan</div>
     <div class="sb-item" data-page="files" onclick="nav('files',this)">Documents</div>
-    <div class="sb-item" data-page="testimonials" onclick="nav('testimonials',this)">Testimonials</div>
-    <div class="sb-item" data-page="emaillist" onclick="nav('emaillist',this)">Email List</div>
+    <div class="sb-item" data-page="ip" onclick="nav('ip',this)">IP Register</div>
 
     <div class="sb-section">Intelligence</div>
     <div class="sb-item" data-page="capmap" onclick="nav('capmap',this)">Capability Map <span class="sb-badge" id="sb-red" style="display:none">—</span></div>
     <div class="sb-item" data-page="goals" onclick="nav('goals',this)">Goals & OKRs</div>
     <div class="sb-item" data-page="market" onclick="nav('market',this)">Market Intel</div>
-    <div class="sb-item" data-page="prospecting" onclick="nav('prospecting',this)">Prospecting</div>
+    <div class="sb-item" data-page="kpis" onclick="nav('kpis',this)">KPIs</div>
 
     <div class="sb-section">Team</div>
     <div class="sb-item" data-page="dannycal" onclick="nav('dannycal',this)">Danny's Calendar</div>
     <div class="sb-item" data-page="roles" onclick="nav('roles',this)">Roles & Responsibilities</div>
     <div class="sb-item" data-page="reviews" onclick="nav('reviews',this)">Weekly Review</div>
     <div class="sb-item" data-page="holidays" onclick="nav('holidays',this)">Holidays</div>
-    <div class="sb-item" data-page="kpis" onclick="nav('kpis',this)">KPIs</div>
-    <div class="sb-item" data-page="aidump" onclick="nav('aidump',this)">AI Tool (Dump)</div>
     <div class="sb-item" data-page="buildreq" onclick="nav('buildreq',this)">Build Requests <span class="sb-badge" id="sb-buildreq" style="background:var(--amb);display:none">0</span></div>
     <div class="sb-item" data-page="notifs" onclick="nav('notifs',this)">Notifications <span class="sb-badge" id="sb-notif" style="display:none">0</span></div>
 
-    <div class="sb-section">C-Suite</div>
-    <div class="sb-item" data-page="csuite" onclick="csuiteNav('CEO',this)">CEO</div>
-    <div class="sb-item" data-page="csuite" onclick="csuiteNav('CMO',this)">CMO</div>
-    <div class="sb-item" data-page="csuite" onclick="csuiteNav('CFO',this)">CFO</div>
-    <div class="sb-item" data-page="csuite" onclick="csuiteNav('COO',this)">COO</div>
+    <div class="sb-section">Our tools</div>
+    <a class="sb-item" href="https://app.gohighlevel.com" target="_blank" rel="noopener" style="display:block;text-decoration:none;color:inherit">GoHighLevel ↗</a>
+    <div class="sb-item" style="opacity:.45;cursor:default" title="Circle community coming soon. Ask Claude to add the link once it is live.">Circle ↗</div>
 
     <div class="sb-footer">TUF HQ · v1.0 · Changes save automatically</div>
   </aside>
@@ -4289,8 +4288,8 @@ function renderDailyControl(){
     cells.push(cell(notConfirmed,'Not confirmed',notConfirmed?'var(--amb)':'var(--grn)',"nav('padel',document.querySelector('[data-page=padel]'))"));
   }
   if(briefShow('pipeline')){
-    cells.push(cell(followUps,'Follow-ups due',followUps?'var(--red)':'var(--grn)',"nav('pipeline',document.querySelector('[data-page=pipeline]'))"));
-    cells.push(cell(pending,'Payments pending',pending?'var(--amb)':'var(--grn)',"nav('pipeline',document.querySelector('[data-page=pipeline]'))"));
+    cells.push(cell(followUps,'Follow-ups due',followUps?'var(--red)':'var(--grn)',"nav('teamoverview',document.querySelector('[data-page=teamoverview]'))"));
+    cells.push(cell(pending,'Payments pending',pending?'var(--amb)':'var(--grn)',"nav('boardroom',document.querySelector('[data-page=boardroom]'))"));
   }
   if(briefShow('clients')) cells.push(cell(risks,'Key risks',risks?'var(--red)':'var(--grn)',"nav('members',document.querySelector('[data-page=members]'))"));
   if(!cells.length){ el.innerHTML=''; return; }
@@ -5393,6 +5392,7 @@ function upsellModal(id){
 function upsellRedraw(){
   const pg=document.querySelector('.page.active')?.id?.replace('page-','')||'';
   if(pg==='pipeline') renderPipeline(); else if(pg==='crmhub') renderCRMHub(); else renderTeamOverview();
+  // crmhub and pipeline are archived (v104) but still render if reached; Team Overview is the card's home.
 }
 function upsellSave(id){
   const g=x=>document.getElementById(x)?.value||'';
