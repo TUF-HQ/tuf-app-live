@@ -1463,6 +1463,7 @@ function initApp(user){
   podV97Promo();
   upsellSeed();
   taskResetOct19();
+  taskSeedW1910();
   updateFollowupBadge();
   setTimeout(()=>{ try{ csuiteAutoRun(); }catch(e){} },8000);
   updateInboundBadge();
@@ -5375,6 +5376,47 @@ function taskResetOct19(){
     addNotif('Task board reset for a fresh start. The old board is archived; ask Claude if you need something back.');
     updateTaskBadge();
   }catch(e){ console.warn('taskResetOct19 failed',e); }
+}
+// One shot (19 Oct 2026): the week's tasks for James, Jasper and Joe, typed in
+// by James after the board reset. Week commencing 19 Oct; Tuesday is the 20th,
+// Wednesday the 21st. Runs after taskResetOct19 so the fresh board starts with
+// exactly these.
+function taskSeedW1910(){
+  try{
+    if(!sbLoadOK) return;
+    if(ls.get('tuf_tasks_seed_w1910',null)) return;
+    const ep1=podEps().find(e=>e.number==='001');
+    const mk=(owner,title,due,notes,linkedTo)=>({id:uid(),title,owner,priority:'Medium',dueDate:due||'',status:'To Do',linkedTo:linkedTo||'',notes:notes||'',section:'',createdBy:'James',createdAt:new Date().toISOString(),completedAt:null});
+    const wk='2026-10-23';
+    const add=[
+      mk('James','Complete the Circle setup with Joe',wk,'Community moves to Circle. The sidebar link goes live once the URL exists.'),
+      mk('James','Finish the GoHighLevel setup',wk,'New emails blocked on a factotum reply. Then get Jasper up to speed so he can fill in client records, Alex Duke and others.'),
+      mk('James','Repurpose TUF HQ so it is simple and current',wk,'Declutter shipped 19 Oct: CRM, Email List, Social, Padel, Testimonials, C Suite and the AI dump archived, My Day and Team Tasks removed, Most used section added. Remaining: team feedback tweaks and the Circle link.'),
+      mk('James','Edit clips',wk,''),
+      mk('James','Get a decision on the podcast: Ollie b roll, and whether to start posting Ep 001',wk,'Danny to decide. Ties into the open decisions on the Episodes page.',ep1?('podcast:'+ep1.id):''),
+      mk('Jasper','Meeting with Sarah, 3:15pm','2026-10-20',''),
+      mk('Jasper','Padel with Russel, Steve and Oliver','2026-10-21',''),
+      mk('Jasper','Introduce the referral strategy with Danny, book the meeting',wk,''),
+      mk('Jasper','Social media for the week',wk,''),
+      mk('Jasper','Book padel for Danny, Alex, business partner and Kieran',wk,''),
+      mk('Jasper','Learn the new CRM in GoHighLevel',wk,'James is walking you through it as part of the GHL setup.'),
+      mk('Joe','Go through SOPs with the team: who owns which one',wk,''),
+      mk('Joe','Sales process SOP and plan for Alex and Oliver',wk,''),
+      mk('Joe','Create the Introducer plan',wk,''),
+      mk('Joe','Meeting with Sarah','2026-10-20',''),
+      mk('Joe','Start planning the November Boardroom, book time with Danny',wk,''),
+      mk('Joe','Boardroom 2027 PD plan',wk,''),
+      mk('Joe','Padel event','2026-10-21',''),
+      mk('Joe','Finish setting up GoHighLevel',wk,'Alongside James.'),
+      mk('Joe','Set up Circle with James',wk,'The TUF HQ repurpose half of this shipped 19 Oct.')
+    ];
+    add[2].status='In Progress';
+    const cur=ls.get('tuf_tasks',[])||[];
+    ls.set('tuf_tasks',cur.concat(add));
+    ls.set('tuf_tasks_seed_w1910',{at:new Date().toISOString(),by:CURRENT_USER,added:add.length});
+    addNotif('This week’s tasks are on the board for James, Jasper and Joe');
+    updateTaskBadge();
+  }catch(e){ console.warn('taskSeedW1910 failed',e); }
 }
 function upsellCard(){
   const list=upsells();
