@@ -505,6 +505,7 @@ details>summary::-webkit-details-marker{display:none}
          Every store and page still exists; restore any of them by re-adding its
          sb-item row from git history. People were exported to GHL first. -->
     <div class="sb-section">Most used</div>
+    <div class="sb-item" data-page="mypage" onclick="nav('mypage',this)">My Page</div>
     <div class="sb-item" data-page="tasks" onclick="nav('tasks',this)">Tasks <span class="sb-badge" id="sb-tasks" style="background:var(--amb);display:none">0</span></div>
     <div class="sb-item" data-page="dannycal" onclick="nav('dannycal',this)">Danny's Calendar</div>
     <div class="sb-item" data-page="coaching" onclick="nav('coaching',this)">Coaching</div>
@@ -767,6 +768,7 @@ details>summary::-webkit-details-marker{display:none}
     <!-- ═══ COACHING SESSIONS ═══ -->
     <div class="page" id="page-coaching"><div id="coaching-content"></div></div>
     <div class="page" id="page-wmeeting"><div id="wmeeting-render"></div></div>
+    <div class="page" id="page-mypage"><div id="mypage-render"></div></div>
 
     <!-- ═══ GROWTH PLAN ═══ -->
     <div class="page" id="page-growthplan"><div id="growth-content"></div></div>
@@ -1753,7 +1755,7 @@ function seedDefaultData(){
 // ═══ NAVIGATION ══════════════════════════════════════════════════════════════
 const PAGE_TITLES = {
   myday:'My Day',
-  home:'Morning Brief',teamoverview:'Team Overview',tasks:'Tasks',transcript:'Meeting Notes → Tasks',wmeeting:'Weekly Meeting',
+  home:'Morning Brief',teamoverview:'Team Overview',tasks:'Tasks',transcript:'Meeting Notes → Tasks',wmeeting:'Weekly Meeting',mypage:'My Page',
   people:'Network',members:'Boardroom Members',pipeline:'Sales Pipeline',inbound:'Inbound Leads',dannycal:"Danny's Calendar",
   boardroom:'Boardroom',crmhub:'CRM',crmclean:'CRM Cleanup',content:'Content Calendar',social:'Social Media',kpis:'KPIs',aidump:'AI Tool (Dump)',buildreq:'Build Requests',clientanalysis:'Client Analysis',emaillist:'Email List',watemplates:'WhatsApp Templates',
   testimonials:'Testimonials',
@@ -1790,7 +1792,7 @@ function goPage(page){ nav(page, document.querySelector('[data-page='+page+']'))
 function goPersonTasks(p){ taskViewMode='person'; taskStatusFilter='Open'; taskFocusPerson=p; goPage('tasks'); }
 function renderPage(page){
   const fns = {
-    home:renderHome, tasks:renderTasks, transcript:renderTranscript, wmeeting:renderWMeeting,
+    home:renderHome, tasks:renderTasks, transcript:renderTranscript, wmeeting:renderWMeeting, mypage:renderMyPage,
     people:renderPeople, members:renderMembers, pipeline:renderPipeline, inbound:renderInbound, dannycal:renderDannyCal,
     boardroom:renderBoardroom, crmhub:renderCRMHub, crmclean:renderCleanup, content:renderContent, social:renderSocial, kpis:renderKPIs, aidump:renderAIDump, buildreq:renderBuildRequests, clientanalysis:renderClientAnalysis, emaillist:renderEmailList, watemplates:renderWATemplates,
     testimonials:renderTestimonials,
@@ -8797,7 +8799,7 @@ async function wmLiveFinish(){
 }
 // ── Summary ──
 function wmSummaryView(){
-  const done=wmData.meetings.filter(m=>m.status==='closed'||m.status==='skipped').slice().sort((a,b)=>(b.meeting_date||'').localeCompare(a.meeting_date||''));
+  const done=wmData.meetings.filter(m=>m.type==='team'&&(m.status==='closed'||m.status==='skipped')).slice().sort((a,b)=>(b.meeting_date||'').localeCompare(a.meeting_date||''));
   if(!done.length) return '<div class="empty">No meetings closed yet. The first summary appears after the first live meeting.</div>';
   const m=wmData.meetings.find(x=>x.id===wmSelMeetingId)||done[0];
   const items=wmItemsFor(m.id);
@@ -8855,6 +8857,286 @@ async function wmSettingsSave(){
     addNotif('Meeting settings saved');
     wmDraw();
   }catch(e){ alert('Save failed: '+(e.message||e)); }
+}
+
+// ═══ MY PAGE (per person performance page, v110) ═════════════════════════════
+// Each person owns their page: achievements in their own words, metrics they
+// define themselves, their 1:1 agenda with Danny (rides the wm_* tables, type
+// one_to_one with with_person — mypage.sql adds the column), the SOPs they
+// own, and small computed strips. Store: one tuf_state key per person
+// (tuf_mypage_<name>) so nobody's save can clobber anybody else's.
+let mpPerson=null;
+function mpKey(p){ return 'tuf_mypage_'+String(p||'').toLowerCase(); }
+function mpGet(p){ const d=ls.get(mpKey(p),null)||{}; return {role:'',sops:[],metrics:[],blocks:{tasks:true,goals:true,sops:true},weeks:{},...d}; }
+function mpSet(p,d){ ls.set(mpKey(p),d); }
+function mpWho(){ return mpPerson||CURRENT_USER; }
+function mpCanSwitch(){ return CURRENT_USER==='Danny'||CURRENT_USER==='James'; }
+function mpIsMine(){ return mpWho()===CURRENT_USER; }
+function mpWeekKey(d){ return ymdLocal(mondayOf(d||new Date())); }
+function mpWeekKeys(n,from){ const out=[]; let k=mpWeekKey(from); for(let i=0;i<n;i++){ out.unshift(k); k=wmYmdAddDays(k,-7); } return out; }
+// Pure: the open 1:1 meeting for a person, team meetings ignored.
+function mpOneToOne(meetings,person){
+  return (meetings||[]).filter(m=>m.type==='one_to_one'&&m.status==='open'&&m.with_person===person)
+    .slice().sort((a,b)=>(a.created_at||'').localeCompare(b.created_at||''))[0]||null;
+}
+function renderMyPage(){
+  const el=document.getElementById('mypage-render'); if(!el) return;
+  if(!mpCanSwitch()) mpPerson=null;
+  el.innerHTML='<div class="empty">Loading…</div>';
+  wmLoad().then(()=>mpDraw()).catch(()=>mpDraw());
+}
+function mpDraw(){
+  const el=document.getElementById('mypage-render'); if(!el) return;
+  const p=mpWho(); const d=mpGet(p); const mine=mpIsMine();
+  const col=USER_COLOURS[p]||'#888';
+  const switcher=mpCanSwitch()?`<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px">${TASK_PEOPLE.map(x=>`<button class="btn btn-sm ${p===x?'btn-k':'btn-ghost'}" onclick="mpPerson='${x}';mpDraw()"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${USER_COLOURS[x]};margin-right:6px"></span>${x}</button>`).join('')}</div>`:'';
+  const header=`<div class="card" style="margin-bottom:12px;border-left:5px solid ${col}">
+    <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+      <div style="width:13px;height:13px;border-radius:50%;background:${col};flex-shrink:0"></div>
+      <span style="font-family:Montserrat,sans-serif;font-weight:700;font-size:20px">${p}</span>
+      <input class="form-input" style="flex:1;min-width:220px;font-size:12.5px" placeholder="${mine?'Your role, one line':'No role written yet'}" value="${escAttr(d.role||'')}"${mine?` onchange="mpRoleSave(this.value)"`:' disabled'}>
+      ${mine?`<button class="btn btn-ghost btn-sm" onclick="mpCustomise()">Customise</button>`:''}
+    </div></div>`;
+  el.innerHTML=switcher+header+mpWeekCard(p,d,mine)+mpMetricsCard(p,d,mine)+mpOneCard(p,mine)+((d.blocks||{}).sops!==false?mpSopsCard(p,d,mine):'')+mpStrips(p,d);
+  const ta=document.getElementById('topbar-actions');
+  if(ta) ta.innerHTML=mine?`<button class="btn btn-k btn-sm" onclick="mpAchModal('')">+ Add this week</button>`:'';
+}
+function mpRoleSave(v){ if(!mpIsMine()) return; const p=mpWho(); const d=mpGet(p); d.role=String(v||'').trim(); mpSet(p,d); }
+// ── This week: achievements in your own words + this week's metric values ──
+function mpWeekCard(p,d,mine){
+  const wk=mpWeekKey();
+  const w=(d.weeks||{})[wk]||{ach:[],vals:{}};
+  const prevKeys=mpWeekKeys(9).slice(0,-1).reverse();
+  const achRow=(a,ro)=>`<div style="display:flex;gap:10px;align-items:center;padding:6px 0;border-bottom:1px solid var(--bdr);font-size:13px">
+    <span style="color:var(--grn);font-weight:800">✓</span><span style="flex:1">${escHtml(a.text)}</span>
+    ${!ro&&mine?`<span style="cursor:pointer;color:var(--mut);font-size:11px;text-decoration:underline" onclick="mpAchModal('${a.id}')">edit</span><span style="cursor:pointer;color:var(--mut)" onclick="mpAchDel('${a.id}')">✕</span>`:''}
+  </div>`;
+  return `<div class="card" style="margin-bottom:12px;border-left:5px solid var(--y)">
+    <div class="card-title">This week <span style="font-weight:500;color:var(--mut);font-size:11px">w/c ${fmtShort(wk)} · what ${mine?'you':p} achieved, in ${mine?'your':'their'} own words</span></div>
+    ${(w.ach||[]).length?(w.ach||[]).map(a=>achRow(a,false)).join(''):`<div style="font-size:12.5px;color:var(--mut);padding:4px 0">${mine?'Nothing logged yet this week. Add the first one.':'Nothing logged yet this week.'}</div>`}
+    ${mine?`<button class="btn btn-ghost btn-sm" style="margin-top:8px" onclick="mpAchModal('')">+ Add an achievement</button>`:''}
+    ${(d.metrics||[]).length?`<div style="font-size:10px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--mut);margin:14px 0 4px">This week's numbers</div>
+      <div style="display:flex;gap:12px;flex-wrap:wrap">${(d.metrics||[]).map(mt=>`<div style="min-width:130px"><div style="font-size:11px;font-weight:700">${escHtml(mt.name)}${mt.target?` <span style="color:var(--mut);font-weight:500">/ ${mt.target}</span>`:''}</div><input class="form-input" type="number" style="font-size:13px" value="${w.vals&&w.vals[mt.id]!==undefined&&w.vals[mt.id]!==null?escAttr(String(w.vals[mt.id])):''}"${mine?` onchange="mpValSave('${mt.id}',this.value)"`:' disabled'}></div>`).join('')}</div>`:''}
+    <details style="margin-top:12px"><summary style="font-size:12px;font-weight:700;cursor:pointer;color:var(--mut)">Previous weeks</summary>
+      ${prevKeys.map(k=>{ const pw=(d.weeks||{})[k]; if(!pw||(!(pw.ach||[]).length&&!Object.keys(pw.vals||{}).length)) return ''; return `<div style="margin-top:10px"><div style="font-size:11px;font-weight:800;color:var(--mut)">w/c ${fmtShort(k)}</div>${(pw.ach||[]).map(a=>achRow(a,true)).join('')}${Object.keys(pw.vals||{}).length?`<div style="font-size:11.5px;color:var(--mut);margin-top:3px">${(d.metrics||[]).filter(mt=>pw.vals[mt.id]!==undefined).map(mt=>escHtml(mt.name)+': '+pw.vals[mt.id]).join(' · ')}</div>`:''}</div>`; }).join('')||'<div style="font-size:12px;color:var(--mut);padding:6px 0">Nothing before this week yet.</div>'}
+    </details>
+  </div>`;
+}
+function mpAchModal(id){
+  if(!mpIsMine()) return;
+  const p=mpWho(); const d=mpGet(p); const wk=mpWeekKey();
+  const a=id?(((d.weeks||{})[wk]||{}).ach||[]).find(x=>x.id===id):null;
+  showModal(a?'Edit achievement':'What did you achieve?',`
+    <div class="form-row"><label class="form-label">In your own words, one line</label><input class="form-input" id="mp-ach-txt" value="${escAttr(a?a.text:'')}" onkeydown="if(event.key==='Enter')mpAchSave('${id||''}')"></div>
+  `,`<button class="btn btn-ghost" onclick="closeModal()">Cancel</button><button class="btn btn-k" onclick="mpAchSave('${id||''}')">Save</button>`);
+  setTimeout(()=>document.getElementById('mp-ach-txt')?.focus(),50);
+}
+function mpAchSave(id){
+  const t=document.getElementById('mp-ach-txt')?.value.trim(); if(!t) return;
+  const p=mpWho(); if(p!==CURRENT_USER) return;
+  const d=mpGet(p); const wk=mpWeekKey();
+  d.weeks=d.weeks||{}; const w=d.weeks[wk]=d.weeks[wk]||{ach:[],vals:{}};
+  const a=id?(w.ach||[]).find(x=>x.id===id):null;
+  if(a) a.text=t; else (w.ach=w.ach||[]).push({id:uid(),text:t,at:new Date().toISOString()});
+  mpSet(p,d); closeModal(); mpDraw();
+}
+function mpAchDel(id){
+  const p=mpWho(); if(p!==CURRENT_USER) return;
+  const d=mpGet(p); const wk=mpWeekKey(); const w=(d.weeks||{})[wk]; if(!w) return;
+  w.ach=(w.ach||[]).filter(x=>x.id!==id);
+  mpSet(p,d); mpDraw();
+}
+function mpValSave(mid,v){
+  const p=mpWho(); if(p!==CURRENT_USER) return;
+  const d=mpGet(p); const wk=mpWeekKey();
+  d.weeks=d.weeks||{}; const w=d.weeks[wk]=d.weeks[wk]||{ach:[],vals:{}};
+  w.vals=w.vals||{};
+  if(String(v).trim()==='') delete w.vals[mid]; else w.vals[mid]=parseFloat(v);
+  mpSet(p,d);
+}
+// ── Metrics the person defines themselves ──
+function mpMetricsCard(p,d,mine){
+  const keys=mpWeekKeys(6);
+  const row=mt=>`<tr>
+    <td style="padding:5px 8px;font-size:12px;font-weight:700;white-space:nowrap">${escHtml(mt.name)}${mine?` <span style="cursor:pointer;color:var(--mut);font-weight:400" onclick="mpMetricModal('${mt.id}')">✎</span>`:''}</td>
+    ${keys.map(k=>{ const v=(((d.weeks||{})[k]||{}).vals||{})[mt.id]; const hit=mt.target&&v!==undefined&&v>=mt.target; return `<td style="padding:5px 8px;font-size:12px;text-align:center;${hit?'color:var(--grn);font-weight:800':''}">${v!==undefined&&v!==null?v:'·'}</td>`; }).join('')}
+    <td style="padding:5px 8px;font-size:11px;color:var(--mut);text-align:center">${mt.target||''}</td>
+  </tr>`;
+  return `<div class="card" style="margin-bottom:12px">
+    <div class="card-title">My metrics <span style="font-weight:500;color:var(--mut);font-size:11px">${mine?'yours to define, the app never invents these numbers':'defined by '+p}</span></div>
+    ${(d.metrics||[]).length?`<div style="overflow-x:auto"><table style="border-collapse:collapse;width:100%"><tr><td></td>${keys.map(k=>`<td style="padding:5px 8px;font-size:10px;color:var(--mut);text-align:center;white-space:nowrap">${fmtShort(k)}</td>`).join('')}<td style="padding:5px 8px;font-size:10px;color:var(--mut);text-align:center">target</td></tr>${(d.metrics||[]).map(row).join('')}</table></div>`:`<div style="font-size:12.5px;color:var(--mut)">No metrics yet. ${mine?'Pick two or three numbers that prove your week worked, like calls booked or recaps sent.':''}</div>`}
+    ${mine?`<button class="btn btn-ghost btn-sm" style="margin-top:8px" onclick="mpMetricModal('')">+ Add a metric</button>`:''}
+  </div>`;
+}
+function mpMetricModal(id){
+  if(!mpIsMine()) return;
+  const d=mpGet(mpWho());
+  const mt=id?(d.metrics||[]).find(x=>x.id===id):null;
+  showModal(mt?'Edit metric':'Add a metric',`
+    <div class="grid-2">
+      <div class="form-row"><label class="form-label">Name</label><input class="form-input" id="mp-met-name" value="${escAttr(mt?mt.name:'')}" placeholder="Calls booked"></div>
+      <div class="form-row"><label class="form-label">Weekly target (optional)</label><input class="form-input" type="number" id="mp-met-target" value="${mt&&mt.target?mt.target:''}"></div>
+    </div>
+  `,`<button class="btn btn-ghost" onclick="closeModal()">Cancel</button>${mt?`<button class="btn btn-red btn-sm" onclick="mpMetricDel('${mt.id}')">Delete</button>`:''}<button class="btn btn-k" onclick="mpMetricSave('${id||''}')">Save</button>`);
+}
+function mpMetricSave(id){
+  const p=mpWho(); if(p!==CURRENT_USER) return;
+  const name=document.getElementById('mp-met-name')?.value.trim(); if(!name){ alert('The metric needs a name.'); return; }
+  const tRaw=document.getElementById('mp-met-target')?.value;
+  const d=mpGet(p);
+  const mt=id?(d.metrics||[]).find(x=>x.id===id):null;
+  const target=tRaw===''?null:parseFloat(tRaw);
+  if(mt){ mt.name=name; mt.target=target; }
+  else (d.metrics=d.metrics||[]).push({id:uid(),name:name,target:target});
+  mpSet(p,d); closeModal(); mpDraw();
+}
+function mpMetricDel(id){
+  const p=mpWho(); if(p!==CURRENT_USER) return;
+  if(!confirm('Delete this metric? Past values stay stored but stop showing.')) return;
+  const d=mpGet(p); d.metrics=(d.metrics||[]).filter(x=>x.id!==id);
+  mpSet(p,d); closeModal(); mpDraw();
+}
+// ── 1:1 with Danny (wm tables, type one_to_one) ──
+function mpOneCard(p,mine){
+  if(!wmData.loaded) return `<div class="card" style="margin-bottom:12px"><div class="card-title">1:1 with Danny</div><div style="font-size:12px;color:var(--mut)">The meeting tables are not reachable right now. If adding an item fails, run mypage.sql in Supabase (two lines) and reload.</div></div>`;
+  if(p==='Danny'){
+    const rows=TASK_PEOPLE.filter(x=>x!=='Danny').map(x=>{
+      const m=mpOneToOne(wmData.meetings,x);
+      const n=m?wmItemsFor(m.id).filter(i=>i.status==='open').length:0;
+      return `<div style="display:flex;gap:10px;align-items:center;padding:6px 0;border-bottom:1px solid var(--bdr);font-size:13px">
+        <span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:${USER_COLOURS[x]}"></span>
+        <span style="flex:1;font-weight:700">${x}</span>
+        <span style="font-size:11.5px;color:${n?'var(--amb)':'var(--mut)'}">${n?n+' item'+(n===1?'':'s')+' waiting':'nothing waiting'}</span>
+        ${mpCanSwitch()?`<button class="btn btn-ghost btn-sm" style="padding:1px 8px;font-size:10px" onclick="mpPerson='${x}';mpDraw()">Open</button>`:''}
+      </div>`;
+    }).join('');
+    return `<div class="card" style="margin-bottom:12px"><div class="card-title">1:1 agendas waiting on you</div>${rows}</div>`;
+  }
+  const m=mpOneToOne(wmData.meetings,p);
+  const items=m?wmItemsFor(m.id):[];
+  const open=items.filter(i=>i.status==='open');
+  const covered=items.filter(i=>i.status!=='open');
+  const canAct=mine||CURRENT_USER==='Danny';
+  const row=i=>`<div style="display:flex;gap:10px;align-items:flex-start;padding:7px 0;border-bottom:1px solid var(--bdr);font-size:13px">
+    ${canAct?`<div class="chk-box" style="flex-shrink:0;margin-top:1px" onclick="mpOneDone('${i.id}')"></div>`:''}
+    <div style="flex:1;min-width:160px"><b>${escHtml(i.title)}</b>${i.note?`<div style="font-size:11.5px;color:var(--mut);white-space:pre-wrap">${escHtml(i.note)}</div>`:''}</div>
+    ${canAct&&!i.action_task_id?`<button class="btn btn-ghost btn-sm" style="padding:1px 8px;font-size:10px" onclick="mpOneTask('${i.id}')">→ Make a task</button>`:''}
+    ${i.action_task_id?'<span class="tag tag-b" style="font-size:9px">Task made</span>':''}
+    ${(mine&&i.created_by===CURRENT_USER)||CURRENT_USER==='Danny'?`<span style="cursor:pointer;color:var(--mut)" onclick="mpOneDel('${i.id}')">✕</span>`:''}
+  </div>`;
+  return `<div class="card" style="margin-bottom:12px">
+    <div class="card-title">1:1 with Danny <span style="font-weight:500;color:var(--mut);font-size:11px">add it here when you think of it, not in the meeting</span></div>
+    ${open.length?open.map(row).join(''):'<div style="font-size:12.5px;color:var(--mut);padding:4px 0">Nothing on the agenda.</div>'}
+    ${canAct?`<div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap">
+      <input class="form-input" id="mp-one-txt" placeholder="What to raise with Danny" style="flex:1;min-width:180px" onkeydown="if(event.key==='Enter')mpOneAdd()">
+      <button class="btn btn-k btn-sm" onclick="mpOneAdd()">Add</button>
+      ${m&&open.length?`<button class="btn btn-ghost btn-sm" onclick="mpOneClose('${m.id}')">Close this 1:1</button>`:''}
+    </div>`:''}
+    ${covered.length?`<div style="font-size:11px;color:var(--mut);margin-top:8px">${covered.length} covered in this 1:1 so far.</div>`:''}
+  </div>`;
+}
+async function mpOneAdd(){
+  const t=document.getElementById('mp-one-txt')?.value.trim(); if(!t) return;
+  const p=mpWho();
+  let m=mpOneToOne(wmData.meetings,p);
+  if(!m){
+    m=await coIns('wm_meetings',{meeting_date:wmNextMondayYmd(),type:'one_to_one',length_min:30,chair:'Danny',status:'open',with_person:p,created_by:CURRENT_USER});
+    if(!m) return;
+    wmData.meetings.push(m);
+  }
+  const row=await coIns('wm_items',{meeting_id:m.id,title:t,type:'help',need:'',minutes:null,note:'',owner:p,status:'open',created_by:CURRENT_USER});
+  if(row){ wmData.items.push(row); mpDraw(); }
+}
+async function mpOneDone(id){
+  const it=wmData.items.find(x=>x.id===id); if(!it) return;
+  if(await coUpd('wm_items',id,{status:'covered',closed_at:new Date().toISOString()},true)){ it.status='covered'; mpDraw(); }
+}
+async function mpOneTask(id){
+  const it=wmData.items.find(x=>x.id===id); if(!it) return;
+  const p=mpWho(); const tid=uid();
+  await commitTasks(arr=>{ arr.push({id:tid,title:it.title,owner:p,priority:'Medium',dueDate:'',status:'To Do',linkedTo:'wm:'+it.id,notes:'From the 1:1 with Danny',section:'meeting',createdBy:CURRENT_USER,createdAt:new Date().toISOString(),completedAt:null}); });
+  if(await coUpd('wm_items',id,{action_task_id:tid},true)) it.action_task_id=tid;
+  updateTaskBadge(); addNotif('Task created: '+it.title.slice(0,50));
+  mpDraw();
+}
+async function mpOneDel(id){
+  if(!confirm('Take this off the 1:1 agenda?')) return;
+  if(await coDel('wm_items',id)){ wmData.items=wmData.items.filter(x=>x.id!==id); mpDraw(); }
+}
+async function mpOneClose(mid){
+  if(!confirm('Close this 1:1? Open items stay visible under it until covered; a fresh agenda starts with the next item added.')) return;
+  const m=wmData.meetings.find(x=>x.id===mid); if(!m) return;
+  if(await coUpd('wm_meetings',mid,{status:'closed',ended_at:new Date().toISOString()})){ m.status='closed'; mpDraw(); }
+}
+// ── SOPs this person owns ──
+function mpSopsCard(p,d,mine){
+  const chip=s=>`<span class="tag ${s==='current'?'tag-g':s==='draft'?'tag-a':'tag-r'}" style="font-size:9px">${s}</span>`;
+  return `<div class="card" style="margin-bottom:12px">
+    <div class="card-title">SOPs ${mine?'I own':p+' owns'} <span style="font-weight:500;color:var(--mut);font-size:11px">who owns which process, and its state</span></div>
+    ${(d.sops||[]).length?(d.sops||[]).map(s=>`<div style="display:flex;gap:10px;align-items:center;padding:6px 0;border-bottom:1px solid var(--bdr);font-size:13px">
+      <span style="flex:1">${escHtml(s.name)}</span>
+      ${mine?`<select class="form-select" style="width:auto;padding:2px 8px;font-size:11px" onchange="mpSopSet('${s.id}',this.value)">${['missing','draft','current'].map(x=>`<option${x===s.status?' selected':''}>${x}</option>`).join('')}</select><span style="cursor:pointer;color:var(--mut)" onclick="mpSopDel('${s.id}')">✕</span>`:chip(s.status)}
+    </div>`).join(''):'<div style="font-size:12.5px;color:var(--mut)">None listed yet.</div>'}
+    ${mine?`<div style="display:flex;gap:6px;margin-top:8px"><input class="form-input" id="mp-sop-txt" placeholder="Process name, e.g. Client onboarding" style="flex:1" onkeydown="if(event.key==='Enter')mpSopAdd()"><button class="btn btn-ghost btn-sm" onclick="mpSopAdd()">Add</button></div>`:''}
+  </div>`;
+}
+function mpSopAdd(){
+  const t=document.getElementById('mp-sop-txt')?.value.trim(); if(!t) return;
+  const p=mpWho(); if(p!==CURRENT_USER) return;
+  const d=mpGet(p); (d.sops=d.sops||[]).push({id:uid(),name:t,status:'missing'});
+  mpSet(p,d); mpDraw();
+}
+function mpSopSet(id,v){
+  const p=mpWho(); if(p!==CURRENT_USER) return;
+  const d=mpGet(p); const s=(d.sops||[]).find(x=>x.id===id); if(!s) return;
+  s.status=v; mpSet(p,d); mpDraw();
+}
+function mpSopDel(id){
+  const p=mpWho(); if(p!==CURRENT_USER) return;
+  const d=mpGet(p); d.sops=(d.sops||[]).filter(x=>x.id!==id);
+  mpSet(p,d); mpDraw();
+}
+// ── Computed strips (read only, toggleable) ──
+function mpStrips(p,d){
+  const b=d.blocks||{};
+  const out=[];
+  const wk=mpWeekKey();
+  if(b.tasks!==false){
+    const tasks=(ls.get('tuf_tasks',[])||[]).filter(utIsBoard).filter(t=>t.owner===p);
+    const today=new Date().toISOString().slice(0,10);
+    const open=tasks.filter(t=>t.status!=='Done');
+    const overdue=open.filter(t=>t.dueDate&&t.dueDate<today).length;
+    const doneWk=tasks.filter(t=>t.status==='Done'&&t.completedAt&&ymdLocal(mondayOf(new Date(t.completedAt)))===wk).length;
+    out.push(`<div class="stat"><div class="n">${open.length}</div><div class="l">Open tasks</div></div>
+      <div class="stat ${overdue?'r':''}"><div class="n">${overdue}</div><div class="l">Overdue</div></div>
+      <div class="stat g"><div class="n">${doneWk}</div><div class="l">Done this week</div></div>`);
+  }
+  if(b.goals!==false){
+    try{
+      const gp=ls.get('tuf_growth_plan',null);
+      if(gp&&gp.sections){
+        const mineItems=[]; gp.sections.forEach(s=>(s.items||[]).forEach(it=>{ if(!it.done&&(it.owner===p||(!it.owner&&s.owner===p))) mineItems.push(it.text); }));
+        out.push(`<div class="stat"><div class="n">${mineItems.length}</div><div class="l">Growth Plan items open</div></div>`);
+      }
+    }catch(e){}
+  }
+  const acts=(ls.get('tuf_tasks',[])||[]).filter(t=>t.owner===p&&t.status!=='Done'&&String(t.linkedTo||'').indexOf('wm:')===0).length;
+  out.push(`<div class="stat ${acts?'':''}"><div class="n">${acts}</div><div class="l">Meeting actions open</div></div>`);
+  return out.length?`<div class="grid-4" style="margin-bottom:12px">${out.join('')}</div>`:'';
+}
+function mpCustomise(){
+  if(!mpIsMine()) return;
+  const d=mpGet(mpWho()); const b=d.blocks||{};
+  showModal('Customise your page',`
+    <div style="font-size:12.5px;color:var(--mut);margin-bottom:10px">Tick what shows on your page. Achievements, metrics and the 1:1 always show; they are the point.</div>
+    ${[['tasks','Task numbers'],['goals','Growth Plan items'],['sops','SOPs I own']].map(([k,l])=>`<label style="display:flex;gap:8px;align-items:center;padding:4px 0;font-size:13px;cursor:pointer"><input type="checkbox" id="mp-blk-${k}"${b[k]!==false?' checked':''}> ${l}</label>`).join('')}
+  `,`<button class="btn btn-ghost" onclick="closeModal()">Cancel</button><button class="btn btn-k" onclick="mpCustomiseSave()">Save</button>`);
+}
+function mpCustomiseSave(){
+  const p=mpWho(); if(p!==CURRENT_USER) return;
+  const d=mpGet(p);
+  d.blocks={tasks:!!document.getElementById('mp-blk-tasks')?.checked,goals:!!document.getElementById('mp-blk-goals')?.checked,sops:!!document.getElementById('mp-blk-sops')?.checked};
+  mpSet(p,d); closeModal(); mpDraw();
 }
 
 // ═══ IP REGISTER ═════════════════════════════════════════════════════════════
