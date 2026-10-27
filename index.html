@@ -8885,39 +8885,55 @@ function renderMyPage(){
   el.innerHTML='<div class="empty">Loading…</div>';
   wmLoad().then(()=>mpDraw()).catch(()=>mpDraw());
 }
+// Consecutive weeks, ending this week, with at least one achievement logged.
+function mpStreak(d,from){
+  let n=0,k=mpWeekKey(from);
+  while((((d.weeks||{})[k]||{}).ach||[]).length){ n++; k=wmYmdAddDays(k,-7); if(n>520) break; }
+  return n;
+}
 function mpDraw(){
   const el=document.getElementById('mypage-render'); if(!el) return;
   const p=mpWho(); const d=mpGet(p); const mine=mpIsMine();
   const col=USER_COLOURS[p]||'#888';
+  const wk=mpWeekKey(); const w=(d.weeks||{})[wk]||{ach:[],vals:{}};
+  const streak=mpStreak(d);
   const switcher=mpCanSwitch()?`<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px">${TASK_PEOPLE.map(x=>`<button class="btn btn-sm ${p===x?'btn-k':'btn-ghost'}" onclick="mpPerson='${x}';mpDraw()"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${USER_COLOURS[x]};margin-right:6px"></span>${x}</button>`).join('')}</div>`:'';
-  const header=`<div class="card" style="margin-bottom:12px;border-left:5px solid ${col}">
-    <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
-      <div style="width:13px;height:13px;border-radius:50%;background:${col};flex-shrink:0"></div>
-      <span style="font-family:Montserrat,sans-serif;font-weight:700;font-size:20px">${p}</span>
-      <input class="form-input" style="flex:1;min-width:220px;font-size:12.5px" placeholder="${mine?'Your role, one line':'No role written yet'}" value="${escAttr(d.role||'')}"${mine?` onchange="mpRoleSave(this.value)"`:' disabled'}>
-      ${mine?`<button class="btn btn-ghost btn-sm" onclick="mpCustomise()">Customise</button>`:''}
-    </div></div>`;
-  el.innerHTML=switcher+header+mpWeekCard(p,d,mine)+mpMetricsCard(p,d,mine)+mpOneCard(p,mine)+((d.blocks||{}).sops!==false?mpSopsCard(p,d,mine):'')+mpStrips(p,d);
+  const hero=`<div style="background:var(--k);color:var(--w);border-radius:16px;padding:22px 24px;margin-bottom:14px;display:flex;gap:16px;align-items:center;flex-wrap:wrap">
+    <div style="width:42px;height:42px;border-radius:50%;background:${col};display:flex;align-items:center;justify-content:center;font-weight:800;font-size:17px;flex-shrink:0">${p.slice(0,1)}</div>
+    <div style="flex:1;min-width:200px">
+      <div style="font-family:Montserrat,sans-serif;font-weight:800;font-size:21px">${p}</div>
+      <input style="width:100%;margin-top:4px;background:#141416;border:1px solid #26272B;border-radius:8px;color:#C9CBD1;font-family:inherit;font-size:12px;padding:6px 10px;outline:none" placeholder="${mine?'Your role, one line':'No role written yet'}" value="${escAttr(d.role||'')}"${mine?` onchange="mpRoleSave(this.value)"`:' disabled'}>
+    </div>
+    <div style="text-align:right"><div style="font-family:Montserrat,sans-serif;font-size:32px;font-weight:800;color:var(--y);line-height:1">${(w.ach||[]).length}</div><div style="font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:#9BA0A8;margin-top:3px">wins this week</div></div>
+    <div style="text-align:right"><div style="font-family:Montserrat,sans-serif;font-size:32px;font-weight:800;color:var(--y);line-height:1">${streak}</div><div style="font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:#9BA0A8;margin-top:3px">week streak</div></div>
+    ${mine?`<button class="btn btn-ghost btn-sm" style="color:var(--w);border-color:#3A3B40" onclick="mpCustomise()">Customise</button>`:''}
+  </div>`;
+  const twoCol=`<div style="display:grid;grid-template-columns:3fr 2fr;gap:12px;align-items:start" class="mp-cols">
+    <div>${mpWeekCard(p,d,mine)}</div>
+    <div>${mpOneCard(p,mine)}${(d.blocks||{}).sops!==false?mpSopsCard(p,d,mine):''}</div>
+  </div><style>@media(max-width:860px){.mp-cols{grid-template-columns:1fr !important}}</style>`;
+  el.innerHTML=switcher+hero+mpMetricsCard(p,d,mine)+twoCol+mpStrips(p,d);
   const ta=document.getElementById('topbar-actions');
-  if(ta) ta.innerHTML=mine?`<button class="btn btn-k btn-sm" onclick="mpAchModal('')">+ Add this week</button>`:'';
+  if(ta) ta.innerHTML=mine?`<button class="btn btn-k btn-sm" onclick="mpAchModal('')">+ Add a win</button>`:'';
 }
 function mpRoleSave(v){ if(!mpIsMine()) return; const p=mpWho(); const d=mpGet(p); d.role=String(v||'').trim(); mpSet(p,d); }
-// ── This week: achievements in your own words + this week's metric values ──
+// ── This week's wins: a feed with yellow ticks and day stamps ──
 function mpWeekCard(p,d,mine){
   const wk=mpWeekKey();
   const w=(d.weeks||{})[wk]||{ach:[],vals:{}};
   const prevKeys=mpWeekKeys(9).slice(0,-1).reverse();
-  const achRow=(a,ro)=>`<div style="display:flex;gap:10px;align-items:center;padding:6px 0;border-bottom:1px solid var(--bdr);font-size:13px">
-    <span style="color:var(--grn);font-weight:800">✓</span><span style="flex:1">${escHtml(a.text)}</span>
-    ${!ro&&mine?`<span style="cursor:pointer;color:var(--mut);font-size:11px;text-decoration:underline" onclick="mpAchModal('${a.id}')">edit</span><span style="cursor:pointer;color:var(--mut)" onclick="mpAchDel('${a.id}')">✕</span>`:''}
+  const day=a=>{ try{ return new Date(a.at).toLocaleDateString('en-GB',{weekday:'short'}).toUpperCase(); }catch(e){ return ''; } };
+  const achRow=(a,ro)=>`<div style="display:flex;gap:11px;align-items:center;padding:8px 0;border-bottom:1px dashed var(--bdr);font-size:13.5px;font-weight:500">
+    <span style="width:24px;height:24px;border-radius:50%;background:var(--y);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:12px;flex-shrink:0">✓</span>
+    <span style="flex:1;${!ro&&mine?'cursor:pointer':''}"${!ro&&mine?` onclick="mpAchModal('${a.id}')" title="Edit"`:''}>${escHtml(a.text)}</span>
+    <span style="font-size:9.5px;font-weight:800;color:var(--mut)">${day(a)}</span>
+    ${!ro&&mine?`<span style="cursor:pointer;color:var(--mut)" onclick="mpAchDel('${a.id}')">✕</span>`:''}
   </div>`;
-  return `<div class="card" style="margin-bottom:12px;border-left:5px solid var(--y)">
-    <div class="card-title">This week <span style="font-weight:500;color:var(--mut);font-size:11px">w/c ${fmtShort(wk)} · what ${mine?'you':p} achieved, in ${mine?'your':'their'} own words</span></div>
-    ${(w.ach||[]).length?(w.ach||[]).map(a=>achRow(a,false)).join(''):`<div style="font-size:12.5px;color:var(--mut);padding:4px 0">${mine?'Nothing logged yet this week. Add the first one.':'Nothing logged yet this week.'}</div>`}
-    ${mine?`<button class="btn btn-ghost btn-sm" style="margin-top:8px" onclick="mpAchModal('')">+ Add an achievement</button>`:''}
-    ${(d.metrics||[]).length?`<div style="font-size:10px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--mut);margin:14px 0 4px">This week's numbers</div>
-      <div style="display:flex;gap:12px;flex-wrap:wrap">${(d.metrics||[]).map(mt=>`<div style="min-width:130px"><div style="font-size:11px;font-weight:700">${escHtml(mt.name)}${mt.target?` <span style="color:var(--mut);font-weight:500">/ ${mt.target}</span>`:''}</div><input class="form-input" type="number" style="font-size:13px" value="${w.vals&&w.vals[mt.id]!==undefined&&w.vals[mt.id]!==null?escAttr(String(w.vals[mt.id])):''}"${mine?` onchange="mpValSave('${mt.id}',this.value)"`:' disabled'}></div>`).join('')}</div>`:''}
-    <details style="margin-top:12px"><summary style="font-size:12px;font-weight:700;cursor:pointer;color:var(--mut)">Previous weeks</summary>
+  return `<div class="card" style="margin-bottom:12px">
+    <div class="card-title" style="letter-spacing:.07em;text-transform:uppercase;font-size:11px;color:var(--mut)">This week's wins <span style="font-weight:500;text-transform:none;letter-spacing:0">· w/c ${fmtShort(wk)}, in ${mine?'your':p+"'s"} own words</span></div>
+    ${(w.ach||[]).length?(w.ach||[]).map(a=>achRow(a,false)).join(''):`<div style="font-size:12.5px;color:var(--mut);padding:6px 0">${mine?'Nothing logged yet. The streak is waiting.':'Nothing logged yet this week.'}</div>`}
+    ${mine?`<button class="btn btn-y btn-sm" style="margin-top:10px;font-weight:800" onclick="mpAchModal('')">+ Add a win</button>`:''}
+    <details style="margin-top:14px"><summary style="font-size:12px;font-weight:700;cursor:pointer;color:var(--mut)">Previous weeks</summary>
       ${prevKeys.map(k=>{ const pw=(d.weeks||{})[k]; if(!pw||(!(pw.ach||[]).length&&!Object.keys(pw.vals||{}).length)) return ''; return `<div style="margin-top:10px"><div style="font-size:11px;font-weight:800;color:var(--mut)">w/c ${fmtShort(k)}</div>${(pw.ach||[]).map(a=>achRow(a,true)).join('')}${Object.keys(pw.vals||{}).length?`<div style="font-size:11.5px;color:var(--mut);margin-top:3px">${(d.metrics||[]).filter(mt=>pw.vals[mt.id]!==undefined).map(mt=>escHtml(mt.name)+': '+pw.vals[mt.id]).join(' · ')}</div>`:''}</div>`; }).join('')||'<div style="font-size:12px;color:var(--mut);padding:6px 0">Nothing before this week yet.</div>'}
     </details>
   </div>`;
@@ -8953,19 +8969,32 @@ function mpValSave(mid,v){
   w.vals=w.vals||{};
   if(String(v).trim()==='') delete w.vals[mid]; else w.vals[mid]=parseFloat(v);
   mpSet(p,d);
+  mpDraw(); // change fires on blur, so the tile recolours without stealing focus
 }
-// ── Metrics the person defines themselves ──
+// ── Metric tiles: big number, target corner, six week mini chart, this week's
+// value typed straight into the tile. Green when target hit, amber when short.
 function mpMetricsCard(p,d,mine){
   const keys=mpWeekKeys(6);
-  const row=mt=>`<tr>
-    <td style="padding:5px 8px;font-size:12px;font-weight:700;white-space:nowrap">${escHtml(mt.name)}${mine?` <span style="cursor:pointer;color:var(--mut);font-weight:400" onclick="mpMetricModal('${mt.id}')">✎</span>`:''}</td>
-    ${keys.map(k=>{ const v=(((d.weeks||{})[k]||{}).vals||{})[mt.id]; const hit=mt.target&&v!==undefined&&v>=mt.target; return `<td style="padding:5px 8px;font-size:12px;text-align:center;${hit?'color:var(--grn);font-weight:800':''}">${v!==undefined&&v!==null?v:'·'}</td>`; }).join('')}
-    <td style="padding:5px 8px;font-size:11px;color:var(--mut);text-align:center">${mt.target||''}</td>
-  </tr>`;
-  return `<div class="card" style="margin-bottom:12px">
-    <div class="card-title">My metrics <span style="font-weight:500;color:var(--mut);font-size:11px">${mine?'yours to define, the app never invents these numbers':'defined by '+p}</span></div>
-    ${(d.metrics||[]).length?`<div style="overflow-x:auto"><table style="border-collapse:collapse;width:100%"><tr><td></td>${keys.map(k=>`<td style="padding:5px 8px;font-size:10px;color:var(--mut);text-align:center;white-space:nowrap">${fmtShort(k)}</td>`).join('')}<td style="padding:5px 8px;font-size:10px;color:var(--mut);text-align:center">target</td></tr>${(d.metrics||[]).map(row).join('')}</table></div>`:`<div style="font-size:12.5px;color:var(--mut)">No metrics yet. ${mine?'Pick two or three numbers that prove your week worked, like calls booked or recaps sent.':''}</div>`}
-    ${mine?`<button class="btn btn-ghost btn-sm" style="margin-top:8px" onclick="mpMetricModal('')">+ Add a metric</button>`:''}
+  const wk=mpWeekKey();
+  const tile=mt=>{
+    const vNow=((((d.weeks||{})[wk]||{}).vals||{})[mt.id]);
+    const has=vNow!==undefined&&vNow!==null;
+    const hit=mt.target!=null&&has&&vNow>=mt.target;
+    const miss=mt.target!=null&&has&&vNow<mt.target;
+    const vals=keys.map(k=>((((d.weeks||{})[k]||{}).vals||{})[mt.id]));
+    const mx=Math.max(mt.target||0,...vals.map(v=>(v==null?0:v)),1);
+    const spark=keys.map((k,i)=>{ const v=vals[i]; const h=v==null?6:Math.max(10,Math.round(v/mx*100)); const colr=v==null?'var(--bdr)':(mt.target!=null&&v>=mt.target)?'var(--grn)':'var(--y)'; return `<i title="w/c ${fmtShort(k)}${v==null?'':': '+v}" style="flex:1;display:block;border-radius:3px 3px 0 0;background:${colr};height:${h}%"></i>`; }).join('');
+    return `<div class="card" style="margin-bottom:0;position:relative;border-bottom:4px solid ${hit?'var(--grn)':miss?'var(--amb)':'var(--bdr)'}">
+      ${mt.target!=null?`<span style="position:absolute;top:10px;right:12px;font-size:10px;font-weight:800;color:var(--mut)">target ${mt.target}</span>`:''}
+      <div style="font-family:Montserrat,sans-serif;font-size:34px;font-weight:800;line-height:1;color:${hit?'var(--grn)':'var(--k)'}">${has?vNow:'·'}</div>
+      <div style="font-size:11px;font-weight:700;color:var(--mut);margin:5px 0 9px">${escHtml(mt.name)}${mine?` <span style="cursor:pointer;font-weight:400" title="Edit this metric" onclick="mpMetricModal('${mt.id}')">✎</span>`:''}</div>
+      <div style="display:flex;gap:3px;align-items:flex-end;height:34px">${spark}</div>
+      ${mine?`<input class="form-input" type="number" placeholder="this week" style="margin-top:9px;font-size:12px;padding:5px 9px" value="${has?escAttr(String(vNow)):''}" onchange="mpValSave('${mt.id}',this.value)">`:''}
+    </div>`;
+  };
+  return `<div style="margin-bottom:14px">
+    ${(d.metrics||[]).length?`<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px">${(d.metrics||[]).map(tile).join('')}${mine?`<div class="card" style="margin-bottom:0;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--mut);font-weight:700;font-size:12.5px;border-style:dashed" onclick="mpMetricModal('')">+ Add a metric</div>`:''}</div>`
+    :`<div class="card" style="margin-bottom:0"><div style="font-size:12.5px;color:var(--mut)">No metrics yet. ${mine?'Pick two or three numbers that prove your week worked, like calls booked or recaps sent.':'None defined by '+p+' yet.'}</div>${mine?`<button class="btn btn-ghost btn-sm" style="margin-top:8px" onclick="mpMetricModal('')">+ Add a metric</button>`:''}</div>`}
   </div>`;
 }
 function mpMetricModal(id){
@@ -9017,15 +9046,15 @@ function mpOneCard(p,mine){
   const open=items.filter(i=>i.status==='open');
   const covered=items.filter(i=>i.status!=='open');
   const canAct=mine||CURRENT_USER==='Danny';
-  const row=i=>`<div style="display:flex;gap:10px;align-items:flex-start;padding:7px 0;border-bottom:1px solid var(--bdr);font-size:13px">
-    ${canAct?`<div class="chk-box" style="flex-shrink:0;margin-top:1px" onclick="mpOneDone('${i.id}')"></div>`:''}
-    <div style="flex:1;min-width:160px"><b>${escHtml(i.title)}</b>${i.note?`<div style="font-size:11.5px;color:var(--mut);white-space:pre-wrap">${escHtml(i.note)}</div>`:''}</div>
-    ${canAct&&!i.action_task_id?`<button class="btn btn-ghost btn-sm" style="padding:1px 8px;font-size:10px" onclick="mpOneTask('${i.id}')">→ Make a task</button>`:''}
-    ${i.action_task_id?'<span class="tag tag-b" style="font-size:9px">Task made</span>':''}
+  const row=i=>`<div style="display:flex;gap:10px;align-items:center;background:var(--bg);border-radius:9px;padding:8px 11px;margin-bottom:7px;font-size:12.5px;font-weight:600;flex-wrap:wrap">
+    ${canAct?`<div class="chk-box" style="flex-shrink:0" title="Mark covered" onclick="mpOneDone('${i.id}')"></div>`:''}
+    <div style="flex:1;min-width:140px">${escHtml(i.title)}${i.note?`<div style="font-size:11px;color:var(--mut);font-weight:500;white-space:pre-wrap">${escHtml(i.note)}</div>`:''}</div>
+    ${canAct&&!i.action_task_id?`<span style="cursor:pointer;font-size:10px;background:var(--k);color:var(--y);border-radius:9px;padding:3px 9px;font-weight:800;white-space:nowrap" onclick="mpOneTask('${i.id}')">→ task</span>`:''}
+    ${i.action_task_id?'<span class="tag tag-b" style="font-size:9px">task made</span>':''}
     ${(mine&&i.created_by===CURRENT_USER)||CURRENT_USER==='Danny'?`<span style="cursor:pointer;color:var(--mut)" onclick="mpOneDel('${i.id}')">✕</span>`:''}
   </div>`;
   return `<div class="card" style="margin-bottom:12px">
-    <div class="card-title">1:1 with Danny <span style="font-weight:500;color:var(--mut);font-size:11px">add it here when you think of it, not in the meeting</span></div>
+    <div class="card-title" style="letter-spacing:.07em;text-transform:uppercase;font-size:11px;color:var(--mut)">For my 1:1 with Danny <span style="font-weight:500;text-transform:none;letter-spacing:0">· add it when you think of it, not in the meeting</span></div>
     ${open.length?open.map(row).join(''):'<div style="font-size:12.5px;color:var(--mut);padding:4px 0">Nothing on the agenda.</div>'}
     ${canAct?`<div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap">
       <input class="form-input" id="mp-one-txt" placeholder="What to raise with Danny" style="flex:1;min-width:180px" onkeydown="if(event.key==='Enter')mpOneAdd()">
@@ -9068,28 +9097,32 @@ async function mpOneClose(mid){
   const m=wmData.meetings.find(x=>x.id===mid); if(!m) return;
   if(await coUpd('wm_meetings',mid,{status:'closed',ended_at:new Date().toISOString()})){ m.status='closed'; mpDraw(); }
 }
-// ── SOPs this person owns ──
+// ── SOPs this person owns: traffic light pills ──
 function mpSopsCard(p,d,mine){
-  const chip=s=>`<span class="tag ${s==='current'?'tag-g':s==='draft'?'tag-a':'tag-r'}" style="font-size:9px">${s}</span>`;
+  const dotCol=s=>s==='current'?'var(--grn)':s==='draft'?'var(--amb)':'var(--red)';
+  const pill=s=>`<span style="display:inline-flex;gap:7px;align-items:center;border:1.5px solid var(--bdr);border-radius:16px;padding:6px 12px;font-size:11.5px;font-weight:700;margin:0 6px 7px 0">
+    <span style="width:8px;height:8px;border-radius:50%;background:${dotCol(s.status)};flex-shrink:0;${mine?'cursor:pointer':''}" title="${mine?'Tap to cycle missing, draft, current':s.status}" ${mine?`onclick="mpSopCycle('${s.id}')"`:''}></span>
+    ${escHtml(s.name)}
+    ${mine?`<span style="cursor:pointer;color:var(--mut);font-weight:400" onclick="mpSopDel('${s.id}')">✕</span>`:''}
+  </span>`;
   return `<div class="card" style="margin-bottom:12px">
-    <div class="card-title">SOPs ${mine?'I own':p+' owns'} <span style="font-weight:500;color:var(--mut);font-size:11px">who owns which process, and its state</span></div>
-    ${(d.sops||[]).length?(d.sops||[]).map(s=>`<div style="display:flex;gap:10px;align-items:center;padding:6px 0;border-bottom:1px solid var(--bdr);font-size:13px">
-      <span style="flex:1">${escHtml(s.name)}</span>
-      ${mine?`<select class="form-select" style="width:auto;padding:2px 8px;font-size:11px" onchange="mpSopSet('${s.id}',this.value)">${['missing','draft','current'].map(x=>`<option${x===s.status?' selected':''}>${x}</option>`).join('')}</select><span style="cursor:pointer;color:var(--mut)" onclick="mpSopDel('${s.id}')">✕</span>`:chip(s.status)}
-    </div>`).join(''):'<div style="font-size:12.5px;color:var(--mut)">None listed yet.</div>'}
-    ${mine?`<div style="display:flex;gap:6px;margin-top:8px"><input class="form-input" id="mp-sop-txt" placeholder="Process name, e.g. Client onboarding" style="flex:1" onkeydown="if(event.key==='Enter')mpSopAdd()"><button class="btn btn-ghost btn-sm" onclick="mpSopAdd()">Add</button></div>`:''}
+    <div class="card-title" style="letter-spacing:.07em;text-transform:uppercase;font-size:11px;color:var(--mut)">SOPs ${mine?'I own':p+' owns'}</div>
+    <div style="font-size:10px;color:var(--mut);margin-bottom:8px"><span style="color:var(--grn)">●</span> current · <span style="color:var(--amb)">●</span> draft · <span style="color:var(--red)">●</span> missing${mine?' · tap a dot to change it':''}</div>
+    ${(d.sops||[]).length?(d.sops||[]).map(pill).join(''):'<div style="font-size:12.5px;color:var(--mut)">None listed yet.</div>'}
+    ${mine?`<div style="display:flex;gap:6px;margin-top:8px"><input class="form-input" id="mp-sop-txt" placeholder="Process name" style="flex:1;font-size:12px" onkeydown="if(event.key==='Enter')mpSopAdd()"><button class="btn btn-ghost btn-sm" onclick="mpSopAdd()">Add</button></div>`:''}
   </div>`;
+}
+function mpSopCycle(id){
+  const p=mpWho(); if(p!==CURRENT_USER) return;
+  const d=mpGet(p); const s=(d.sops||[]).find(x=>x.id===id); if(!s) return;
+  s.status=s.status==='missing'?'draft':s.status==='draft'?'current':'missing';
+  mpSet(p,d); mpDraw();
 }
 function mpSopAdd(){
   const t=document.getElementById('mp-sop-txt')?.value.trim(); if(!t) return;
   const p=mpWho(); if(p!==CURRENT_USER) return;
   const d=mpGet(p); (d.sops=d.sops||[]).push({id:uid(),name:t,status:'missing'});
   mpSet(p,d); mpDraw();
-}
-function mpSopSet(id,v){
-  const p=mpWho(); if(p!==CURRENT_USER) return;
-  const d=mpGet(p); const s=(d.sops||[]).find(x=>x.id===id); if(!s) return;
-  s.status=v; mpSet(p,d); mpDraw();
 }
 function mpSopDel(id){
   const p=mpWho(); if(p!==CURRENT_USER) return;
