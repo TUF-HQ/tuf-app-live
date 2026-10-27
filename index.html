@@ -306,6 +306,7 @@ details>summary::-webkit-details-marker{display:none}
 }
 /* ═══ AI-GUIDED OKR SESSION (full-screen, readable across a room) ═══ */
 #okr-session{position:fixed;inset:0;z-index:2000;background:var(--k);color:var(--w);display:none;flex-direction:column;font-family:'Montserrat',sans-serif}
+#wm-live{position:fixed;inset:0;z-index:2000;background:var(--k);color:var(--w);display:none;flex-direction:column;padding:3vh 5vw;overflow:auto}
 .okr-top{display:flex;align-items:center;gap:14px;padding:14px 22px;border-bottom:1px solid #26262b;flex-wrap:wrap}
 .okr-top .okr-brand{font-weight:800;letter-spacing:.5px;font-size:13px;color:var(--y)}
 .okr-phases{display:flex;gap:6px;flex-wrap:wrap;flex:1}
@@ -513,6 +514,7 @@ details>summary::-webkit-details-marker{display:none}
          Tasks (teamtasks) removed per James; everyone now works from Tasks. -->
     <div class="sb-section">Overview</div>
     <div class="sb-item active" data-page="home" onclick="nav('home',this)">Morning Brief</div>
+    <div class="sb-item" data-page="wmeeting" onclick="nav('wmeeting',this)">Weekly Meeting</div>
     <div class="sb-item" data-page="teamoverview" onclick="nav('teamoverview',this)">Team Overview</div>
     <div class="sb-item" data-page="transcript" onclick="nav('transcript',this)">Meeting Notes</div>
 
@@ -764,6 +766,7 @@ details>summary::-webkit-details-marker{display:none}
 
     <!-- ═══ COACHING SESSIONS ═══ -->
     <div class="page" id="page-coaching"><div id="coaching-content"></div></div>
+    <div class="page" id="page-wmeeting"><div id="wmeeting-render"></div></div>
 
     <!-- ═══ GROWTH PLAN ═══ -->
     <div class="page" id="page-growthplan"><div id="growth-content"></div></div>
@@ -888,6 +891,7 @@ details>summary::-webkit-details-marker{display:none}
 </div>
 
 <!-- AI-GUIDED OKR SESSION OVERLAY -->
+<div id="wm-live"></div>
 <div id="okr-session">
   <div class="okr-top">
     <span class="okr-brand">TUF · OKR SESSION</span>
@@ -1490,6 +1494,17 @@ function initApp(user){
     const el=document.querySelector('[data-page=tasks]');
     if(el) nav('tasks', el);
   }
+  // A shared pre read link (#wm-preread-<meetingId>) overrides the landing page.
+  try{
+    const pre='#wm-preread-';
+    if(location.hash&&location.hash.indexOf(pre)===0){
+      wmView='preread'; wmSelMeetingId=location.hash.slice(pre.length);
+      const el=document.querySelector('[data-page=wmeeting]');
+      if(el) nav('wmeeting', el);
+    }
+  }catch(e){}
+  // Next Monday's meeting exists as soon as anyone opens the app this week.
+  wmLoad().then(r=>{ if(r.ok) wmEnsureMeeting(); }).catch(()=>{});
 }
 
 // One-time contact details update (June 2026). Puts contact details onto
@@ -1738,7 +1753,7 @@ function seedDefaultData(){
 // ═══ NAVIGATION ══════════════════════════════════════════════════════════════
 const PAGE_TITLES = {
   myday:'My Day',
-  home:'Morning Brief',teamoverview:'Team Overview',tasks:'Tasks',transcript:'Meeting Notes → Tasks',
+  home:'Morning Brief',teamoverview:'Team Overview',tasks:'Tasks',transcript:'Meeting Notes → Tasks',wmeeting:'Weekly Meeting',
   people:'Network',members:'Boardroom Members',pipeline:'Sales Pipeline',inbound:'Inbound Leads',dannycal:"Danny's Calendar",
   boardroom:'Boardroom',crmhub:'CRM',crmclean:'CRM Cleanup',content:'Content Calendar',social:'Social Media',kpis:'KPIs',aidump:'AI Tool (Dump)',buildreq:'Build Requests',clientanalysis:'Client Analysis',emaillist:'Email List',watemplates:'WhatsApp Templates',
   testimonials:'Testimonials',
@@ -1775,7 +1790,7 @@ function goPage(page){ nav(page, document.querySelector('[data-page='+page+']'))
 function goPersonTasks(p){ taskViewMode='person'; taskStatusFilter='Open'; taskFocusPerson=p; goPage('tasks'); }
 function renderPage(page){
   const fns = {
-    home:renderHome, tasks:renderTasks, transcript:renderTranscript,
+    home:renderHome, tasks:renderTasks, transcript:renderTranscript, wmeeting:renderWMeeting,
     people:renderPeople, members:renderMembers, pipeline:renderPipeline, inbound:renderInbound, dannycal:renderDannyCal,
     boardroom:renderBoardroom, crmhub:renderCRMHub, crmclean:renderCleanup, content:renderContent, social:renderSocial, kpis:renderKPIs, aidump:renderAIDump, buildreq:renderBuildRequests, clientanalysis:renderClientAnalysis, emaillist:renderEmailList, watemplates:renderWATemplates,
     testimonials:renderTestimonials,
@@ -8330,6 +8345,516 @@ function podMeasuresView(){
     </div>
     <div style="font-size:11px;color:var(--mut);margin-top:12px">All four are computed from the episode and pipeline records, never self reported. The seven per episode metrics are typed in by hand on each episode's Metrics card.</div>
   `;
+}
+
+// ═══ WEEKLY MEETING (Joe's Monday meeting on rails) ══════════════════════════
+// Row per record Supabase tables (wm_meetings / wm_items / wm_parking /
+// wm_settings), like coaching, because the whole team edits the agenda at once
+// on Monday morning. One time SQL lives in weekly_meeting.sql. Everything Joe
+// may need to change lives in wm_settings, never in code. Every clock rule
+// runs in Europe/London through Intl, so the March and October clock changes
+// cannot move the cutoff.
+let wmView='agenda', wmSelMeetingId=null, wmLiveList=[], wmLiveIdx=0, __wmLiveInt=null, __wmLiveStartedAt=0, wmLivePanel='';
+let wmData={meetings:[],items:[],parking:[],settings:{},loaded:false};
+const WM_TYPES=[['decision','Decision needed'],['help','Help needed'],['update','Update']];
+const WM_TYPE_LABEL=Object.fromEntries(WM_TYPES);
+const WM_WDS=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+function wmSettings(){
+  const d={chair:'Joe',default_length_min:60,cutoff_day:'Mon',cutoff_time:'09:00',minutes_options:[5,10,15],questions_slot_min:5,parking_review_min:5};
+  return {...d,...(wmData.settings||{})};
+}
+function wmIsChair(){ return CURRENT_USER===wmSettings().chair; }
+// ── Europe/London clock helpers (pure, unit tested) ──
+function wmLondonParts(d){
+  const p={};
+  new Intl.DateTimeFormat('en-GB',{timeZone:'Europe/London',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',weekday:'short',hour12:false}).formatToParts(d||new Date()).forEach(x=>{ if(x.type!=='literal') p[x.type]=x.value; });
+  return {y:+p.year,m:+p.month,d:+p.day,hh:(+p.hour)%24,mm:+p.minute,wd:p.weekday,ymd:p.year+'-'+p.month+'-'+p.day};
+}
+function wmYmdAddDays(ymd,n){
+  const dt=new Date(Date.UTC(+ymd.slice(0,4),+ymd.slice(5,7)-1,+ymd.slice(8,10),12));
+  dt.setUTCDate(dt.getUTCDate()+n);
+  return dt.toISOString().slice(0,10);
+}
+function wmYmdWeekday(ymd){
+  const dt=new Date(Date.UTC(+ymd.slice(0,4),+ymd.slice(5,7)-1,+ymd.slice(8,10),12));
+  return (dt.getUTCDay()+6)%7; // Mon 0 .. Sun 6
+}
+function wmNextMondayYmd(now){
+  const p=wmLondonParts(now||new Date());
+  return wmYmdAddDays(p.ymd,(7-WM_WDS.indexOf(p.wd))%7);
+}
+// The Date whose London wall time is ymd hh:mm, found by guess and correct.
+function wmLondonInstant(ymd,hhmm){
+  const hh=+String(hhmm||'09:00').slice(0,2), mm=+String(hhmm||'09:00').slice(3,5);
+  let guess=new Date(Date.UTC(+ymd.slice(0,4),+ymd.slice(5,7)-1,+ymd.slice(8,10),hh,mm));
+  for(let i=0;i<2;i++){
+    const p=wmLondonParts(guess);
+    const got=Date.UTC(p.y,p.m-1,p.d,p.hh,p.mm);
+    const want=Date.UTC(+ymd.slice(0,4),+ymd.slice(5,7)-1,+ymd.slice(8,10),hh,mm);
+    guess=new Date(guess.getTime()+(want-got));
+  }
+  return guess;
+}
+// Cutoff instant for a meeting: the configured weekday and time at or before
+// the meeting date (default Monday 09:00, the morning of the meeting itself).
+function wmCutoff(meeting,s){
+  s=s||wmSettings();
+  const back=(wmYmdWeekday(meeting.meeting_date)-WM_WDS.indexOf(s.cutoff_day||'Mon')+7)%7;
+  return wmLondonInstant(wmYmdAddDays(meeting.meeting_date,-back),s.cutoff_time||'09:00');
+}
+function wmIsLocked(meeting,s,now){
+  if(!meeting) return true;
+  if(meeting.status!=='open') return true;
+  return (now||new Date()).getTime()>=wmCutoff(meeting,s).getTime();
+}
+// ── Data ──
+async function wmLoad(){
+  if(typeof sb==='undefined'||!sb) return {ok:false,reason:'error',msg:'Not connected'};
+  try{
+    const [m,i,pk,st]=await Promise.all([
+      sb.from('wm_meetings').select('*'),
+      sb.from('wm_items').select('*'),
+      sb.from('wm_parking').select('*'),
+      sb.from('wm_settings').select('*')
+    ]);
+    const err=[m,i,pk,st].map(r=>r.error).find(Boolean);
+    if(err) throw err;
+    const settings={}; (st.data||[]).forEach(r=>{ settings[r.key]=r.value; });
+    wmData={meetings:m.data||[],items:i.data||[],parking:pk.data||[],settings:settings,loaded:true};
+    return {ok:true};
+  }catch(e){
+    const msg=String((e&&e.message)||e);
+    const setup=msg.indexOf('schema cache')>=0||msg.indexOf('does not exist')>=0;
+    return {ok:false,reason:setup?'setup':'error',msg};
+  }
+}
+function wmRefresh(){ wmLoad().then(r=>{ if(r.ok) wmDraw(); }); }
+function wmUpcoming(){
+  return wmData.meetings.filter(m=>m.type==='team'&&(m.status==='open'||m.status==='locked'||m.status==='live'))
+    .slice().sort((a,b)=>(a.meeting_date||'').localeCompare(b.meeting_date||''))[0]||null;
+}
+async function wmEnsureMeeting(){
+  if(!wmData.loaded||wmUpcoming()) return null;
+  const s=wmSettings();
+  const row=await coIns('wm_meetings',{meeting_date:wmNextMondayYmd(),type:'team',length_min:s.default_length_min,chair:s.chair,status:'open',created_by:CURRENT_USER});
+  if(row) wmData.meetings.push(row);
+  return row;
+}
+// The meeting after this one; created on demand so late and carried items have
+// somewhere to land.
+async function wmGetOrCreateFollowing(meeting){
+  const after=wmData.meetings.filter(m=>m.type==='team'&&m.status==='open'&&(m.meeting_date||'')>(meeting.meeting_date||''))
+    .sort((a,b)=>(a.meeting_date||'').localeCompare(b.meeting_date||''))[0];
+  if(after) return after;
+  const s=wmSettings();
+  const row=await coIns('wm_meetings',{meeting_date:wmYmdAddDays(meeting.meeting_date,7),type:'team',length_min:s.default_length_min,chair:s.chair,status:'open',created_by:CURRENT_USER});
+  if(row) wmData.meetings.push(row);
+  return row;
+}
+function wmItemsFor(mid){ return wmData.items.filter(x=>x.meeting_id===mid); }
+function wmParkingFor(mid){ return wmData.parking.filter(x=>x.meeting_id===mid); }
+// Pure: agenda order and running minute budget. Fixed slots (questions on
+// updates + parking lot review) come off the top of the meeting length.
+function wmAgendaCalc(items,meeting,s){
+  const order={decision:0,help:1};
+  const timed=items.filter(x=>x.type!=='update').slice()
+    .sort((a,b)=>((order[a.type]??9)-(order[b.type]??9))||((a.sort_order||0)-(b.sort_order||0))||String(a.created_at||'').localeCompare(b.created_at||''));
+  const fixed=(+s.questions_slot_min||5)+(+s.parking_review_min||5);
+  let cum=0;
+  const rows=timed.map(it=>{ cum+=(+it.minutes||0); return {item:it,cum:cum,rolls:cum>((+meeting.length_min||60)-fixed)}; });
+  return {rows:rows,updates:items.filter(x=>x.type==='update'),used:cum+fixed,fixed:fixed};
+}
+function wmCanEdit(it,meeting){
+  if(meeting.status==='closed'||meeting.status==='skipped') return false;
+  if(wmIsChair()) return true;
+  return it.created_by===CURRENT_USER&&!wmIsLocked(meeting);
+}
+// ── Page shell ──
+function renderWMeeting(){
+  const el=document.getElementById('wmeeting-render'); if(!el) return;
+  el.innerHTML='<div class="empty">Loading the meeting…</div>';
+  const ta=document.getElementById('topbar-actions'); if(ta) ta.innerHTML='';
+  wmLoad().then(async r=>{
+    const still=document.getElementById('wmeeting-render'); if(!still) return;
+    if(!r.ok){
+      still.innerHTML = r.reason==='setup'
+        ? `<div class="card" style="border-left:4px solid var(--amb)"><div style="font-weight:800;margin-bottom:6px">One time setup needed</div><div style="font-size:13px;line-height:1.6">The meeting tables do not exist yet. Run <b>weekly_meeting.sql</b> in the Supabase dashboard (SQL editor, one file), then reload this page. Nothing else in the app is affected.</div></div>`
+        : `<div class="card" style="border-left:4px solid var(--red)"><div style="font-weight:800;margin-bottom:6px">Could not load the meeting</div><div style="font-size:13px">${escHtml(r.msg||'Unknown error')}</div><button class="btn btn-ghost btn-sm" style="margin-top:10px" onclick="renderWMeeting()">Retry</button></div>`;
+      return;
+    }
+    await wmEnsureMeeting();
+    wmDraw();
+  });
+}
+function wmNav(v){ wmView=v; if(v!=='summary') wmSelMeetingId=null; wmDraw(); }
+function wmDraw(){
+  const el=document.getElementById('wmeeting-render'); if(!el) return;
+  const pills=[['agenda','Agenda'],['preread','Pre read'],['summary','Past meetings'],['settings','Settings']];
+  const nav=`<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px">${pills.map(([k,l])=>`<button class="btn btn-sm ${wmView===k?'btn-k':'btn-ghost'}" onclick="wmNav('${k}')">${l}</button>`).join('')}</div>`;
+  const body=wmView==='preread'?wmPrereadView():wmView==='summary'?wmSummaryView():wmView==='settings'?wmSettingsView():wmAgendaView();
+  el.innerHTML=nav+body;
+  const ta=document.getElementById('topbar-actions');
+  if(ta) ta.innerHTML=`<button class="btn btn-k btn-sm" onclick="wmItemModal('')">+ Add item</button>`;
+}
+// ── Agenda ──
+function wmAgendaView(){
+  const m=wmUpcoming();
+  if(!m) return '<div class="empty">No upcoming meeting. Reload the page and one is created automatically.</div>';
+  const s=wmSettings();
+  const locked=wmIsLocked(m,s);
+  const items=wmItemsFor(m.id);
+  const calc=wmAgendaCalc(items,m,s);
+  const now=Date.now(); const co=wmCutoff(m,s).getTime();
+  const mins=Math.max(0,Math.round((co-now)/60000));
+  const coTxt=m.status!=='open'?'Agenda locked by the chair':(now>=co?'Agenda locked, late items go to next week':('Agenda locks in '+(mins>=1440?Math.floor(mins/1440)+'d '+Math.floor((mins%1440)/60)+'h':Math.floor(mins/60)+'h '+(mins%60)+'m')));
+  const chairBtns=wmIsChair()?`
+    ${m.status==='open'?`<button class="btn btn-ghost btn-sm" onclick="wmLockNow('${m.id}')">Lock now</button>`:''}
+    <button class="btn btn-ghost btn-sm" onclick="wmMoveModal('${m.id}')">Move date</button>
+    <button class="btn btn-ghost btn-sm" onclick="wmSkip('${m.id}')">Skip</button>
+    <button class="btn btn-y btn-sm" style="font-weight:800" onclick="wmLiveStart('${m.id}')">Start live mode</button>`:'';
+  const itemRow=r=>{
+    const it=r.item;
+    return `<div style="display:flex;gap:10px;align-items:center;padding:8px 0;border-bottom:1px solid var(--bdr);font-size:13px;flex-wrap:wrap;${r.rolls?'opacity:.55':''}">
+      <div style="flex:1;min-width:200px;${wmCanEdit(it,m)?'cursor:pointer':''}" ${wmCanEdit(it,m)?`onclick="wmItemModal('${it.id}')"`:''}>
+        <b>${escHtml(it.title)}</b> <span style="color:var(--mut);font-size:11.5px">· ${escHtml(it.owner||'')}</span>
+        ${it.need?`<div style="font-size:12px;color:var(--mut)">I need: ${escHtml(it.need)}</div>`:''}
+      </div>
+      <span class="tag tag-k" style="font-size:9px">${it.minutes||0} min</span>
+      <span style="font-size:10.5px;color:var(--mut)">at ${r.cum} min</span>
+      ${r.rolls?'<span class="tag tag-a" style="font-size:9px">Rolls to next week</span>':''}
+      ${wmCanEdit(it,m)?`<span style="cursor:pointer;color:var(--mut);padding:0 4px" title="Delete" onclick="wmItemDelete('${it.id}')">✕</span>`:''}
+    </div>`;
+  };
+  const group=(type,label)=>{
+    const g=calc.rows.filter(r=>r.item.type===type);
+    if(!g.length) return '';
+    return `<div style="font-size:10px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--mut);margin:12px 0 2px">${label}</div>${g.map(itemRow).join('')}`;
+  };
+  const over=calc.used>(+m.length_min||60);
+  return `
+    <div class="card" style="margin-bottom:12px;border-left:5px solid var(--y)">
+      <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+        <div style="flex:1;min-width:200px">
+          <div style="font-family:Montserrat,sans-serif;font-weight:700;font-size:17px">${fmtDate(m.meeting_date)} · ${m.length_min} minutes</div>
+          <div style="font-size:12px;color:var(--mut)">Chair ${escHtml(m.chair||s.chair)} · ${coTxt}</div>
+        </div>
+        ${chairBtns}
+      </div>
+    </div>
+    <div style="font-size:12.5px;font-weight:700;background:var(--bg);border:1px solid var(--bdr);border-radius:8px;padding:8px 14px;margin-bottom:12px">Not on the agenda? It goes in the parking lot.</div>
+    ${items.length?`
+      <div class="card" style="margin-bottom:12px">
+        ${group('decision','Decision needed')}
+        ${group('help','Help needed')}
+        <div style="font-size:10px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--mut);margin:12px 0 2px">Fixed slots</div>
+        <div style="display:flex;gap:10px;align-items:center;padding:8px 0;border-bottom:1px solid var(--bdr);font-size:13px"><div style="flex:1"><b>Questions on updates</b> <span style="color:var(--mut);font-size:11.5px">· written updates are below, this slot is questions only</span></div><span class="tag tag-k" style="font-size:9px">${s.questions_slot_min} min</span></div>
+        <div style="display:flex;gap:10px;align-items:center;padding:8px 0;font-size:13px"><div style="flex:1"><b>Parking lot review</b> <span style="color:var(--mut);font-size:11.5px">· ${wmParkingFor(m.id).length} parked so far</span></div><span class="tag tag-k" style="font-size:9px">${s.parking_review_min} min</span></div>
+        <div style="font-size:12px;font-weight:700;margin-top:10px;color:${over?'var(--red)':'var(--grn)'}">${calc.used} of ${m.length_min} minutes planned, including the ${calc.fixed} fixed. ${over?'Over the hour: the greyed items roll to next week.':''}</div>
+      </div>
+      ${calc.updates.length?`<div class="card" style="margin-bottom:12px"><div class="card-title">Written updates <span style="font-weight:500;color:var(--mut);font-size:11px">read before the meeting, not presented in it</span></div>
+        ${calc.updates.map(u=>`<div style="padding:7px 0;border-bottom:1px solid var(--bdr);font-size:12.5px"><b>${escHtml(u.title)}</b> <span style="color:var(--mut);font-size:11px">· ${escHtml(u.owner||'')}</span>${wmCanEdit(u,m)?` <span style="cursor:pointer;color:var(--mut);font-size:11px;text-decoration:underline" onclick="wmItemModal('${u.id}')">edit</span>`:''}<div style="white-space:pre-wrap;color:var(--mut);font-size:12px;margin-top:2px">${escHtml(u.note||'No update written yet.')}</div></div>`).join('')}</div>`:''}
+    `:`<div class="card" style="margin-bottom:12px"><div style="font-size:13.5px;line-height:1.6">Nothing needs the room this week. Shorten the meeting or skip it${wmIsChair()?' with the Skip button above':''}; an empty hour is not a target.</div></div>`}
+  `;
+}
+async function wmLockNow(id){
+  if(await coUpd('wm_meetings',id,{status:'locked'})){ const m=wmData.meetings.find(x=>x.id===id); if(m) m.status='locked'; wmDraw(); }
+}
+function wmMoveModal(id){
+  const m=wmData.meetings.find(x=>x.id===id); if(!m) return;
+  showModal('Move the meeting',`<div class="form-row"><label class="form-label">New date</label><input class="form-input" type="date" id="wm-move-date" value="${m.meeting_date}"></div><div style="font-size:11.5px;color:var(--mut)">For bank holidays and clashes. The cutoff moves with it.</div>`,
+    `<button class="btn btn-ghost" onclick="closeModal()">Cancel</button><button class="btn btn-k" onclick="wmMoveSave('${id}')">Move</button>`);
+}
+async function wmMoveSave(id){
+  const d=document.getElementById('wm-move-date')?.value; if(!d) return;
+  if(await coUpd('wm_meetings',id,{meeting_date:d})){ const m=wmData.meetings.find(x=>x.id===id); if(m) m.meeting_date=d; closeModal(); wmDraw(); }
+}
+async function wmSkip(id){
+  if(!confirm('Skip this meeting? Its items move to the next one.')) return;
+  const m=wmData.meetings.find(x=>x.id===id); if(!m) return;
+  const next=await wmGetOrCreateFollowing(m);
+  for(const it of wmItemsFor(m.id).filter(x=>x.status==='open')){
+    if(next&&await coUpd('wm_items',it.id,{meeting_id:next.id},true)) it.meeting_id=next.id;
+  }
+  if(await coUpd('wm_meetings',id,{status:'skipped'})) m.status='skipped';
+  await wmEnsureMeeting();
+  addNotif('Meeting skipped, items moved to '+(next?fmtShort(next.meeting_date):'next week'));
+  wmDraw();
+}
+// ── Add and edit items ──
+function wmItemModal(id){
+  const m=wmUpcoming();
+  if(!m){ alert('No upcoming meeting to add to yet. Open the Weekly Meeting page first.'); return; }
+  const it=id?wmData.items.find(x=>x.id===id):null;
+  const s=wmSettings();
+  const locked=!it&&wmIsLocked(m,s);
+  showModal(it?'Edit item':'Add to the agenda',`
+    ${locked?`<div style="font-size:12px;background:var(--rbg);border:1px solid var(--red);border-radius:8px;padding:8px 12px;margin-bottom:10px">The agenda for ${fmtShort(m.meeting_date)} is locked, so this files for the following meeting.</div>`:''}
+    <div class="form-row"><label class="form-label">Title</label><input class="form-input" id="wmi-title" value="${escAttr(it?it.title:'')}"></div>
+    <div class="grid-2">
+      <div class="form-row"><label class="form-label">Type</label><select class="form-select" id="wmi-type" onchange="wmItemTypeSync()">${WM_TYPES.map(([k,l])=>`<option value="${k}"${it&&it.type===k?' selected':''}>${l}</option>`).join('')}</select></div>
+      <div class="form-row" id="wmi-min-row"><label class="form-label">Minutes needed</label><select class="form-select" id="wmi-min">${(s.minutes_options||[5,10,15]).map(v=>`<option${it&&it.minutes===v?' selected':''}>${v}</option>`).join('')}</select></div>
+    </div>
+    <div class="form-row" id="wmi-need-row"><label class="form-label">By the end of this I need</label><input class="form-input" id="wmi-need" value="${escAttr(it?it.need||'':'')}" placeholder="a yes or no on the new podcast editor"></div>
+    <div class="form-row"><label class="form-label" id="wmi-note-label">Note or link (optional)</label><textarea class="form-textarea" id="wmi-note" style="min-height:70px">${escHtml(it?it.note||'':'')}</textarea></div>
+    <div class="form-row"><label class="form-label">Owner</label><select class="form-select" id="wmi-owner">${TASK_PEOPLE.map(p=>`<option${(it?it.owner===p:p===CURRENT_USER)?' selected':''}>${p}</option>`).join('')}</select></div>
+  `,`<button class="btn btn-ghost" onclick="closeModal()">Cancel</button><button class="btn btn-k" onclick="wmItemSave('${id||''}')">${it?'Save':'Add it'}</button>`);
+  wmItemTypeSync();
+}
+function wmItemTypeSync(){
+  const t=document.getElementById('wmi-type')?.value;
+  const mr=document.getElementById('wmi-min-row'), nr=document.getElementById('wmi-need-row'), nl=document.getElementById('wmi-note-label');
+  if(mr) mr.style.visibility=t==='update'?'hidden':'visible';
+  if(nr) nr.style.display=t==='update'?'none':'block';
+  if(nl) nl.textContent=t==='update'?'The update itself, written here, not presented live':'Note or link (optional)';
+}
+async function wmItemSave(id){
+  const g=x=>document.getElementById(x)?.value||'';
+  const title=g('wmi-title').trim(); const type=g('wmi-type'); const need=g('wmi-need').trim();
+  if(!title){ alert('The item needs a title.'); return; }
+  if(type!=='update'&&!need){ alert('Say what you need by the end of it. That line is the whole point.'); return; }
+  const it=id?wmData.items.find(x=>x.id===id):null;
+  const fields={title:title,type:type,need:type==='update'?'':need,minutes:type==='update'?null:(+g('wmi-min')||5),note:g('wmi-note'),owner:g('wmi-owner')};
+  if(it){
+    if(await coUpd('wm_items',id,fields)){ Object.assign(it,fields); closeModal(); wmDraw(); }
+    return;
+  }
+  let m=wmUpcoming(); const s=wmSettings();
+  if(wmIsLocked(m,s)) m=await wmGetOrCreateFollowing(m);
+  if(!m){ alert('Could not find a meeting to add to.'); return; }
+  const row=await coIns('wm_items',{meeting_id:m.id,...fields,status:'open',created_by:CURRENT_USER});
+  if(row){ wmData.items.push(row); closeModal(); addNotif('On the agenda for '+fmtShort(m.meeting_date)); wmDraw(); }
+}
+async function wmItemDelete(id){
+  if(!confirm('Take this item off the agenda?')) return;
+  if(await coDel('wm_items',id)){ wmData.items=wmData.items.filter(x=>x.id!==id); wmDraw(); }
+}
+// ── Pre read ──
+function wmPrereadView(){
+  const m=wmSelMeetingId?wmData.meetings.find(x=>x.id===wmSelMeetingId):wmUpcoming();
+  if(!m) return '<div class="empty">No meeting to read.</div>';
+  const items=wmItemsFor(m.id);
+  const calc=wmAgendaCalc(items,m,wmSettings());
+  const link=location.origin+location.pathname+'#wm-preread-'+m.id;
+  return `
+    <div class="card" style="margin-bottom:12px"><div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+      <div style="flex:1;min-width:200px"><div style="font-family:Montserrat,sans-serif;font-weight:700;font-size:16px">Pre read · ${fmtDate(m.meeting_date)}</div>
+      <div style="font-size:12px;color:var(--mut)">Everything below is readable in five minutes. Updates are written, the meeting is for decisions.</div></div>
+      <button class="btn btn-ghost btn-sm" onclick="navigator.clipboard.writeText('${escAttr(link)}').then(()=>addNotif('Pre read link copied'))">Copy link</button>
+    </div></div>
+    ${calc.rows.length?`<div class="card" style="margin-bottom:12px"><div class="card-title">On the agenda</div>
+      ${calc.rows.map(r=>`<div style="padding:8px 0;border-bottom:1px solid var(--bdr)"><div style="font-size:14px"><b>${escHtml(r.item.title)}</b> <span style="color:var(--mut);font-size:11.5px">· ${escHtml(r.item.owner||'')} · ${r.item.minutes||0} min</span></div><div style="font-size:13px;margin-top:2px">I need: <b>${escHtml(r.item.need||'')}</b></div>${r.item.note?`<div style="font-size:12px;color:var(--mut);margin-top:2px;white-space:pre-wrap">${escHtml(r.item.note)}</div>`:''}</div>`).join('')}</div>`:''}
+    ${calc.updates.length?`<div class="card"><div class="card-title">Written updates</div>
+      ${calc.updates.map(u=>`<div style="padding:8px 0;border-bottom:1px solid var(--bdr)"><div style="font-size:13.5px;font-weight:700">${escHtml(u.title)} <span style="color:var(--mut);font-weight:500;font-size:11.5px">· ${escHtml(u.owner||'')}</span></div><div style="font-size:12.5px;white-space:pre-wrap;margin-top:2px">${escHtml(u.note||'No update written yet.')}</div></div>`).join('')}</div>`:''}
+    ${!items.length?'<div class="empty">Nothing on the agenda yet.</div>':''}
+  `;
+}
+// ── Live mode (chair only, full screen overlay) ──
+function wmLiveStart(mid){
+  if(!wmIsChair()){ alert('Live mode belongs to the chair ('+wmSettings().chair+').'); return; }
+  const m=wmData.meetings.find(x=>x.id===mid); if(!m) return;
+  const s=wmSettings();
+  const calc=wmAgendaCalc(wmItemsFor(mid),m,s);
+  wmLiveList=calc.rows.filter(r=>!r.rolls&&r.item.status==='open').map(r=>({kind:'item',item:r.item,minutes:+r.item.minutes||5}));
+  wmLiveList.push({kind:'slot',title:'Questions on updates',minutes:+s.questions_slot_min||5});
+  wmLiveList.push({kind:'slot',title:'Parking lot review',minutes:+s.parking_review_min||5});
+  wmLiveIdx=0; wmSelMeetingId=mid; wmLivePanel='';
+  if(m.status!=='live'){ m.status='live'; m.started_at=m.started_at||new Date().toISOString(); coUpd('wm_meetings',mid,{status:'live',started_at:m.started_at},true); }
+  const ov=document.getElementById('wm-live'); if(ov){ ov.style.display='flex'; document.body.style.overflow='hidden'; }
+  wmLivePaint(true);
+}
+function wmLiveExit(){
+  if(__wmLiveInt){ clearInterval(__wmLiveInt); __wmLiveInt=null; }
+  const ov=document.getElementById('wm-live'); if(ov) ov.style.display='none';
+  document.body.style.overflow='';
+  wmDraw();
+}
+function wmLivePaint(resetClock){
+  const ov=document.getElementById('wm-live'); if(!ov) return;
+  if(__wmLiveInt){ clearInterval(__wmLiveInt); __wmLiveInt=null; }
+  const cur=wmLiveList[wmLiveIdx];
+  const m=wmData.meetings.find(x=>x.id===wmSelMeetingId);
+  if(!cur||!m){ wmLiveFinishPrompt(); return; }
+  if(resetClock) __wmLiveStartedAt=Date.now();
+  const total=wmLiveList.length;
+  const title=cur.kind==='slot'?cur.title:cur.item.title;
+  const need=cur.kind==='slot'?(cur.title==='Parking lot review'?'Decide which parked items deserve next week. Nothing gets discussed now.':'Questions only. The updates were read before the meeting.'):cur.item.need;
+  const owner=cur.kind==='slot'?'':(cur.item.owner||'');
+  ov.innerHTML=`
+    <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">
+      <span style="font-size:13px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--y)">Live · ${wmLiveIdx+1} of ${total}</span>
+      <span style="flex:1"></span>
+      <button class="btn btn-ghost btn-sm" onclick="wmLiveExit()">Pause and exit</button>
+      <button class="btn btn-ghost btn-sm" style="border-color:var(--y);color:var(--y)" onclick="wmLiveFinishPrompt()">Close the meeting</button>
+    </div>
+    <div style="flex:1;display:flex;flex-direction:column;justify-content:center;max-width:960px;margin:0 auto;width:100%">
+      <div style="font-size:clamp(13px,1.6vw,17px);color:#9BA0A8;font-weight:700">${escHtml(owner)}</div>
+      <div style="font-family:Montserrat,sans-serif;font-weight:700;font-size:clamp(26px,4vw,44px);line-height:1.15;margin:6px 0 14px">${escHtml(title)}</div>
+      ${need?`<div style="font-size:clamp(18px,2.6vw,30px);line-height:1.35"><span style="color:#9BA0A8">I need:</span> <b>${escHtml(need)}</b></div>`:''}
+      <div id="wm-clock" style="font-family:Montserrat,sans-serif;font-weight:800;font-size:clamp(56px,10vw,120px);margin:24px 0 10px">--:--</div>
+      <div id="wm-live-panel"></div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:18px">
+        ${cur.kind==='item'?`<button class="btn btn-y" style="font-size:16px;padding:12px 26px;font-weight:800" onclick="wmLivePanelShow('close')">Close item</button>`:''}
+        <button class="btn btn-ghost" style="font-size:15px;padding:12px 22px;color:var(--w);border-color:#3A3B40" onclick="wmLivePanelShow('park')">Park it</button>
+        <span style="flex:1"></span>
+        ${wmLiveIdx>0?`<button class="btn btn-ghost btn-sm" style="color:var(--w);border-color:#3A3B40" onclick="wmLiveIdx--;wmLivePaint(true)">Back</button>`:''}
+        <button class="btn btn-ghost btn-sm" style="color:var(--w);border-color:#3A3B40" onclick="wmLiveIdx++;wmLivePaint(true)">${cur.kind==='item'?'Skip for now':'Next'}</button>
+      </div>
+    </div>`;
+  const budget=cur.minutes*60000;
+  const paintClock=()=>{
+    const elC=document.getElementById('wm-clock'); if(!elC){ if(__wmLiveInt){clearInterval(__wmLiveInt);__wmLiveInt=null;} return; }
+    const left=budget-(Date.now()-__wmLiveStartedAt);
+    const a=Math.abs(left); const mm=Math.floor(a/60000), ss=Math.floor((a%60000)/1000);
+    const t=String(mm)+':'+String(ss).padStart(2,'0');
+    if(left>=0){ elC.textContent=t; elC.style.color=left<=60000?'var(--y)':'var(--w)'; }
+    else { elC.textContent=t+' over'; elC.style.color='var(--red)'; }
+  };
+  paintClock();
+  __wmLiveInt=setInterval(paintClock,1000);
+  if(wmLivePanel) wmLivePanelShow(wmLivePanel);
+}
+function wmLivePanelShow(kind){
+  wmLivePanel=kind;
+  const p=document.getElementById('wm-live-panel'); if(!p) return;
+  const cur=wmLiveList[wmLiveIdx]; if(!cur) return;
+  if(kind==='park'){
+    p.innerHTML=`<div style="display:flex;gap:8px;flex-wrap:wrap;background:#141416;border:1px solid #26272B;border-radius:10px;padding:12px">
+      <input class="form-input" id="wm-park-txt" placeholder="A few words, dealt with later" style="flex:1;min-width:200px" onkeydown="if(event.key==='Enter')wmParkSave()">
+      <button class="btn btn-y btn-sm" onclick="wmParkSave()">Park</button>
+      <button class="btn btn-ghost btn-sm" style="color:var(--w);border-color:#3A3B40" onclick="wmLivePanel='';wmLivePaint(false)">Cancel</button>
+    </div>`;
+    document.getElementById('wm-park-txt')?.focus();
+  } else if(kind==='close'&&cur.kind==='item'){
+    p.innerHTML=`<div style="background:#141416;border:1px solid #26272B;border-radius:10px;padding:14px">
+      <div style="display:flex;gap:8px;margin-bottom:10px">
+        <button class="btn btn-sm ${wmLiveCloseKind!=='action'?'btn-y':'btn-ghost'}" style="${wmLiveCloseKind==='action'?'color:var(--w);border-color:#3A3B40':''}" onclick="wmLiveCloseKind='decision';wmLivePanelShow('close')">A decision</button>
+        <button class="btn btn-sm ${wmLiveCloseKind==='action'?'btn-y':'btn-ghost'}" style="${wmLiveCloseKind!=='action'?'color:var(--w);border-color:#3A3B40':''}" onclick="wmLiveCloseKind='action';wmLivePanelShow('close')">An action</button>
+      </div>
+      ${wmLiveCloseKind==='action'?`
+        <input class="form-input" id="wm-close-txt" placeholder="What gets done" style="margin-bottom:8px">
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <select class="form-select" id="wm-close-owner" style="flex:1;min-width:120px">${TASK_PEOPLE.map(x=>`<option${x===(cur.item.owner||'')?' selected':''}>${x}</option>`).join('')}</select>
+          <input class="form-input" type="date" id="wm-close-due" style="flex:1;min-width:140px">
+          <button class="btn btn-y btn-sm" onclick="wmLiveCloseSave()">Save and next</button>
+        </div>`
+      :`<div style="display:flex;gap:8px;flex-wrap:wrap">
+          <input class="form-input" id="wm-close-txt" placeholder="The decision, one line" style="flex:1;min-width:220px" onkeydown="if(event.key==='Enter')wmLiveCloseSave()">
+          <button class="btn btn-y btn-sm" onclick="wmLiveCloseSave()">Save and next</button>
+        </div>`}
+    </div>`;
+    document.getElementById('wm-close-txt')?.focus();
+  } else p.innerHTML='';
+}
+let wmLiveCloseKind='decision';
+async function wmParkSave(){
+  const txt=document.getElementById('wm-park-txt')?.value.trim(); if(!txt) return;
+  const row=await coIns('wm_parking',{meeting_id:wmSelMeetingId,text:txt,raised_by:CURRENT_USER});
+  if(row){ wmData.parking.push(row); addNotif('Parked: '+txt.slice(0,50)); }
+  wmLivePanel=''; wmLivePaint(false);
+}
+async function wmLiveCloseSave(){
+  const cur=wmLiveList[wmLiveIdx]; if(!cur||cur.kind!=='item') return;
+  const txt=document.getElementById('wm-close-txt')?.value.trim();
+  if(!txt){ alert(wmLiveCloseKind==='action'?'Say what gets done.':'One line on what was decided.'); return; }
+  const patch={status:'covered',closed_at:new Date().toISOString(),outcome_kind:wmLiveCloseKind,outcome_text:txt};
+  if(wmLiveCloseKind==='action'){
+    const owner=document.getElementById('wm-close-owner')?.value||cur.item.owner||'James';
+    const due=document.getElementById('wm-close-due')?.value||'';
+    const tid=uid();
+    await commitTasks(arr=>{ arr.push({id:tid,title:txt,owner:owner,priority:'Medium',dueDate:due,status:'To Do',linkedTo:'wm:'+cur.item.id,notes:'From the Weekly Meeting · '+fmtShort((wmData.meetings.find(x=>x.id===wmSelMeetingId)||{}).meeting_date||'')+' · '+cur.item.title,section:'meeting',createdBy:CURRENT_USER,createdAt:new Date().toISOString(),completedAt:null}); });
+    patch.action_task_id=tid;
+    updateTaskBadge();
+  }
+  if(await coUpd('wm_items',cur.item.id,patch,true)) Object.assign(cur.item,patch);
+  wmLivePanel=''; wmLiveCloseKind='decision'; wmLiveIdx++;
+  wmLivePaint(true);
+}
+function wmLiveFinishPrompt(){
+  const open=wmLiveList.filter(x=>x.kind==='item'&&x.item.status==='open').length;
+  if(!confirm('Close the meeting?'+(open?' '+open+' item'+(open===1?'':'s')+' not reached will carry to next week.':''))){ if(wmLiveIdx>=wmLiveList.length) wmLiveIdx=wmLiveList.length-1; wmLivePaint(false); return; }
+  wmLiveFinish();
+}
+async function wmLiveFinish(){
+  const m=wmData.meetings.find(x=>x.id===wmSelMeetingId); if(!m) return;
+  const next=await wmGetOrCreateFollowing(m);
+  const unreached=wmItemsFor(m.id).filter(x=>x.status==='open'&&x.type!=='update');
+  for(const it of unreached){
+    if(await coUpd('wm_items',it.id,{status:'carried'},true)) it.status='carried';
+    if(next){
+      const row=await coIns('wm_items',{meeting_id:next.id,title:it.title,type:it.type,need:it.need,minutes:it.minutes,note:it.note,owner:it.owner,status:'open',carried_from_id:it.id,created_by:it.created_by||CURRENT_USER});
+      if(row) wmData.items.push(row);
+    }
+  }
+  const ended=new Date().toISOString();
+  if(await coUpd('wm_meetings',m.id,{status:'closed',ended_at:ended})){ m.status='closed'; m.ended_at=ended; }
+  await wmEnsureMeeting();
+  if(__wmLiveInt){ clearInterval(__wmLiveInt); __wmLiveInt=null; }
+  const ov=document.getElementById('wm-live'); if(ov) ov.style.display='none';
+  document.body.style.overflow='';
+  wmView='summary'; wmSelMeetingId=m.id;
+  addNotif('Meeting closed. '+unreached.length+' carried to '+(next?fmtShort(next.meeting_date):'next week'));
+  wmDraw();
+}
+// ── Summary ──
+function wmSummaryView(){
+  const done=wmData.meetings.filter(m=>m.status==='closed'||m.status==='skipped').slice().sort((a,b)=>(b.meeting_date||'').localeCompare(a.meeting_date||''));
+  if(!done.length) return '<div class="empty">No meetings closed yet. The first summary appears after the first live meeting.</div>';
+  const m=wmData.meetings.find(x=>x.id===wmSelMeetingId)||done[0];
+  const items=wmItemsFor(m.id);
+  const tasks=ls.get('tuf_tasks',[])||[];
+  const actual=(m.started_at&&m.ended_at)?Math.round((new Date(m.ended_at)-new Date(m.started_at))/60000):null;
+  const decided=items.filter(x=>x.outcome_kind==='decision');
+  const actions=items.filter(x=>x.outcome_kind==='action');
+  const carried=items.filter(x=>x.status==='carried');
+  const parked=wmParkingFor(m.id);
+  const sec=(label,rows)=>`<div class="card" style="margin-bottom:10px"><div class="card-title">${label} <span style="font-weight:500;color:var(--mut);font-size:11px">${rows.length}</span></div>${rows.length?rows.join(''):'<div style="font-size:12px;color:var(--mut)">None.</div>'}</div>`;
+  return `
+    <div style="display:flex;gap:8px;align-items:center;margin-bottom:12px;flex-wrap:wrap">
+      <select class="form-select" style="width:auto" onchange="wmSelMeetingId=this.value;wmDraw()">${done.map(x=>`<option value="${x.id}"${x.id===m.id?' selected':''}>${fmtDate(x.meeting_date)}${x.status==='skipped'?' (skipped)':''}</option>`).join('')}</select>
+      <span style="font-size:12px;color:var(--mut)">${m.status==='skipped'?'Skipped.':(actual!==null?`Planned ${m.length_min} minutes, ran ${actual}.`:'')} ${items.filter(x=>x.status==='covered').length} of ${items.filter(x=>x.type!=='update').length} items covered.</span>
+    </div>
+    ${sec('Decisions',decided.map(x=>`<div style="padding:6px 0;border-bottom:1px solid var(--bdr);font-size:12.5px"><b>${escHtml(x.title)}</b><div style="color:var(--mut)">${escHtml(x.outcome_text||'')}</div></div>`))}
+    ${sec('Actions',actions.map(x=>{const t=tasks.find(k=>k.id===x.action_task_id);return `<div style="padding:6px 0;border-bottom:1px solid var(--bdr);font-size:12.5px;display:flex;gap:8px;align-items:center;flex-wrap:wrap"><div style="flex:1;min-width:180px"><b>${escHtml(x.outcome_text||'')}</b><div style="color:var(--mut);font-size:11.5px">from ${escHtml(x.title)}${t&&t.dueDate?' · due '+fmtShort(t.dueDate):''}</div></div><span class="tag tag-k" style="font-size:9px">${escHtml(t?t.owner:'')}</span>${t?`<span class="tag ${t.status==='Done'?'tag-g':'tag-a'}" style="font-size:9px">${escHtml(t.status)}</span>`:'<span class="tag tag-a" style="font-size:9px">Task missing</span>'}</div>`;}))}
+    ${sec('Parked',parked.map(x=>`<div style="padding:6px 0;border-bottom:1px solid var(--bdr);font-size:12.5px">${escHtml(x.text)} <span style="color:var(--mut);font-size:11px">· ${escHtml(x.raised_by||'')}</span></div>`))}
+    ${sec('Carried over',carried.map(x=>`<div style="padding:6px 0;border-bottom:1px solid var(--bdr);font-size:12.5px"><b>${escHtml(x.title)}</b> <span style="color:var(--mut);font-size:11px">· moved to the next meeting</span></div>`))}
+  `;
+}
+// ── Settings ──
+function wmSettingsView(){
+  const s=wmSettings();
+  const chair=wmIsChair()||CURRENT_USER==='James';
+  if(!chair) return `<div class="card"><div style="font-size:13px;line-height:1.8">Settings belong to the chair (${escHtml(s.chair)}). Current: ${s.default_length_min} minute meetings, agenda locks ${escHtml(s.cutoff_day)} ${escHtml(s.cutoff_time)}, item slots of ${(s.minutes_options||[]).join(', ')} minutes.</div></div>`;
+  return `<div class="card" style="max-width:520px">
+    <div class="card-title">Meeting settings</div>
+    <div class="grid-2">
+      <div class="form-row"><label class="form-label">Chair</label><select class="form-select" id="wms-chair">${TASK_PEOPLE.map(p=>`<option${p===s.chair?' selected':''}>${p}</option>`).join('')}</select></div>
+      <div class="form-row"><label class="form-label">Meeting length, minutes</label><input class="form-input" type="number" id="wms-len" value="${s.default_length_min}"></div>
+    </div>
+    <div class="grid-2">
+      <div class="form-row"><label class="form-label">Agenda locks on</label><select class="form-select" id="wms-coday">${WM_WDS.map(d=>`<option${d===s.cutoff_day?' selected':''}>${d}</option>`).join('')}</select></div>
+      <div class="form-row"><label class="form-label">At (London time)</label><input class="form-input" type="time" id="wms-cotime" value="${escAttr(s.cutoff_time)}"></div>
+    </div>
+    <div class="grid-2">
+      <div class="form-row"><label class="form-label">Item slots, minutes, comma separated</label><input class="form-input" id="wms-mins" value="${escAttr((s.minutes_options||[]).join(', '))}"></div>
+      <div class="form-row"><label class="form-label">Questions on updates slot</label><input class="form-input" type="number" id="wms-q" value="${s.questions_slot_min}"></div>
+    </div>
+    <div class="form-row"><label class="form-label">Parking lot review slot</label><input class="form-input" type="number" id="wms-p" value="${s.parking_review_min}" style="max-width:120px"></div>
+    <button class="btn btn-k" onclick="wmSettingsSave()">Save settings</button>
+    <div style="font-size:11px;color:var(--mut);margin-top:8px">Changes apply to the next meeting created and to the cutoff immediately. Nothing here needs a developer.</div>
+  </div>`;
+}
+async function wmSettingsSave(){
+  const g=x=>document.getElementById(x)?.value||'';
+  const mins=g('wms-mins').split(',').map(x=>parseInt(x,10)).filter(n=>n>0&&n<=60);
+  const vals={chair:g('wms-chair'),default_length_min:Math.max(15,parseInt(g('wms-len'),10)||60),cutoff_day:g('wms-coday'),cutoff_time:g('wms-cotime')||'09:00',minutes_options:mins.length?mins:[5,10,15],questions_slot_min:Math.max(0,parseInt(g('wms-q'),10)||5),parking_review_min:Math.max(0,parseInt(g('wms-p'),10)||5)};
+  try{
+    const rows=Object.keys(vals).map(k=>({key:k,value:vals[k],updated_at:new Date().toISOString()}));
+    const {error}=await sb.from('wm_settings').upsert(rows,{onConflict:'key'});
+    if(error) throw error;
+    wmData.settings={...wmData.settings,...vals};
+    addNotif('Meeting settings saved');
+    wmDraw();
+  }catch(e){ alert('Save failed: '+(e.message||e)); }
 }
 
 // ═══ IP REGISTER ═════════════════════════════════════════════════════════════
