@@ -8555,7 +8555,7 @@ function wmAgendaView(){
         <div style="font-size:12px;font-weight:700;margin-top:10px;color:${over?'var(--red)':'var(--grn)'}">${calc.used} of ${m.length_min} minutes planned, including the ${calc.fixed} fixed. ${over?'Over the hour: the greyed items roll to next week.':''}</div>
       </div>
       ${calc.updates.length?`<div class="card" style="margin-bottom:12px"><div class="card-title">Written updates <span style="font-weight:500;color:var(--mut);font-size:11px">read before the meeting, not presented in it</span></div>
-        ${calc.updates.map(u=>`<div style="padding:7px 0;border-bottom:1px solid var(--bdr);font-size:12.5px"><b>${escHtml(u.title)}</b> <span style="color:var(--mut);font-size:11px">· ${escHtml(u.owner||'')}</span>${wmCanEdit(u,m)?` <span style="cursor:pointer;color:var(--mut);font-size:11px;text-decoration:underline" onclick="wmItemModal('${u.id}')">edit</span>`:''}<div style="white-space:pre-wrap;color:var(--mut);font-size:12px;margin-top:2px">${escHtml(u.note||'No update written yet.')}</div></div>`).join('')}</div>`:''}
+        ${calc.updates.map(u=>`<div style="padding:7px 0;border-bottom:1px solid var(--bdr);font-size:12.5px"><b>${escHtml(u.title)}</b> <span style="color:var(--mut);font-size:11px">· ${escHtml(u.owner||'')}</span>${wmCanEdit(u,m)?` <span style="cursor:pointer;color:var(--mut);font-size:11px;text-decoration:underline" onclick="wmItemModal('${u.id}')">edit</span>`:''}<div style="margin-top:2px">${u.note?wmNoteHtml(u.note):'<span style="font-size:12px;color:var(--mut)">No update written yet.</span>'}</div></div>`).join('')}</div>`:''}
     `:`<div class="card" style="margin-bottom:12px"><div style="font-size:13.5px;line-height:1.6">Nothing needs the room this week. Shorten the meeting or skip it${wmIsChair()?' with the Skip button above':''}; an empty hour is not a target.</div></div>`}
   `;
 }
@@ -8647,7 +8647,7 @@ function wmPrereadView(){
     ${calc.rows.length?`<div class="card" style="margin-bottom:12px"><div class="card-title">On the agenda</div>
       ${calc.rows.map(r=>`<div style="padding:8px 0;border-bottom:1px solid var(--bdr)"><div style="font-size:14px"><b>${escHtml(r.item.title)}</b> <span style="color:var(--mut);font-size:11.5px">· ${escHtml(r.item.owner||'')} · ${r.item.minutes||0} min</span></div><div style="font-size:13px;margin-top:2px">I need: <b>${escHtml(r.item.need||'')}</b></div>${r.item.note?`<div style="font-size:12px;color:var(--mut);margin-top:2px;white-space:pre-wrap">${escHtml(r.item.note)}</div>`:''}</div>`).join('')}</div>`:''}
     ${calc.updates.length?`<div class="card"><div class="card-title">Written updates</div>
-      ${calc.updates.map(u=>`<div style="padding:8px 0;border-bottom:1px solid var(--bdr)"><div style="font-size:13.5px;font-weight:700">${escHtml(u.title)} <span style="color:var(--mut);font-weight:500;font-size:11.5px">· ${escHtml(u.owner||'')}</span></div><div style="font-size:12.5px;white-space:pre-wrap;margin-top:2px">${escHtml(u.note||'No update written yet.')}</div></div>`).join('')}</div>`:''}
+      ${calc.updates.map(u=>`<div style="padding:8px 0;border-bottom:1px solid var(--bdr)"><div style="font-size:13.5px;font-weight:700">${escHtml(u.title)} <span style="color:var(--mut);font-weight:500;font-size:11.5px">· ${escHtml(u.owner||'')}</span></div><div style="margin-top:2px">${u.note?wmNoteHtml(u.note):'<span style="font-size:12.5px;color:var(--mut)">No update written yet.</span>'}</div></div>`).join('')}</div>`:''}
     ${!items.length?'<div class="empty">Nothing on the agenda yet.</div>':''}
   `;
 }
@@ -9325,6 +9325,24 @@ function renderCapMap2(){
 // contract in TUF_RECAP_AGENT.md). The old pack and wins/blockers page is
 // archived; its store tuf_reviews is untouched.
 let wrv2Week='';
+// Renders written update text so it scans rather than reads (Danny has
+// dyslexia): "- " lines become marked bullets with the owner name bold, ALL
+// CAPS lines become section labels, everything short and well spaced.
+function wmNoteHtml(note){
+  return String(note||'').split('\n').map(line=>{
+    const l=line.trim();
+    if(!l) return '<div style="height:9px"></div>';
+    if(/^[-·•*]\s*/.test(l)){
+      let body=l.replace(/^[-·•*]\s*/,'');
+      const ci=body.indexOf(':');
+      if(ci>0&&ci<=26) body='<b>'+escHtml(body.slice(0,ci))+':</b>'+escHtml(body.slice(ci+1));
+      else body=escHtml(body);
+      return '<div style="display:flex;gap:10px;align-items:flex-start;padding:3px 0;font-size:13.5px;line-height:1.65"><span style="width:7px;height:7px;border-radius:2px;background:var(--y);flex-shrink:0;margin-top:8px"></span><span>'+body+'</span></div>';
+    }
+    if(l.length>3&&l===l.toUpperCase()) return '<div style="font-size:10.5px;font-weight:800;letter-spacing:.07em;color:var(--mut);margin:11px 0 4px">'+escHtml(l)+'</div>';
+    return '<div style="font-size:13px;line-height:1.65;padding:2px 0">'+escHtml(l)+'</div>';
+  }).join('');
+}
 // Mon to Wed the review looks at LAST week (the one filled on Friday); from
 // Thursday it shows the current week forming. London weekday, DST safe.
 function wrv2DefaultWeek(now){
@@ -9385,7 +9403,7 @@ function wrv2Draw(){
   const digest=wrv2Digest();
   const digestCard=`<div class="card" style="margin-bottom:12px;border-left:4px solid var(--y)">
     <div class="card-title" style="letter-spacing:.07em;text-transform:uppercase;font-size:11px;color:var(--mut)">Week in meetings</div>
-    ${digest.length?digest.map(i=>`<div style="font-size:12.5px;white-space:pre-wrap;line-height:1.7">${escHtml(i.note||'')}</div>`).join('<hr style="border:none;border-top:1px dashed var(--bdr)">')
+    ${digest.length?digest.map(i=>wmNoteHtml(i.note||'')).join('<hr style="border:none;border-top:1px dashed var(--bdr)">')
     :'<div style="font-size:12px;color:var(--mut)">No meetings digest filed yet. James’s meetings agent writes one row onto the Monday agenda; the format lives in TUF_RECAP_AGENT.md.</div>'}
   </div>`;
   const mUp=wmUpcoming();
