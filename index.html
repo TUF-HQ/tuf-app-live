@@ -1800,7 +1800,7 @@ function renderPage(page){
     onboarding:renderOnboarding, sessions:renderSessions, padel:renderPadel,
     podcast:renderPodcast, coaching:renderCoaching, growthplan:renderGrowthPlan, ip:renderIP, files:renderFiles,
     capmap:renderCapMap2, goals:renderGoals, market:renderMarket, prospecting:renderProspecting, fourbox:renderFourBox, budget:renderBudget,
-    teamtasks:renderTeamTasks, roles:renderRoles, reviews:renderReviews, notifs:renderNotifs,
+    teamtasks:renderTeamTasks, roles:renderRoles, reviews:renderWeeklyReview2, notifs:renderNotifs,
     csuite:renderCSuite, holidays:renderHolidays, daily:renderDaily, teamoverview:renderTeamOverview, myday:renderMyDay,
   };
   if(fns[page]) fns[page]();
@@ -8909,7 +8909,8 @@ function mpDraw(){
     <div style="text-align:right"><div style="font-family:Montserrat,sans-serif;font-size:32px;font-weight:800;color:var(--y);line-height:1">${streak}</div><div style="font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:#9BA0A8;margin-top:3px">week streak</div></div>
     ${mine?`<button class="btn btn-ghost btn-sm" style="color:var(--w);border-color:#3A3B40" onclick="mpCustomise()">Customise</button>`:''}
   </div>`;
-  const twoCol=`<div style="display:grid;grid-template-columns:3fr 2fr;gap:12px;align-items:start" class="mp-cols">
+  const friday=wmLondonParts().wd==='Fri'?`<div style="font-size:12.5px;font-weight:700;background:var(--y);border-radius:10px;padding:9px 14px;margin-bottom:12px">It is Friday. Log this week’s wins and numbers below; Monday’s review reads straight from here.</div>`:'';
+  const twoCol=`${friday}<div style="display:grid;grid-template-columns:3fr 2fr;gap:12px;align-items:start" class="mp-cols">
     <div>${mpWeekCard(p,d,mine)}</div>
     <div>${mpOneCard(p,mine)}${(d.blocks||{}).sops!==false?mpSopsCard(p,d,mine):''}</div>
   </div><style>@media(max-width:860px){.mp-cols{grid-template-columns:1fr !important}}</style>`;
@@ -9314,6 +9315,132 @@ function renderCapMap2(){
     </div></div>`;
   const ta=document.getElementById('topbar-actions');
   if(ta) ta.innerHTML=`<button class="btn btn-k btn-sm" onclick="cap2Modal('')">+ Add capability</button>`;
+}
+
+// ═══ WEEKLY REVIEW v2 (v113): Danny's Monday chair report ════════════════════
+// Compiled, never filled in. Friday's My Pages (wins + custom metrics), the
+// week's task numbers, open 1:1 items, red capabilities, last Monday's
+// decisions with live action status, and the meetings digest James's agent
+// files onto the Monday agenda (a written update row titled Week in meetings;
+// contract in TUF_RECAP_AGENT.md). The old pack and wins/blockers page is
+// archived; its store tuf_reviews is untouched.
+let wrv2Week='';
+// Mon to Wed the review looks at LAST week (the one filled on Friday); from
+// Thursday it shows the current week forming. London weekday, DST safe.
+function wrv2DefaultWeek(now){
+  const p=wmLondonParts(now||new Date());
+  const idx=WM_WDS.indexOf(p.wd);
+  const thisMon=wmYmdAddDays(p.ymd,-idx);
+  return idx<=2?wmYmdAddDays(thisMon,-7):thisMon;
+}
+// Pure per person compile over injected stores, so it is unit testable.
+function wrv2PersonData(p,wk,st){
+  const d=(st.mypage||{})[p]||{};
+  const w=((d.weeks||{})[wk])||{ach:[],vals:{}};
+  const mets=(d.metrics||[]).map(mt=>{ const v=(w.vals||{})[mt.id]; return {name:mt.name,target:mt.target==null?null:mt.target,val:v===undefined?null:v,hit:mt.target!=null&&v!=null&&v>=mt.target}; });
+  const wkEnd=wmYmdAddDays(wk,7);
+  const tasks=(st.tasks||[]).filter(t=>(!t.scope||t.scope==='board')&&t.owner===p);
+  const doneWk=tasks.filter(t=>t.status==='Done'&&t.completedAt&&String(t.completedAt).slice(0,10)>=wk&&String(t.completedAt).slice(0,10)<wkEnd).length;
+  const today=st.today||new Date().toISOString().slice(0,10);
+  const overdue=tasks.filter(t=>t.status!=='Done'&&t.dueDate&&t.dueDate<today).length;
+  const m=(st.wmMeetings||[]).filter(mm=>mm.type==='one_to_one'&&mm.status==='open'&&mm.with_person===p)[0];
+  const oneOpen=m?(st.wmItems||[]).filter(i=>i.meeting_id===m.id&&i.status==='open').length:0;
+  const reds=(st.capmap||[]).filter(c=>String(c.owner||'').toLowerCase().indexOf(p.toLowerCase())>=0&&c.rag==='R').length;
+  const filled=(w.ach||[]).length>0||mets.some(x=>x.val!=null);
+  return {person:p,role:d.role||'',wins:(w.ach||[]).map(a=>a.text),metrics:mets,doneWk:doneWk,overdue:overdue,oneOpen:oneOpen,reds:reds,filled:filled};
+}
+function wrv2Stores(){
+  const mypage={}; TASK_PEOPLE.forEach(p=>{ mypage[p]=mpGet(p); });
+  return {mypage:mypage,tasks:ls.get('tuf_tasks',[])||[],capmap:cap2All(),wmMeetings:wmData.meetings||[],wmItems:wmData.items||[]};
+}
+function wrv2Digest(){
+  const m=wmUpcoming(); if(!m) return [];
+  return (wmData.items||[]).filter(i=>i.meeting_id===m.id&&i.type==='update'&&String(i.title||'').toLowerCase().indexOf('week in meetings')===0);
+}
+function renderWeeklyReview2(){
+  const el=document.getElementById('reviews-render'); if(!el) return;
+  el.innerHTML='<div class="empty">Compiling the week…</div>';
+  wmLoad().then(()=>wrv2Draw()).catch(()=>wrv2Draw());
+}
+function wrv2Draw(){
+  const el=document.getElementById('reviews-render'); if(!el) return;
+  if(!wrv2Week) wrv2Week=wrv2DefaultWeek();
+  const wk=wrv2Week;
+  const st=wrv2Stores();
+  const rows=TASK_PEOPLE.map(p=>wrv2PersonData(p,wk,st));
+  const filled=rows.filter(r=>r.filled).length;
+  const totWins=rows.reduce((n,r)=>n+r.wins.length,0);
+  const metSet=rows.reduce((n,r)=>n+r.metrics.filter(m=>m.val!=null).length,0);
+  const metHit=rows.reduce((n,r)=>n+r.metrics.filter(m=>m.hit).length,0);
+  const doneAll=rows.reduce((n,r)=>n+r.doneWk,0);
+  const weekOpts=mpWeekKeys(8).reverse();
+  const hero=`<div style="background:var(--k);color:var(--w);border-radius:16px;padding:20px 24px;margin-bottom:14px;display:flex;gap:26px;align-items:center;flex-wrap:wrap">
+    <div style="min-width:170px"><div style="font-family:Montserrat,sans-serif;font-size:19px;font-weight:800">Weekly Review</div>
+      <select class="form-select" style="margin-top:6px;width:auto;background:#141416;border-color:#26272B;color:#C9CBD1;font-size:12px" onchange="wrv2Week=this.value;wrv2Draw()">${weekOpts.map(k=>`<option value="${k}"${k===wk?' selected':''}>w/c ${fmtShort(k)}</option>`).join('')}</select>
+    </div>
+    ${[[filled+' of 5','filled in'],[totWins,'wins logged'],[metHit+' of '+metSet,'metrics hit'],[doneAll,'tasks done']].map(([v,l])=>`<div><div style="font-family:Montserrat,sans-serif;font-size:30px;font-weight:800;line-height:1;color:var(--y)">${v}</div><div style="font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:#9BA0A8;margin-top:3px">${l}</div></div>`).join('')}
+    <span style="flex:1"></span>
+    <button class="btn btn-ghost btn-sm" style="color:var(--w);border-color:#3A3B40" onclick="wrv2Copy()">Copy report</button>
+  </div>`;
+  const digest=wrv2Digest();
+  const digestCard=`<div class="card" style="margin-bottom:12px;border-left:4px solid var(--y)">
+    <div class="card-title" style="letter-spacing:.07em;text-transform:uppercase;font-size:11px;color:var(--mut)">Week in meetings</div>
+    ${digest.length?digest.map(i=>`<div style="font-size:12.5px;white-space:pre-wrap;line-height:1.7">${escHtml(i.note||'')}</div>`).join('<hr style="border:none;border-top:1px dashed var(--bdr)">')
+    :'<div style="font-size:12px;color:var(--mut)">No meetings digest filed yet. James’s meetings agent writes one row onto the Monday agenda; the format lives in TUF_RECAP_AGENT.md.</div>'}
+  </div>`;
+  const mUp=wmUpcoming();
+  const lastClosed=(wmData.meetings||[]).filter(m=>m.type==='team'&&m.status==='closed').sort((a,b)=>(b.meeting_date||'').localeCompare(a.meeting_date||''))[0];
+  const lcItems=lastClosed?(wmData.items||[]).filter(i=>i.meeting_id===lastClosed.id):[];
+  const lcDecisions=lcItems.filter(i=>i.outcome_kind==='decision');
+  const lcActions=lcItems.filter(i=>i.outcome_kind==='action');
+  const openUpsells=upsells().filter(u=>u.status==='open').length;
+  const teamCard=`<div class="card" style="margin-bottom:12px">
+    <div class="card-title" style="letter-spacing:.07em;text-transform:uppercase;font-size:11px;color:var(--mut)">The team week</div>
+    <div style="font-size:12.5px;line-height:2">
+      ${mUp?`Today’s meeting: <b>${fmtShort(mUp.meeting_date)}</b> · ${wmItemsFor(mUp.id).filter(i=>i.status==='open'&&i.type!=='update').length} items on the agenda · ${wmIsLocked(mUp,wmSettings())?'locked':'still open'} · <span style="cursor:pointer;text-decoration:underline" onclick="nav('wmeeting',document.querySelector('[data-page=wmeeting]'))">open the Weekly Meeting</span>`:'No upcoming meeting found.'}<br>
+      ${lastClosed?`Last Monday (${fmtShort(lastClosed.meeting_date)}): <b>${lcDecisions.length}</b> decision${lcDecisions.length===1?'':'s'}, <b>${lcActions.length}</b> action${lcActions.length===1?'':'s'} — ${(()=>{const t=ls.get('tuf_tasks',[])||[];const done=lcActions.filter(a=>{const k=t.find(x=>x.id===a.action_task_id);return k&&k.status==='Done';}).length;return done+' of '+lcActions.length+' actions done';})()}`:'No closed meeting yet.'}<br>
+      Open upsells: <b>${openUpsells}</b>
+    </div>
+    ${lcDecisions.length?`<div style="font-size:11px;color:var(--mut);margin-top:4px">${lcDecisions.map(d=>'· '+escHtml(d.outcome_text||d.title)).join('<br>')}</div>`:''}
+  </div>`;
+  const personCard=r=>{
+    const col=USER_COLOURS[r.person]||'#888';
+    return `<div class="card" style="margin-bottom:12px;border-left:5px solid ${col}">
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:6px">
+        <span style="width:11px;height:11px;border-radius:50%;background:${col}"></span>
+        <b style="font-family:Montserrat,sans-serif;font-size:15px">${r.person}</b>
+        <span style="font-size:11px;color:var(--mut)">${escHtml(r.role||'')}</span>
+        <span style="flex:1"></span>
+        <span style="font-size:10.5px;color:var(--mut)">${r.doneWk} done · ${r.overdue?`<b style="color:var(--red)">${r.overdue} overdue</b>`:'0 overdue'}${r.oneOpen?` · ${r.oneOpen} for the 1:1`:''}${r.reds?` · <b style="color:var(--red)">${r.reds} red capabilit${r.reds===1?'y':'ies'}</b>`:''}</span>
+      </div>
+      ${r.filled?`
+        ${r.wins.length?r.wins.map(t=>`<div style="display:flex;gap:9px;align-items:center;padding:4px 0;font-size:13px"><span style="width:20px;height:20px;border-radius:50%;background:var(--y);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:10px;flex-shrink:0">✓</span>${escHtml(t)}</div>`).join(''):'<div style="font-size:12px;color:var(--mut)">No wins written, numbers only.</div>'}
+        ${r.metrics.filter(m=>m.val!=null||m.target!=null).length?`<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">${r.metrics.map(m=>`<span style="font-size:11px;font-weight:700;border:1.5px solid ${m.val==null?'var(--bdr)':m.hit?'var(--grn)':m.target!=null?'var(--amb)':'var(--bdr)'};border-radius:14px;padding:4px 11px">${escHtml(m.name)}: <b>${m.val==null?'not logged':m.val}</b>${m.target!=null?' / '+m.target:''}</span>`).join('')}</div>`:''}
+      `:`<div style="font-size:12.5px;color:var(--mut)">Nothing logged for this week. That is the first question for the room.</div>`}
+    </div>`;
+  };
+  el.innerHTML=hero+digestCard+teamCard+rows.map(personCard).join('')+
+    `<div style="font-size:10.5px;color:var(--mut);margin-top:4px">Compiled from each person’s My Page (filled on Fridays), the task board, the 1:1 agendas, the capability map and the Monday meeting record. Nothing on this page is typed here.</div>`;
+  const ta=document.getElementById('topbar-actions'); if(ta) ta.innerHTML='';
+}
+function wrv2Copy(){
+  const wk=wrv2Week||wrv2DefaultWeek();
+  const st=wrv2Stores();
+  const lines=['TUF WEEKLY REVIEW · w/c '+fmtShort(wk),''];
+  TASK_PEOPLE.forEach(p=>{
+    const r=wrv2PersonData(p,wk,st);
+    lines.push(p.toUpperCase()+(r.role?' · '+r.role:''));
+    if(!r.filled){ lines.push('· Nothing logged this week'); }
+    else{
+      r.wins.forEach(t=>lines.push('· '+t));
+      r.metrics.filter(m=>m.val!=null).forEach(m=>lines.push('· '+m.name+': '+m.val+(m.target!=null?' / '+m.target:'')+(m.hit?' HIT':'')));
+    }
+    lines.push('· Tasks: '+r.doneWk+' done, '+r.overdue+' overdue'+(r.oneOpen?' · '+r.oneOpen+' for the 1:1':''));
+    lines.push('');
+  });
+  const digest=wrv2Digest();
+  if(digest.length){ lines.push('WEEK IN MEETINGS'); digest.forEach(i=>lines.push(i.note||'')); }
+  navigator.clipboard.writeText(lines.join('\n')).then(()=>addNotif('Report copied')).catch(()=>{});
 }
 
 // ═══ IP REGISTER ═════════════════════════════════════════════════════════════
@@ -10033,6 +10160,8 @@ function wrGroupsHtml(groups){
 }
 function wrPackText(groups){ return groups.map(g=>g.h.toUpperCase()+'\n'+g.items.map(i=>'- '+i).join('\n')).join('\n\n'); }
 let wrPackCache='';
+// ARCHIVED v113 (29 Oct 2026): replaced by renderWeeklyReview2, the compiled
+// Monday chair report built from My Pages. Store tuf_reviews untouched.
 function renderReviews(){
   const reviews=ls.get('tuf_reviews',[]);
   const thisWeek=reviews.find(r=>r.week===weekKey());
