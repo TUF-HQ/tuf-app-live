@@ -8911,14 +8911,13 @@ function mpDraw(){
     </div>
     <div style="text-align:right"><div style="font-family:Montserrat,sans-serif;font-size:32px;font-weight:800;color:var(--y);line-height:1">${(w.ach||[]).length}</div><div style="font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:#9BA0A8;margin-top:3px">wins this week</div></div>
     <div style="text-align:right"><div style="font-family:Montserrat,sans-serif;font-size:32px;font-weight:800;color:var(--y);line-height:1">${streak}</div><div style="font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:#9BA0A8;margin-top:3px">week streak</div></div>
-    ${mine?`<button class="btn btn-ghost btn-sm" style="color:var(--w);border-color:#3A3B40" onclick="mpCustomise()">Customise</button>`:''}
   </div>`;
   const friday=wmLondonParts().wd==='Fri'?`<div style="font-size:12.5px;font-weight:700;background:var(--y);border-radius:10px;padding:9px 14px;margin-bottom:12px">It is Friday. Log this week’s wins and numbers below; Monday’s review reads straight from here.</div>`:'';
   const twoCol=`${friday}<div style="display:grid;grid-template-columns:3fr 2fr;gap:12px;align-items:start" class="mp-cols">
     <div>${mpWeekCard(p,d,mine)}${mpPlanCard(p,d,mine)}</div>
-    <div>${mpOneCard(p,mine)}${(d.blocks||{}).sops!==false?mpSopsCard(p,d,mine):''}</div>
+    <div>${mpOneCard(p,mine)}${mpSopsCard(p,d,mine)}</div>
   </div><style>@media(max-width:860px){.mp-cols{grid-template-columns:1fr !important}}</style>`;
-  el.innerHTML=switcher+hero+mpMetricsCard(p,d,mine)+twoCol+mpStrips(p,d);
+  el.innerHTML=switcher+hero+mpMetricsCard(p,d,mine)+twoCol;
   const ta=document.getElementById('topbar-actions');
   if(ta) ta.innerHTML=mine?`<button class="btn btn-k btn-sm" onclick="mpAchModal('')">+ Add a win</button>`:'';
 }
@@ -8943,7 +8942,7 @@ function mpWeekCard(p,d,mine){
   const w=(d.weeks||{})[wk]||{ach:[],vals:{}};
   const prevKeys=mpWeekKeys(9).slice(0,-1).reverse();
   const day=a=>{ try{ return new Date(a.at).toLocaleDateString('en-GB',{weekday:'short'}).toUpperCase(); }catch(e){ return ''; } };
-  const achRow=(a,ro)=>`<div style="display:flex;gap:11px;align-items:center;padding:8px 0;border-bottom:1px dashed var(--bdr);font-size:13.5px;font-weight:500">
+  const achRow=(a,ro)=>`<div style="display:flex;gap:11px;align-items:center;padding:9px 0;border-bottom:1px dashed var(--bdr);font-size:14.5px;font-weight:500">
     <span style="width:24px;height:24px;border-radius:50%;background:var(--y);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:12px;flex-shrink:0">✓</span>
     <span style="flex:1;${!ro&&mine?'cursor:pointer':''}"${!ro&&mine?` onclick="mpAchModal('${a.id}')" title="Edit"`:''}>${escHtml(a.text)}</span>
     <span style="font-size:9.5px;font-weight:800;color:var(--mut)">${day(a)}</span>
@@ -9128,7 +9127,7 @@ function mpPlanCard(p,d,mine){
   const plan=(((d.weeks||{})[nextMon])||{}).plan||'';
   return `<div class="card" style="margin-bottom:12px;border-left:5px solid var(--grn)">
     <div class="card-title" style="letter-spacing:.07em;text-transform:uppercase;font-size:11px;color:var(--mut)">Coming week <span style="font-weight:500;text-transform:none;letter-spacing:0">· w/c ${fmtShort(nextMon)}, in ${mine?'your':p+'\u2019s'} own words</span></div>
-    ${mine?`<textarea class="form-textarea" id="mp-plan" style="min-height:110px;font-size:13.5px;line-height:1.7" placeholder="What are you getting done next week? Write it however works for you." onchange="mpPlanSave(this.value)">${escHtml(plan)}</textarea><div style="font-size:10.5px;color:var(--mut);margin-top:5px">Saves on its own. Shows on Monday’s Weekly Review next to what you actually log.</div>`
+    ${mine?`<textarea class="form-textarea" id="mp-plan" style="min-height:130px;font-size:14.5px;line-height:1.75" placeholder="What are you getting done next week? Write it however works for you." onchange="mpPlanSave(this.value)">${escHtml(plan)}</textarea><div style="font-size:10.5px;color:var(--mut);margin-top:5px">Saves on its own. Shows on Monday’s Weekly Review next to what you actually log.</div>`
     :(plan?`<div style="white-space:pre-wrap;font-size:13.5px;line-height:1.7">${escHtml(plan)}</div>`:'<div style="font-size:12.5px;color:var(--mut)">Nothing written yet.</div>')}
   </div>`;
 }
@@ -9188,177 +9187,8 @@ function mpSopDel(id){
   const d=mpGet(p); d.sops=(d.sops||[]).filter(x=>x.id!==id);
   mpSet(p,d); mpDraw();
 }
-// ── Computed strips (read only, toggleable) ──
-function mpStrips(p,d){
-  const b=d.blocks||{};
-  const out=[];
-  const wk=mpWeekKey();
-  if(b.tasks!==false){
-    const tasks=(ls.get('tuf_tasks',[])||[]).filter(utIsBoard).filter(t=>t.owner===p);
-    const today=new Date().toISOString().slice(0,10);
-    const open=tasks.filter(t=>t.status!=='Done');
-    const overdue=open.filter(t=>t.dueDate&&t.dueDate<today).length;
-    const doneWk=tasks.filter(t=>t.status==='Done'&&t.completedAt&&ymdLocal(mondayOf(new Date(t.completedAt)))===wk).length;
-    out.push(`<div class="stat"><div class="n">${open.length}</div><div class="l">Open tasks</div></div>
-      <div class="stat ${overdue?'r':''}"><div class="n">${overdue}</div><div class="l">Overdue</div></div>
-      <div class="stat g"><div class="n">${doneWk}</div><div class="l">Done this week</div></div>`);
-  }
-  if(b.goals!==false){
-    try{
-      const gp=ls.get('tuf_growth_plan',null);
-      if(gp&&gp.sections){
-        const mineItems=[]; gp.sections.forEach(s=>(s.items||[]).forEach(it=>{ if(!it.done&&(it.owner===p||(!it.owner&&s.owner===p))) mineItems.push(it.text); }));
-        out.push(`<div class="stat"><div class="n">${mineItems.length}</div><div class="l">Growth Plan items open</div></div>`);
-      }
-    }catch(e){}
-  }
-  const acts=(ls.get('tuf_tasks',[])||[]).filter(t=>t.owner===p&&t.status!=='Done'&&String(t.linkedTo||'').indexOf('wm:')===0).length;
-  out.push(`<div class="stat ${acts?'':''}"><div class="n">${acts}</div><div class="l">Meeting actions open</div></div>`);
-  if(b.capmap!==false){
-    try{
-      const mine=cap2ForOwner(cap2All(),p);
-      if(mine.length){
-        const reds=mine.filter(c=>c.rag==='R').length;
-        out.push(`<div class="stat" style="cursor:pointer" onclick="cap2Filter='${p}';nav('capmap',document.querySelector('[data-page=capmap]'))"><div class="n">${mine.length}</div><div class="l">Capabilities owned${reds?` · <b style='color:var(--red)'>${reds} red</b>`:''}</div></div>`);
-      }
-    }catch(e){}
-  }
-  return out.length?`<div class="grid-4" style="margin-bottom:12px">${out.join('')}</div>`:'';
-}
-function mpCustomise(){
-  if(!mpIsMine()) return;
-  const d=mpGet(mpWho()); const b=d.blocks||{};
-  showModal('Customise your page',`
-    <div style="font-size:12.5px;color:var(--mut);margin-bottom:10px">Tick what shows on your page. Achievements, metrics and the 1:1 always show; they are the point.</div>
-    ${[['tasks','Task numbers'],['goals','Growth Plan items'],['sops','SOPs I own'],['capmap','Capabilities I own']].map(([k,l])=>`<label style="display:flex;gap:8px;align-items:center;padding:4px 0;font-size:13px;cursor:pointer"><input type="checkbox" id="mp-blk-${k}"${b[k]!==false?' checked':''}> ${l}</label>`).join('')}
-  `,`<button class="btn btn-ghost" onclick="closeModal()">Cancel</button><button class="btn btn-k" onclick="mpCustomiseSave()">Save</button>`);
-}
-function mpCustomiseSave(){
-  const p=mpWho(); if(p!==CURRENT_USER) return;
-  const d=mpGet(p);
-  d.blocks={tasks:!!document.getElementById('mp-blk-tasks')?.checked,goals:!!document.getElementById('mp-blk-goals')?.checked,sops:!!document.getElementById('mp-blk-sops')?.checked,capmap:!!document.getElementById('mp-blk-capmap')?.checked};
-  mpSet(p,d); closeModal(); mpDraw();
-}
-
-// ═══ TUF CAPABILITY MAP (v112, seeded from TUF_Capability_Map.xlsx 29 Oct) ═══
-// 78 capabilities, 9 functions, owner + RAG + Danny's delegation level each.
-// The app copy is the live version; the spreadsheet is history. Tap the RAG
-// dot to cycle, tap a person chip to see their role at a glance. Rows marked
-// added are gaps whose owner is a proposal to confirm with the team.
-const CAP78_SEED=[{"id":"vision-mission-values","fn":"Strategy & Leadership","name":"Vision, Mission & Values","owner":"Danny","rag":"G","del":"Tell","added":false},{"id":"company-strategy","fn":"Strategy & Leadership","name":"Company Strategy","owner":"Danny","rag":"G","del":"Tell","added":false},{"id":"business-plan-targets","fn":"Strategy & Leadership","name":"Business Plan & Targets","owner":"Danny / Joe","rag":"A","del":"Tell","added":false},{"id":"operating-rhythm-wk-mth-qtr","fn":"Strategy & Leadership","name":"Operating Rhythm (Wk / Mth / Qtr)","owner":"Joe","rag":null,"del":"Delegate","added":false},{"id":"decision-rights-governance","fn":"Strategy & Leadership","name":"Decision Rights & Governance","owner":"Joe","rag":null,"del":"Join","added":true},{"id":"company-kpis-scorecard","fn":"Strategy & Leadership","name":"Company KPIs & Scorecard","owner":"Joe","rag":null,"del":"Tell","added":true},{"id":"strategic-projects-initiatives","fn":"Strategy & Leadership","name":"Strategic Projects & Initiatives","owner":"Joe","rag":null,"del":"Join","added":true},{"id":"internal-communications","fn":"Strategy & Leadership","name":"Internal Communications","owner":"Joe","rag":"A","del":"Delegate","added":true},{"id":"product-design-development","fn":"Product & Proposition","name":"Product Design & Development","owner":"Joe","rag":null,"del":"Consult","added":false},{"id":"product-session-prep","fn":"Product & Proposition","name":"Product / Session Prep","owner":"Joe","rag":null,"del":"Consult","added":false},{"id":"methodology-ip-founder-to-ceo","fn":"Product & Proposition","name":"Methodology & IP (Founder to CEO)","owner":"Danny","rag":null,"del":null,"added":false},{"id":"guest-expert-strategy","fn":"Product & Proposition","name":"Guest & Expert Strategy","owner":"Joe","rag":null,"del":"Consult","added":false},{"id":"diagnostic-assessment-tools","fn":"Product & Proposition","name":"Diagnostic & Assessment Tools","owner":"Joe / James","rag":null,"del":"Delegate","added":false},{"id":"pricing-packaging","fn":"Product & Proposition","name":"Pricing & Packaging","owner":"Danny / Joe","rag":null,"del":"Sell","added":true},{"id":"product-roadmap-new-offers","fn":"Product & Proposition","name":"Product Roadmap & New Offers","owner":"Joe","rag":null,"del":"Consult","added":true},{"id":"boardroom-delivery","fn":"Delivery","name":"Boardroom Delivery","owner":"Joe","rag":"G","del":"Consult","added":false},{"id":"session-facilitation","fn":"Delivery","name":"Session Facilitation","owner":"Danny / Joe","rag":"G","del":null,"added":false},{"id":"1-1-coaching","fn":"Delivery","name":"1:1 Coaching","owner":"Danny","rag":null,"del":null,"added":false},{"id":"event-delivery","fn":"Delivery","name":"Event Delivery","owner":"Jasper","rag":"G","del":"Join","added":false},{"id":"venue-session-bookings","fn":"Delivery","name":"Venue & Session Bookings","owner":"Chloe","rag":"G","del":"Delegate","added":false},{"id":"member-outcomes-progress-tracking","fn":"Delivery","name":"Member Outcomes & Progress Tracking","owner":"Joe","rag":"G","del":"Delegate","added":true},{"id":"client-onboarding","fn":"Client Experience","name":"Client Onboarding","owner":"Joe","rag":"A","del":"Delegate","added":false},{"id":"technical-onboarding","fn":"Client Experience","name":"Technical Onboarding","owner":"James","rag":"A","del":"Delegate","added":false},{"id":"client-journey-experience","fn":"Client Experience","name":"Client Journey & Experience","owner":"Joe","rag":"A","del":"Delegate","added":false},{"id":"renewals","fn":"Client Experience","name":"Renewals","owner":"Joe","rag":"R","del":"Delegate","added":false},{"id":"client-communications","fn":"Client Experience","name":"Client Communications","owner":"Chloe","rag":"G","del":"Delegate","added":false},{"id":"client-feedback-nps","fn":"Client Experience","name":"Client Feedback & NPS","owner":"Joe","rag":"G","del":"Delegate","added":true},{"id":"complaint-handling","fn":"Client Experience","name":"Complaint Handling","owner":"Joe","rag":"A","del":"Delegate","added":true},{"id":"gifts-hospitality","fn":"Client Experience","name":"Gifts & Hospitality","owner":"Chloe","rag":"G","del":"Delegate","added":true},{"id":"offboarding-alumni","fn":"Client Experience","name":"Offboarding & Alumni","owner":"Joe","rag":"A","del":"Delegate","added":true},{"id":"brand-management","fn":"Marketing & Brand","name":"Brand Management","owner":"Joe","rag":"A","del":"Join","added":false},{"id":"marketing-strategy-weekly-plan","fn":"Marketing & Brand","name":"Marketing Strategy & Weekly Plan","owner":"Jasper","rag":"A","del":"Consult","added":false},{"id":"content-creation","fn":"Marketing & Brand","name":"Content Creation","owner":"Jasper","rag":"A","del":"Consult","added":false},{"id":"podcast-planning-production","fn":"Marketing & Brand","name":"Podcast Planning & Production","owner":"James","rag":"G","del":"Join","added":false},{"id":"editing-clipping","fn":"Marketing & Brand","name":"Editing & Clipping","owner":"James","rag":"G","del":"Delegate","added":false},{"id":"danny-personal-brand","fn":"Marketing & Brand","name":"Danny Personal Brand","owner":"Danny","rag":"R","del":null,"added":false},{"id":"website-landing-pages","fn":"Marketing & Brand","name":"Website & Landing Pages","owner":"Joe","rag":"R","del":"Delegate","added":true},{"id":"lead-magnets-funnels","fn":"Marketing & Brand","name":"Lead Magnets & Funnels","owner":"James","rag":null,"del":"Delegate","added":true},{"id":"marketing-kpis-attribution","fn":"Marketing & Brand","name":"Marketing KPIs & Attribution","owner":"Jasper","rag":null,"del":"Delegate","added":true},{"id":"run-evolve-systems-hq-crm","fn":"Systems, Data & Automation","name":"Run & Evolve Systems (HQ / CRM)","owner":"James","rag":"A","del":"Delegate","added":false},{"id":"integrations-automation","fn":"Systems, Data & Automation","name":"Integrations & Automation","owner":"James","rag":"G","del":"Delegate","added":false},{"id":"building-internal-tools","fn":"Systems, Data & Automation","name":"Building Internal Tools","owner":"James","rag":"A","del":"Delegate","added":false},{"id":"data-number-accuracy","fn":"Systems, Data & Automation","name":"Data & Number Accuracy","owner":"James","rag":"R","del":"Delegate","added":false},{"id":"reporting-dashboards","fn":"Systems, Data & Automation","name":"Reporting & Dashboards","owner":"James","rag":"G","del":"Delegate","added":true},{"id":"it-access-security","fn":"Systems, Data & Automation","name":"IT, Access & Security","owner":"James","rag":"A","del":"Delegate","added":true},{"id":"ai-enablement","fn":"Systems, Data & Automation","name":"AI Enablement","owner":"James","rag":"G","del":"Delegate","added":true},{"id":"pipeline-management","fn":"Sales & Business Development","name":"Pipeline Management","owner":"Jasper","rag":"A","del":"Join","added":false},{"id":"lead-qualification","fn":"Sales & Business Development","name":"Lead Qualification","owner":"Jasper","rag":"G","del":"Delegate","added":false},{"id":"sales-support","fn":"Sales & Business Development","name":"Sales Support","owner":"Jasper","rag":"A","del":"Delegate","added":false},{"id":"sales-conversations-closing","fn":"Sales & Business Development","name":"Sales Conversations & Closing","owner":"Danny","rag":"G","del":null,"added":true},{"id":"danny-bd-opportunities","fn":"Sales & Business Development","name":"Danny BD Opportunities","owner":"Jasper/ Danny","rag":"R","del":"Join","added":false},{"id":"events-networking","fn":"Sales & Business Development","name":"Events & Networking","owner":"Jasper","rag":"R","del":"Join","added":false},{"id":"relationship-management","fn":"Sales & Business Development","name":"Relationship Management","owner":"Jasper","rag":"A","del":"Delegate","added":false},{"id":"partnerships-referrals","fn":"Sales & Business Development","name":"Partnerships & Referrals","owner":"Jasper","rag":"A","del":"Delegate","added":true},{"id":"sales-targets-forecast","fn":"Sales & Business Development","name":"Sales Targets & Forecast","owner":"Jasper","rag":"A","del":"Tell","added":true},{"id":"sales-collateral-proposals","fn":"Sales & Business Development","name":"Sales Collateral & Proposals","owner":"Jasper","rag":"A","del":"Delegate","added":true},{"id":"client-contracts-t-cs","fn":"Legal, Risk & Compliance","name":"Client Contracts & T&Cs","owner":"Chloe","rag":"A","del":"Consult","added":true},{"id":"gdpr-data-protection","fn":"Legal, Risk & Compliance","name":"GDPR & Data Protection","owner":"James","rag":"R","del":"Delegate","added":true},{"id":"insurance","fn":"Legal, Risk & Compliance","name":"Insurance","owner":"Chloe","rag":"R","del":"Delegate","added":true},{"id":"company-policies","fn":"Legal, Risk & Compliance","name":"Company Policies","owner":"Joe","rag":"R","del":"Sell","added":true},{"id":"key-person-risk-continuity","fn":"Legal, Risk & Compliance","name":"Key-Person Risk & Continuity","owner":"Joe","rag":"R","del":"Join","added":true},{"id":"invoicing","fn":"Finance","name":"Invoicing","owner":"Chloe","rag":"G","del":"Delegate","added":false},{"id":"accounts-receivable-payable","fn":"Finance","name":"Accounts Receivable / Payable","owner":"Chloe","rag":"G","del":"Delegate","added":false},{"id":"weekly-finance-meeting","fn":"Finance","name":"Weekly Finance Meeting","owner":"Chloe","rag":null,"del":"Consult","added":false},{"id":"p-l-management","fn":"Finance","name":"P&L Management","owner":"Joe","rag":"R","del":"Delegate","added":false},{"id":"budgeting-cost-control","fn":"Finance","name":"Budgeting & Cost Control","owner":"Joe","rag":null,"del":"Consult","added":true},{"id":"cash-flow-forecasting","fn":"Finance","name":"Cash Flow Forecasting","owner":"Danny","rag":null,"del":null,"added":true},{"id":"credit-control-chasing","fn":"Finance","name":"Credit Control & Chasing","owner":"Chloe","rag":null,"del":"Delegate","added":true},{"id":"expenses","fn":"Finance","name":"Expenses","owner":"Chloe","rag":null,"del":"Delegate","added":true},{"id":"tax-accountant-relationship","fn":"Finance","name":"Tax & Accountant Relationship","owner":"Chloe","rag":null,"del":"Consult","added":true},{"id":"diary-management","fn":"People & Operations","name":"Diary Management","owner":"Chloe","rag":"A","del":"Delegate","added":false},{"id":"hr-holiday","fn":"People & Operations","name":"HR & Holiday","owner":"Chloe","rag":"G","del":"Delegate","added":false},{"id":"sops-process-documentation","fn":"People & Operations","name":"SOPs & Process Documentation","owner":"Joe","rag":"A","del":"Delegate","added":false},{"id":"org-structure-roles","fn":"People & Operations","name":"Org Structure & Roles","owner":"Joe","rag":"G","del":"Tell","added":true},{"id":"recruitment-staff-onboarding","fn":"People & Operations","name":"Recruitment & Staff Onboarding","owner":"TBC","rag":null,"del":"Consult","added":true},{"id":"performance-1-1s","fn":"People & Operations","name":"Performance & 1:1s","owner":"Joe","rag":"A","del":"Tell","added":true},{"id":"training-development","fn":"People & Operations","name":"Training & Development","owner":"TBC","rag":null,"del":"Delegate","added":true},{"id":"supplier-contract-mgmt","fn":"People & Operations","name":"Supplier & Contract Mgmt","owner":"Chloe","rag":"A","del":"Delegate","added":true}];
-const CAP2_FNS=['Strategy & Leadership','Product & Proposition','Delivery','Client Experience','Marketing & Brand','Systems, Data & Automation','Sales & Business Development','Legal, Risk & Compliance','Finance','People & Operations'];
-const CAP2_DELS=['Tell','Sell','Consult','Join','Delegate'];
-let cap2Filter='';
-function cap2All(){ return ls.get('tuf_capmap2',[])||[]; }
-function cap2Seed(){
-  try{
-    if(!sbLoadOK) return;
-    if(ls.get('tuf_capmap2_seeded',null)) return;
-    if(cap2All().length){ ls.set('tuf_capmap2_seeded',{at:new Date().toISOString(),note:'already present'}); return; }
-    ls.set('tuf_capmap2',CAP78_SEED.map(c=>({...c})));
-    ls.set('tuf_capmap2_seeded',{at:new Date().toISOString(),by:CURRENT_USER});
-  }catch(e){ console.warn('cap2Seed failed',e); }
-}
-// Pure: scorecard counts, computed live, never typed.
-function cap2Counts(list){
-  const o={total:(list||[]).length,R:0,A:0,G:0,unrated:0,del:{Tell:0,Sell:0,Consult:0,Join:0,Delegate:0},unset:0};
-  (list||[]).forEach(c=>{
-    if(c.rag==='R')o.R++; else if(c.rag==='A')o.A++; else if(c.rag==='G')o.G++; else o.unrated++;
-    if(c.del&&o.del[c.del]!==undefined)o.del[c.del]++; else o.unset++;
-  });
-  return o;
-}
-// Pure: a person owns a row when their name appears in the owner string
-// (handles joint owners like "Danny / Joe" and "Jasper/ Danny").
-function cap2Owns(c,person){ return String(c.owner||'').toLowerCase().indexOf(String(person||'').toLowerCase())>=0; }
-function cap2ForOwner(list,person){ return (list||[]).filter(c=>cap2Owns(c,person)); }
-function cap2CycleRag(id){
-  const list=cap2All(); const c=list.find(x=>x.id===id); if(!c) return;
-  c.rag=c.rag==null?'R':c.rag==='R'?'A':c.rag==='A'?'G':null;
-  ls.set('tuf_capmap2',list); renderCapMap2();
-}
-function cap2SetField(id,field,v){
-  const list=cap2All(); const c=list.find(x=>x.id===id); if(!c) return;
-  c[field]=v||null; if(field==='owner'&&!v) c.owner='TBC';
-  ls.set('tuf_capmap2',list); renderCapMap2();
-}
-function cap2Modal(id){
-  const c=id?cap2All().find(x=>x.id===id):null;
-  showModal(c?('Capability · '+c.name):'Add a capability',`
-    <div class="form-row"><label class="form-label">Name</label><input class="form-input" id="c2-name" value="${escAttr(c?c.name:'')}"></div>
-    <div class="grid-2">
-      <div class="form-row"><label class="form-label">Function</label><select class="form-select" id="c2-fn">${CAP2_FNS.map(f=>`<option${c&&c.fn===f?' selected':''}>${f}</option>`).join('')}</select></div>
-      <div class="form-row"><label class="form-label">Owner</label><input class="form-input" id="c2-owner" value="${escAttr(c?c.owner:'')}" placeholder="Danny, Joe, Jasper, James, Chloe or TBC"></div>
-    </div>
-    <div class="grid-2">
-      <div class="form-row"><label class="form-label">RAG</label><select class="form-select" id="c2-rag"><option value="">not yet rated</option>${['R','A','G'].map(r=>`<option${c&&c.rag===r?' selected':''}>${r}</option>`).join('')}</select></div>
-      <div class="form-row"><label class="form-label">Delegation</label><select class="form-select" id="c2-del"><option value="">not set</option>${CAP2_DELS.map(d=>`<option${c&&c.del===d?' selected':''}>${d}</option>`).join('')}</select></div>
-    </div>
-  `,`<button class="btn btn-ghost" onclick="closeModal()">Cancel</button>${c?`<button class="btn btn-red btn-sm" onclick="cap2Delete('${c.id}')">Delete</button>`:''}<button class="btn btn-k" onclick="cap2Save('${id||''}')">Save</button>`);
-}
-function cap2Save(id){
-  const g=x=>document.getElementById(x)?.value||'';
-  const name=g('c2-name').trim(); if(!name){ alert('The capability needs a name.'); return; }
-  const list=cap2All();
-  const c=id?list.find(x=>x.id===id):null;
-  const vals={name:name,fn:g('c2-fn'),owner:g('c2-owner').trim()||'TBC',rag:g('c2-rag')||null,del:g('c2-del')||null};
-  if(c) Object.assign(c,vals);
-  else list.push({id:uid(),...vals,added:true});
-  ls.set('tuf_capmap2',list);
-  closeModal(); renderCapMap2();
-}
-function cap2Delete(id){
-  if(!confirm('Remove this capability from the map?')) return;
-  ls.set('tuf_capmap2',cap2All().filter(x=>x.id!==id));
-  closeModal(); renderCapMap2();
-}
-function renderCapMap2(){
-  const host=document.getElementById('cap-render'); if(!host) return;
-  const stats=document.getElementById('cap-stats'); if(stats) stats.innerHTML=''; // old June grid, archived v112
-  cap2Seed();
-  const list=cap2All();
-  const n=cap2Counts(list);
-  const ragDot=c=>`<span title="Tap to cycle: not rated, R, A, G" onclick="cap2CycleRag('${c.id}')" style="cursor:pointer;width:14px;height:14px;border-radius:50%;flex-shrink:0;background:${c.rag==='R'?'var(--red)':c.rag==='A'?'var(--amb)':c.rag==='G'?'var(--grn)':'var(--bdr)'}"></span>`;
-  const ownCol=o=>{ const p=TASK_PEOPLE.find(x=>String(o||'').toLowerCase().indexOf(x.toLowerCase())>=0); return p?USER_COLOURS[p]:'#9BA0A8'; };
-  const hero=`<div style="background:var(--k);color:var(--w);border-radius:16px;padding:20px 24px;margin-bottom:14px;display:flex;gap:26px;align-items:center;flex-wrap:wrap">
-    <div><div style="font-family:Montserrat,sans-serif;font-size:32px;font-weight:800;line-height:1;color:var(--y)">${n.total}</div><div style="font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:#9BA0A8;margin-top:3px">capabilities</div></div>
-    ${[['R',n.R,'var(--red)'],['A',n.A,'var(--amb)'],['G',n.G,'var(--grn)']].map(([l,v,col])=>`<div><div style="font-family:Montserrat,sans-serif;font-size:32px;font-weight:800;line-height:1;color:${col}">${v}</div><div style="font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:#9BA0A8;margin-top:3px">${l==='R'?'red':l==='A'?'amber':'green'}</div></div>`).join('')}
-    <div><div style="font-family:Montserrat,sans-serif;font-size:32px;font-weight:800;line-height:1;color:#6B6E76">${n.unrated}</div><div style="font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:#9BA0A8;margin-top:3px">not rated</div></div>
-    <span style="flex:1"></span>
-    <div style="font-size:11px;color:#9BA0A8;line-height:1.9;text-align:right">Delegation: ${CAP2_DELS.map(d=>`<b style="color:var(--w)">${n.del[d]}</b> ${d}`).join(' · ')}${n.unset?` · <b style="color:var(--w)">${n.unset}</b> not set`:''}</div>
-  </div>`;
-  const chips=`<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;align-items:center">
-    <button class="btn btn-sm ${!cap2Filter?'btn-k':'btn-ghost'}" onclick="cap2Filter='';renderCapMap2()">Everyone</button>
-    ${TASK_PEOPLE.concat(['TBC']).map(p=>{const cnt=cap2ForOwner(list,p).length;return `<button class="btn btn-sm ${cap2Filter===p?'btn-k':'btn-ghost'}" onclick="cap2Filter='${p}';renderCapMap2()">${p==='TBC'?'':`<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${USER_COLOURS[p]||'#9BA0A8'};margin-right:6px"></span>`}${p} <span style="opacity:.6">${cnt}</span></button>`;}).join('')}
-  </div>`;
-  const row=c=>{
-    const dim=cap2Filter&&!cap2Owns(c,cap2Filter);
-    return `<div style="display:flex;gap:9px;align-items:center;padding:6px 0;border-bottom:1px dashed var(--bdr);font-size:12.5px;${dim?'opacity:.25':''}">
-      ${ragDot(c)}
-      <span style="flex:1;min-width:140px;${dim?'':'font-weight:600'};cursor:pointer" onclick="cap2Modal('${c.id}')">${escHtml(c.name)}${c.added?' <span title="Added gap, owner proposed, confirm with the team" style="color:var(--amb);font-weight:800">+</span>':''}</span>
-      <span style="font-size:10px;font-weight:800;border-radius:10px;padding:2px 9px;background:${ownCol(c.owner)};color:#fff;white-space:nowrap">${escHtml(c.owner||'TBC')}</span>
-      ${c.del?`<span class="tag tag-k" style="font-size:9px">${c.del}</span>`:'<span style="font-size:9px;color:var(--mut)">del?</span>'}
-    </div>`;
-  };
-  const cards=CAP2_FNS.map(fn=>{
-    const g=list.filter(c=>c.fn===fn);
-    if(!g.length) return '';
-    const gr=g.filter(c=>c.rag==='G').length;
-    return `<div class="card" style="margin-bottom:0;break-inside:avoid">
-      <div class="card-title" style="letter-spacing:.07em;text-transform:uppercase;font-size:11px;color:var(--mut)">${fn} <span style="font-weight:500;text-transform:none;letter-spacing:0">· ${gr} of ${g.length} green</span></div>
-      ${g.map(row).join('')}
-    </div>`;
-  }).join('');
-  host.innerHTML=`${hero}${chips}
-    <div style="columns:2 420px;column-gap:12px;display:block">${cards.replace(/<div class="card" style="margin-bottom:0/g,'<div class="card" style="margin-bottom:12px')}</div>
-    <div class="card" style="margin-top:2px"><div style="font-size:11.5px;color:var(--mut);line-height:1.9">
-      <b style="color:var(--k)">RAG:</b> red we do not have it · amber partial, needs improvement · green working well · grey not yet rated, tap the dot to score it.<br>
-      <b style="color:var(--k)">Delegation:</b> Tell Danny decides and announces · Sell Danny decides then wins buy in · Consult owner advises, Danny decides · Join decided together · Delegate owner decides, Danny sees results.<br>
-      <b style="color:var(--k)">The rule:</b> every capability is needed, so anything not green is a decision — upskill the owner, delegate it to someone else, or outsource it. A <b style="color:var(--amb)">+</b> row is an added gap whose owner is a proposal to confirm.
-    </div></div>`;
-  const ta=document.getElementById('topbar-actions');
-  if(ta) ta.innerHTML=`<button class="btn btn-k btn-sm" onclick="cap2Modal('')">+ Add capability</button>`;
-}
+// (v118: the computed stat strip and Customise control were removed; the
+// page is wins, the coming week, metrics, the 1:1 and SOPs, nothing else.)
 
 // ═══ WEEKLY REVIEW v2 (v113): Danny's Monday chair report ════════════════════
 // Compiled, never filled in. Friday's My Pages (wins + custom metrics), the
