@@ -8551,70 +8551,68 @@ function wmNav(v){ wmView=v; if(v!=='summary') wmSelMeetingId=null; wmDraw(); }
 function wmDraw(){
   const el=document.getElementById('wmeeting-render'); if(!el) return;
   const pills=[['agenda','Agenda'],['preread','Pre read'],['summary','Past meetings'],['settings','Settings']];
-  const nav=`<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px">${pills.map(([k,l])=>`<button class="btn btn-sm ${wmView===k?'btn-k':'btn-ghost'}" onclick="wmNav('${k}')">${l}</button>`).join('')}</div>`;
+  const nav=`<div style="display:flex;gap:6px;flex-wrap:wrap;margin:0 0 6px;padding-top:12px">${pills.map(([k,l])=>`<button class="btn btn-sm" style="background:${wmView===k?'var(--y)':'transparent'};color:${wmView===k?'#0A0A0B':'#F4F4F6'};border:1.5px solid ${wmView===k?'var(--y)':'#2E2F33'};font-weight:800" onclick="wmNav('${k}')">${l}</button>`).join('')}</div>`;
   const body=wmView==='preread'?wmPrereadView():wmView==='summary'?wmSummaryView():wmView==='settings'?wmSettingsView():wmAgendaView();
-  el.innerHTML=nav+body;
+  el.innerHTML=`<div class="mp2">${nav}${body}</div>`;
   const ta=document.getElementById('topbar-actions');
   if(ta) ta.innerHTML=`<button class="btn btn-k btn-sm" onclick="wmItemModal('')">+ Add item</button>`;
 }
 // ── Agenda ──
 function wmAgendaView(){
   const m=wmUpcoming();
-  if(!m) return '<div class="empty">No upcoming meeting. Reload the page and one is created automatically.</div>';
+  if(!m) return '<div style="font-size:13px;color:#8B8E96;padding:20px 0">No upcoming meeting. Reload the page and one is created automatically.</div>';
   const s=wmSettings();
-  const locked=wmIsLocked(m,s);
   const items=wmItemsFor(m.id);
   const calc=wmAgendaCalc(items,m,s);
   const now=Date.now(); const co=wmCutoff(m,s).getTime();
   const mins=Math.max(0,Math.round((co-now)/60000));
-  const coTxt=m.status!=='open'?'Agenda locked by the chair':(now>=co?'Agenda locked, late items go to next week':('Agenda locks in '+(mins>=1440?Math.floor(mins/1440)+'d '+Math.floor((mins%1440)/60)+'h':Math.floor(mins/60)+'h '+(mins%60)+'m')));
-  const chairBtns=wmIsChair()?`
-    ${m.status==='open'?`<button class="btn btn-ghost btn-sm" onclick="wmLockNow('${m.id}')">Lock now</button>`:''}
-    <button class="btn btn-ghost btn-sm" onclick="wmMoveModal('${m.id}')">Move date</button>
-    <button class="btn btn-ghost btn-sm" onclick="wmSkip('${m.id}')">Skip</button>
-    <button class="btn btn-y btn-sm" style="font-weight:800" onclick="wmLiveStart('${m.id}')">Start live mode</button>`:'';
+  const coTxt=m.status!=='open'?'AGENDA LOCKED':(now>=co?'LOCKED \u00b7 LATE ITEMS GO TO NEXT WEEK':('LOCKS IN '+(mins>=1440?Math.floor(mins/1440)+'D '+Math.floor((mins%1440)/60)+'H':Math.floor(mins/60)+'H '+(mins%60)+'M')));
+  const len=+m.length_min||60;
+  const segs=calc.rows.map(r=>`<i style="flex:${r.item.minutes||1};background:${r.rolls?'#3A3B40':'var(--y)'};border-right:2px solid #060607" title="${escAttr(r.item.title)} \u00b7 ${r.item.minutes} min"></i>`).join('');
+  const fixedSeg=`<i style="flex:${calc.fixed};background:#2E8B6E;border-right:2px solid #060607" title="Fixed slots, ${calc.fixed} min"></i>`;
+  const slack=Math.max(0,len-calc.used);
+  const over=calc.used>len;
+  const chair=wmIsChair();
   const itemRow=r=>{
-    const it=r.item;
-    return `<div style="display:flex;gap:10px;align-items:center;padding:8px 0;border-bottom:1px solid var(--bdr);font-size:13px;flex-wrap:wrap;${r.rolls?'opacity:.55':''}">
-      <div style="flex:1;min-width:200px;${wmCanEdit(it,m)?'cursor:pointer':''}" ${wmCanEdit(it,m)?`onclick="wmItemModal('${it.id}')"`:''}>
-        <b>${escHtml(it.title)}</b> <span style="color:var(--mut);font-size:11.5px">· ${escHtml(it.owner||'')}</span>
-        ${it.need?`<div style="font-size:12px;color:var(--mut)">I need: ${escHtml(it.need)}</div>`:''}
+    const it=r.item; const canE=wmCanEdit(it,m);
+    const ocol=USER_COLOURS[String(it.owner||'').split(/[\s/]/)[0]]||'#8B8E96';
+    return `<div style="display:flex;gap:16px;align-items:flex-start;padding:13px 0;border-bottom:1px solid #1C1D21;${r.rolls?'opacity:.38':''}">
+      <div style="flex-shrink:0;width:56px;text-align:center"><div style="font-family:Montserrat,sans-serif;font-size:24px;font-weight:800;line-height:1">${it.minutes||0}</div><div style="font-size:8px;letter-spacing:.18em;color:#8B8E96">MIN</div></div>
+      <div style="flex:1;min-width:200px;${canE?'cursor:pointer':''}"${canE?` onclick="wmItemModal('${it.id}')"`:''}>
+        <div style="font-size:16.5px;font-weight:700;line-height:1.35">${escHtml(it.title)}</div>
+        ${it.need?`<div style="font-size:13.5px;margin-top:5px"><span style="color:#8B8E96;font-weight:800;font-size:9.5px;letter-spacing:.12em">I NEED </span><b style="color:var(--y)">${escHtml(it.need)}</b></div>`:''}
+        <div style="display:flex;gap:12px;align-items:center;margin-top:6px;font-size:10.5px;color:#8B8E96">
+          <span style="display:inline-flex;gap:6px;align-items:center"><i style="width:8px;height:8px;border-radius:50%;background:${ocol};display:inline-block"></i>${escHtml(it.owner||'')}</span>
+          ${r.rolls?'<span style="color:#FFB224;font-weight:800;letter-spacing:.08em">ROLLS TO NEXT WEEK</span>':''}
+        </div>
       </div>
-      <span class="tag tag-k" style="font-size:9px">${it.minutes||0} min</span>
-      <span style="font-size:10.5px;color:var(--mut)">at ${r.cum} min</span>
-      ${r.rolls?'<span class="tag tag-a" style="font-size:9px">Rolls to next week</span>':''}
-      ${wmCanEdit(it,m)?`<span style="cursor:pointer;color:var(--mut);padding:0 4px" title="Delete" onclick="wmItemDelete('${it.id}')">✕</span>`:''}
+      ${canE?`<span style="cursor:pointer;color:#8B8E96;padding:4px" onclick="event.stopPropagation();wmItemDelete('${it.id}')">\u2715</span>`:''}
     </div>`;
   };
   const group=(type,label)=>{
     const g=calc.rows.filter(r=>r.item.type===type);
     if(!g.length) return '';
-    return `<div style="font-size:10px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--mut);margin:12px 0 2px">${label}</div>${g.map(itemRow).join('')}`;
+    return `<div class="mp2-pan"><h3>${label} <span class="sub">${g.length} item${g.length===1?'':'s'}</span></h3>${g.map(itemRow).join('')}</div>`;
   };
-  const over=calc.used>(+m.length_min||60);
   return `
-    <div class="card" style="margin-bottom:12px;border-left:5px solid var(--y)">
-      <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
-        <div style="flex:1;min-width:200px">
-          <div style="font-family:Montserrat,sans-serif;font-weight:700;font-size:17px">${fmtDate(m.meeting_date)} · ${m.length_min} minutes</div>
-          <div style="font-size:12px;color:var(--mut)">Chair ${escHtml(m.chair||s.chair)} · ${coTxt}</div>
-        </div>
-        ${chairBtns}
-      </div>
+    <div class="mp2-ribbon" style="border-bottom:none;padding:8px 2px 2px"><span class="live"></span> ${fmtDate(m.meeting_date).toUpperCase()} <b>\u00b7 ${len} MIN \u00b7 CHAIR ${escHtml(String(m.chair||s.chair)).toUpperCase()}</b><span class="cd">${coTxt}</span></div>
+    ${chair?`<div style="display:flex;gap:8px;flex-wrap:wrap;margin:10px 0 14px;align-items:center">
+      <button class="btn btn-sm" style="background:var(--y);border:none;color:#0A0A0B;font-weight:800;font-size:14px;padding:11px 24px;box-shadow:0 0 24px rgba(251,240,0,.25)" onclick="wmLiveStart('${m.id}')">\u25b6 START LIVE MODE</button>
+      ${m.status==='open'?`<button class="btn btn-ghost btn-sm" style="color:#F4F4F6;border-color:#2E2F33" onclick="wmLockNow('${m.id}')">Lock now</button>`:''}
+      <button class="btn btn-ghost btn-sm" style="color:#F4F4F6;border-color:#2E2F33" onclick="wmMoveModal('${m.id}')">Move date</button>
+      <button class="btn btn-ghost btn-sm" style="color:#F4F4F6;border-color:#2E2F33" onclick="wmSkip('${m.id}')">Skip</button>
+    </div>`:'<div style="height:10px"></div>'}
+    <div class="mp2-pan" style="padding:14px 20px">
+      <div style="display:flex;gap:0;height:14px;border-radius:7px;overflow:hidden;background:#1C1D21">${segs}${fixedSeg}${slack?`<i style="flex:${slack};background:#1C1D21"></i>`:''}</div>
+      <div style="display:flex;gap:16px;margin-top:8px;font-size:9.5px;letter-spacing:.12em;color:#8B8E96;flex-wrap:wrap"><span><i style="display:inline-block;width:8px;height:8px;background:var(--y);border-radius:2px"></i> ITEMS</span><span><i style="display:inline-block;width:8px;height:8px;background:#2E8B6E;border-radius:2px"></i> FIXED SLOTS</span><span style="margin-left:auto;font-weight:800;color:${over?'#FF5C5C':'#3DD68C'}">${calc.used} OF ${len} MINUTES${over?' \u00b7 OVER, GREYED ITEMS ROLL':''}</span></div>
     </div>
-    <div style="font-size:12.5px;font-weight:700;background:var(--bg);border:1px solid var(--bdr);border-radius:8px;padding:8px 14px;margin-bottom:12px">Not on the agenda? It goes in the parking lot.</div>
+    <div style="font-size:13px;font-weight:800;background:var(--y);color:#0A0A0B;border-radius:10px;padding:10px 16px;margin-bottom:14px">NOT ON THE AGENDA? IT GOES IN THE PARKING LOT.</div>
     ${items.length?`
-      <div class="card" style="margin-bottom:12px">
-        ${group('decision','Decision needed')}
-        ${group('help','Help needed')}
-        <div style="font-size:10px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--mut);margin:12px 0 2px">Fixed slots</div>
-        <div style="display:flex;gap:10px;align-items:center;padding:8px 0;border-bottom:1px solid var(--bdr);font-size:13px"><div style="flex:1"><b>Questions on updates</b> <span style="color:var(--mut);font-size:11.5px">· written updates are below, this slot is questions only</span></div><span class="tag tag-k" style="font-size:9px">${s.questions_slot_min} min</span></div>
-        <div style="display:flex;gap:10px;align-items:center;padding:8px 0;font-size:13px"><div style="flex:1"><b>Parking lot review</b> <span style="color:var(--mut);font-size:11.5px">· ${wmParkingFor(m.id).length} parked so far</span></div><span class="tag tag-k" style="font-size:9px">${s.parking_review_min} min</span></div>
-        <div style="font-size:12px;font-weight:700;margin-top:10px;color:${over?'var(--red)':'var(--grn)'}">${calc.used} of ${m.length_min} minutes planned, including the ${calc.fixed} fixed. ${over?'Over the hour: the greyed items roll to next week.':''}</div>
-      </div>
-      ${calc.updates.length?`<div class="card" style="margin-bottom:12px"><div class="card-title">Written updates <span style="font-weight:500;color:var(--mut);font-size:11px">read before the meeting, not presented in it</span></div>
-        ${calc.updates.map(u=>`<div style="padding:7px 0;border-bottom:1px solid var(--bdr);font-size:12.5px"><b>${escHtml(u.title)}</b> <span style="color:var(--mut);font-size:11px">· ${escHtml(u.owner||'')}</span>${wmCanEdit(u,m)?` <span style="cursor:pointer;color:var(--mut);font-size:11px;text-decoration:underline" onclick="wmItemModal('${u.id}')">edit</span>`:''}<div style="margin-top:2px">${u.note?wmNoteHtml(u.note):'<span style="font-size:12px;color:var(--mut)">No update written yet.</span>'}</div></div>`).join('')}</div>`:''}
-    `:`<div class="card" style="margin-bottom:12px"><div style="font-size:13.5px;line-height:1.6">Nothing needs the room this week. Shorten the meeting or skip it${wmIsChair()?' with the Skip button above':''}; an empty hour is not a target.</div></div>`}
+      ${group('decision','Decision needed')}
+      ${group('help','Help needed')}
+      <div class="mp2-pan" style="padding:13px 20px"><div style="display:flex;gap:20px;flex-wrap:wrap;font-size:12.5px;color:#C9CBD1"><span><b style="color:#F4F4F6">Questions on updates</b> \u00b7 ${s.questions_slot_min} min</span><span><b style="color:#F4F4F6">Parking lot review</b> \u00b7 ${s.parking_review_min} min \u00b7 ${wmParkingFor(m.id).length} parked so far</span></div></div>
+      ${calc.updates.length?`<div class="mp2-pan"><h3>Written updates <span class="sub">read before the meeting, never presented in it</span></h3>${calc.updates.map(u=>`<div style="padding:8px 0;border-bottom:1px solid #1C1D21"><div style="font-size:13.5px;font-weight:800">${escHtml(u.title)} <span style="color:#8B8E96;font-weight:500;font-size:10.5px">\u00b7 ${escHtml(u.owner||'')}</span>${wmCanEdit(u,m)?` <span style="cursor:pointer;color:#8B8E96;font-size:10px;text-decoration:underline" onclick="wmItemModal('${u.id}')">edit</span>`:''}</div><div style="margin-top:3px">${u.note?wmNoteHtml(u.note):'<span style="font-size:12px;color:#8B8E96">No update written yet.</span>'}</div></div>`).join('')}</div>`:''}
+    `:`<div class="mp2-pan"><div style="font-size:14.5px;line-height:1.7;color:#C9CBD1">Nothing needs the room this week. Shorten the meeting or skip it; an empty hour is not a target.</div></div>`}
   `;
 }
 async function wmLockNow(id){
@@ -8692,21 +8690,18 @@ async function wmItemDelete(id){
 // ── Pre read ──
 function wmPrereadView(){
   const m=wmSelMeetingId?wmData.meetings.find(x=>x.id===wmSelMeetingId):wmUpcoming();
-  if(!m) return '<div class="empty">No meeting to read.</div>';
+  if(!m) return '<div style="font-size:13px;color:#8B8E96;padding:20px 0">No meeting to read.</div>';
   const items=wmItemsFor(m.id);
   const calc=wmAgendaCalc(items,m,wmSettings());
   const link=location.origin+location.pathname+'#wm-preread-'+m.id;
   return `
-    <div class="card" style="margin-bottom:12px"><div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
-      <div style="flex:1;min-width:200px"><div style="font-family:Montserrat,sans-serif;font-weight:700;font-size:16px">Pre read · ${fmtDate(m.meeting_date)}</div>
-      <div style="font-size:12px;color:var(--mut)">Everything below is readable in five minutes. Updates are written, the meeting is for decisions.</div></div>
-      <button class="btn btn-ghost btn-sm" onclick="navigator.clipboard.writeText('${escAttr(link)}').then(()=>addNotif('Pre read link copied'))">Copy link</button>
-    </div></div>
-    ${calc.rows.length?`<div class="card" style="margin-bottom:12px"><div class="card-title">On the agenda</div>
-      ${calc.rows.map(r=>`<div style="padding:8px 0;border-bottom:1px solid var(--bdr)"><div style="font-size:14px"><b>${escHtml(r.item.title)}</b> <span style="color:var(--mut);font-size:11.5px">· ${escHtml(r.item.owner||'')} · ${r.item.minutes||0} min</span></div><div style="font-size:13px;margin-top:2px">I need: <b>${escHtml(r.item.need||'')}</b></div>${r.item.note?`<div style="font-size:12px;color:var(--mut);margin-top:2px;white-space:pre-wrap">${escHtml(r.item.note)}</div>`:''}</div>`).join('')}</div>`:''}
-    ${calc.updates.length?`<div class="card"><div class="card-title">Written updates</div>
-      ${calc.updates.map(u=>`<div style="padding:8px 0;border-bottom:1px solid var(--bdr)"><div style="font-size:13.5px;font-weight:700">${escHtml(u.title)} <span style="color:var(--mut);font-weight:500;font-size:11.5px">· ${escHtml(u.owner||'')}</span></div><div style="margin-top:2px">${u.note?wmNoteHtml(u.note):'<span style="font-size:12.5px;color:var(--mut)">No update written yet.</span>'}</div></div>`).join('')}</div>`:''}
-    ${!items.length?'<div class="empty">Nothing on the agenda yet.</div>':''}
+    <div class="mp2-ribbon" style="border-bottom:none;padding:8px 2px 10px"><span class="live"></span> PRE READ <b>\u00b7 ${fmtDate(m.meeting_date).toUpperCase()}</b><span style="margin-left:auto"><button class="btn btn-ghost btn-sm" style="color:#F4F4F6;border-color:#2E2F33" onclick="navigator.clipboard.writeText('${escAttr(link)}').then(()=>addNotif('Pre read link copied'))">Copy link</button></span></div>
+    <div style="font-size:12px;color:#8B8E96;margin-bottom:14px">Readable in five minutes. Updates are written; the meeting is for decisions.</div>
+    ${calc.rows.length?`<div class="mp2-pan"><h3>On the agenda</h3>
+      ${calc.rows.map(r=>`<div style="padding:11px 0;border-bottom:1px solid #1C1D21"><div style="font-size:16px;font-weight:700">${escHtml(r.item.title)} <span style="color:#8B8E96;font-size:10.5px;font-weight:500">\u00b7 ${escHtml(r.item.owner||'')} \u00b7 ${r.item.minutes||0} min</span></div><div style="font-size:14px;margin-top:4px"><span style="color:#8B8E96;font-weight:800;font-size:9.5px;letter-spacing:.12em">I NEED </span><b style="color:var(--y)">${escHtml(r.item.need||'')}</b></div>${r.item.note?`<div style="font-size:12px;color:#C9CBD1;margin-top:4px;white-space:pre-wrap">${escHtml(r.item.note)}</div>`:''}</div>`).join('')}</div>`:''}
+    ${calc.updates.length?`<div class="mp2-pan"><h3>Written updates</h3>
+      ${calc.updates.map(u=>`<div style="padding:9px 0;border-bottom:1px solid #1C1D21"><div style="font-size:13.5px;font-weight:800">${escHtml(u.title)} <span style="color:#8B8E96;font-weight:500;font-size:10.5px">\u00b7 ${escHtml(u.owner||'')}</span></div><div style="margin-top:3px">${u.note?wmNoteHtml(u.note):'<span style="font-size:12px;color:#8B8E96">No update written yet.</span>'}</div></div>`).join('')}</div>`:''}
+    ${!items.length?'<div style="font-size:13px;color:#8B8E96;padding:12px 0">Nothing on the agenda yet.</div>':''}
   `;
 }
 // ── Live mode (chair only, full screen overlay) ──
@@ -8743,6 +8738,7 @@ function wmLivePaint(resetClock){
   ov.innerHTML=`
     <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">
       <span style="font-size:13px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--y)">Live · ${wmLiveIdx+1} of ${total}</span>
+      <span style="display:flex;gap:5px;align-items:center">${wmLiveList.map((x,i)=>`<i style="width:9px;height:9px;border-radius:50%;background:${i<wmLiveIdx?'var(--grn)':i===wmLiveIdx?'var(--y)':'#2E2F33'};${i===wmLiveIdx?'box-shadow:0 0 10px rgba(251,240,0,.6)':''}"></i>`).join('')}</span>
       <span style="flex:1"></span>
       <button class="btn btn-ghost btn-sm" onclick="wmLiveExit()">Pause and exit</button>
       <button class="btn btn-ghost btn-sm" style="border-color:var(--y);color:var(--y)" onclick="wmLiveFinishPrompt()">Close the meeting</button>
