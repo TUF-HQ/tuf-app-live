@@ -597,6 +597,7 @@ details>summary::-webkit-details-marker{display:none}
          the agent digest all use them; the Weekly Review is the Monday page
          now and carries the Upsells card that lived on Team Overview. -->
     <div class="sb-section">Overview</div>
+    <div class="sb-item" data-page="wmeeting" onclick="nav('wmeeting',this)">Weekly Meeting</div>
     <div class="sb-item" data-page="reviews" onclick="nav('reviews',this)">Weekly Review</div>
     <div class="sb-item" data-page="transcript" onclick="nav('transcript',this)">Meeting Notes</div>
 
@@ -828,7 +829,7 @@ details>summary::-webkit-details-marker{display:none}
 
     <!-- ═══ COACHING SESSIONS ═══ -->
     <div class="page" id="page-coaching"><div id="coaching-content"></div></div>
-    <!-- page-wmeeting removed v120 -->
+    <div class="page" id="page-wmeeting"><div id="wmeeting-render"></div></div>
     <div class="page" id="page-mypage"><div id="mypage-render"></div></div>
 
     <!-- ═══ GROWTH PLAN ═══ -->
@@ -1549,6 +1550,15 @@ function initApp(user){
     const el=document.querySelector('[data-page=mypage]');
     if(el) nav('mypage', el);
   }
+  // A shared pre read link (#wm-preread-<meetingId>) overrides the landing page.
+  try{
+    const pre='#wm-preread-';
+    if(location.hash&&location.hash.indexOf(pre)===0){
+      wmView='preread'; wmSelMeetingId=location.hash.slice(pre.length);
+      const el=document.querySelector('[data-page=wmeeting]');
+      if(el) nav('wmeeting', el);
+    }
+  }catch(e){}
   // Next Monday's meeting exists as soon as anyone opens the app this week.
   wmLoad().then(r=>{ if(r.ok) wmEnsureMeeting(); }).catch(()=>{});
 }
@@ -1799,7 +1809,7 @@ function seedDefaultData(){
 // ═══ NAVIGATION ══════════════════════════════════════════════════════════════
 const PAGE_TITLES = {
   myday:'My Day',
-  transcript:'Meeting Notes → Tasks',mypage:'My Page',
+  wmeeting:'Weekly Meeting',transcript:'Meeting Notes → Tasks',mypage:'My Page',
   people:'Network',members:'Boardroom Members',pipeline:'Sales Pipeline',inbound:'Inbound Leads',dannycal:"Danny's Calendar",
   boardroom:'Boardroom',crmhub:'CRM',crmclean:'CRM Cleanup',content:'Content Calendar',social:'Social Media',kpis:'KPIs',aidump:'AI Tool (Dump)',buildreq:'Build Requests',clientanalysis:'Client Analysis',emaillist:'Email List',watemplates:'WhatsApp Templates',
   testimonials:'Testimonials',
@@ -1842,7 +1852,7 @@ function goPersonTasks(p){
 }
 function renderPage(page){
   const fns = {
-    transcript:renderTranscript, mypage:renderMyPage,
+    transcript:renderTranscript, wmeeting:renderWMeeting, mypage:renderMyPage,
     people:renderPeople, members:renderMembers, pipeline:renderPipeline, inbound:renderInbound, dannycal:renderDannyCal,
     boardroom:renderBoardroom, crmhub:renderCRMHub, crmclean:renderCleanup, content:renderContent, social:renderSocial, kpis:renderKPIs, aidump:renderAIDump, buildreq:renderBuildRequests, clientanalysis:renderClientAnalysis, emaillist:renderEmailList, watemplates:renderWATemplates,
     testimonials:renderTestimonials,
@@ -9491,7 +9501,7 @@ function wrv2Draw(){
   const teamCard=`<div class="card" style="margin-bottom:12px">
     <div class="card-title" style="letter-spacing:.07em;text-transform:uppercase;font-size:11px;color:var(--mut)">The team week</div>
     <div style="font-size:12.5px;line-height:2">
-      ${mUp?`Today’s meeting: <b>${fmtShort(mUp.meeting_date)}</b> · ${wmItemsFor(mUp.id).filter(i=>i.status==='open'&&i.type!=='update').length} items on the agenda · ${wmIsLocked(mUp,wmSettings())?'locked':'still open'}`:'No upcoming meeting found.'}<br>
+      ${mUp?`Today’s meeting: <b>${fmtShort(mUp.meeting_date)}</b> · ${wmItemsFor(mUp.id).filter(i=>i.status==='open'&&i.type!=='update').length} items on the agenda · ${wmIsLocked(mUp,wmSettings())?'locked':'still open'} \u00b7 <span style="cursor:pointer;text-decoration:underline" onclick="nav('wmeeting',document.querySelector('[data-page=wmeeting]'))">open the Weekly Meeting</span>`:'No upcoming meeting found.'}<br>
       ${lastClosed?`Last Monday (${fmtShort(lastClosed.meeting_date)}): <b>${lcDecisions.length}</b> decision${lcDecisions.length===1?'':'s'}, <b>${lcActions.length}</b> action${lcActions.length===1?'':'s'} — ${(()=>{const t=ls.get('tuf_tasks',[])||[];const done=lcActions.filter(a=>{const k=t.find(x=>x.id===a.action_task_id);return k&&k.status==='Done';}).length;return done+' of '+lcActions.length+' actions done';})()}`:'No closed meeting yet.'}<br>
       Open upsells: <b>${openUpsells}</b>
     </div>
