@@ -307,6 +307,82 @@ details>summary::-webkit-details-marker{display:none}
 /* ═══ AI-GUIDED OKR SESSION (full-screen, readable across a room) ═══ */
 #okr-session{position:fixed;inset:0;z-index:2000;background:var(--k);color:var(--w);display:none;flex-direction:column;font-family:'Montserrat',sans-serif}
 #wm-live{position:fixed;inset:0;z-index:2000;background:var(--k);color:var(--w);display:none;flex-direction:column;padding:3vh 5vw;overflow:auto}
+/* My Page futuristic hub (v119) */
+.mp2{background:#060607 radial-gradient(1000px 440px at 50% -14%,rgba(251,240,0,.065),transparent 65%);background-image:radial-gradient(rgba(255,255,255,.028) 1px,transparent 1px),radial-gradient(1000px 440px at 50% -14%,rgba(251,240,0,.065),transparent 65%);background-size:26px 26px,auto;color:#F4F4F6;border-radius:20px;padding:4px 22px 26px;margin:-6px -6px 0}
+.mp2 .mono{font-family:'SF Mono',ui-monospace,Menlo,monospace}
+.mp2-ribbon{display:flex;gap:12px;align-items:center;flex-wrap:wrap;padding:13px 2px;border-bottom:1px solid #242528;font-size:10px;letter-spacing:.14em;color:#8B8E96;text-transform:uppercase}
+.mp2-ribbon b{color:#F4F4F6}
+.mp2-ribbon .live{width:7px;height:7px;border-radius:50%;background:#3DD68C;box-shadow:0 0 10px #3DD68C}
+.mp2-ribbon .cd{margin-left:auto;color:var(--y);text-shadow:0 0 14px rgba(251,240,0,.4)}
+.mp2-pulse{display:flex;gap:5px;align-items:center}
+.mp2-pulse i{width:8px;height:8px;border-radius:50%;display:block}
+.mp2-hero{display:flex;gap:22px;align-items:center;flex-wrap:wrap;padding:26px 0 20px}
+.mp2-av{width:78px;height:78px;border-radius:50%;flex-shrink:0;position:relative}
+.mp2-av i{position:absolute;inset:5px;border-radius:50%;background:#101114;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:28px}
+.mp2-hero h1{font-family:Montserrat,sans-serif;font-size:30px;font-weight:800;letter-spacing:.02em;line-height:1}
+.mp2-hero .big{margin-left:auto;display:flex;gap:30px;text-align:right}
+.mp2-hero .big .n{font-family:Montserrat,sans-serif;font-size:50px;font-weight:800;line-height:.95;color:var(--y);text-shadow:0 0 26px rgba(251,240,0,.35)}
+.mp2-hero .big .n.alt{color:#F4F4F6;text-shadow:none}
+.mp2-hero .big .l{font-size:8.5px;letter-spacing:.22em;color:#8B8E96;margin-top:6px;text-transform:uppercase}
+.mp2-mets{display:grid;grid-template-columns:repeat(auto-fit,minmax(225px,1fr));gap:12px;margin:2px 0 14px}
+.mp2-met{background:linear-gradient(180deg,#15161A,#101114);border:1px solid #242528;border-radius:16px;padding:15px 15px 12px;transition:transform .15s,border-color .15s}
+.mp2-met:hover{transform:translateY(-2px);border-color:#2E2F33}
+.mp2-met .row{display:flex;gap:13px;align-items:center}
+.mp2-ring{width:58px;height:58px;border-radius:50%;flex-shrink:0;position:relative}
+.mp2-ring i{position:absolute;inset:5px;border-radius:50%;background:#101114;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:16px}
+.mp2-met .nm{font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;color:#8B8E96}
+.mp2-met .st{font-size:10.5px;margin-top:4px;font-weight:700}
+.mp2-delta{font-size:9px;font-weight:800;border-radius:7px;padding:1px 7px;margin-left:6px}
+.mp2-delta.up{background:rgba(61,214,140,.15);color:#3DD68C}
+.mp2-delta.dn{background:rgba(255,92,92,.14);color:#FF5C5C}
+.mp2-bars{display:flex;gap:4px;align-items:flex-end;height:20px;margin-top:10px}
+.mp2-bars b{flex:1;border-radius:2px 2px 0 0;background:#232428;display:block}
+.mp2-bars b.y{background:var(--y);opacity:.75}
+.mp2-bars b.g{background:#3DD68C}
+.mp2-vals{display:flex;gap:4px;margin-top:3px}
+.mp2-vals span{flex:1;text-align:center;font-size:8.5px;color:#8B8E96}
+.mp2-vals span.hot{color:#F4F4F6;font-weight:700}
+.mp2-histlab{font-size:7.5px;letter-spacing:.22em;color:#5A5D63;margin-top:4px;text-align:right}
+.mp2-in{width:100%;background:#0B0C0E;border:1px solid #242528;border-radius:9px;color:#F4F4F6;font-family:inherit;font-size:12px;padding:7px 10px;outline:none;margin-top:9px}
+.mp2-in:focus{border-color:rgba(251,240,0,.5);box-shadow:0 0 0 3px rgba(251,240,0,.08)}
+.mp2-met.add{display:flex;align-items:center;justify-content:center;border-style:dashed;color:#8B8E96;font-weight:700;font-size:12px;cursor:pointer;min-height:110px}
+.mp2-cols{display:grid;grid-template-columns:3fr 2fr;gap:14px;align-items:start}
+.mp2-pan{background:#101114;border:1px solid #242528;border-radius:16px;padding:18px 20px;margin-bottom:14px}
+.mp2-pan h3{font-size:9.5px;letter-spacing:.2em;text-transform:uppercase;color:#8B8E96;margin-bottom:13px;display:flex;gap:9px;align-items:center}
+.mp2-pan h3::before{content:"";width:7px;height:7px;background:var(--y);border-radius:2px;box-shadow:0 0 10px rgba(251,240,0,.55);flex-shrink:0}
+.mp2-pan h3 .sub{text-transform:none;letter-spacing:.02em;font-weight:500;margin-left:auto;font-size:10px}
+.mp2-tl{position:relative;padding-left:24px}
+.mp2-tl::before{content:"";position:absolute;left:7px;top:6px;bottom:6px;width:2px;background:linear-gradient(180deg,var(--y),rgba(251,240,0,.1))}
+.mp2-tw{position:relative;padding:8px 0;font-size:14px;display:flex;gap:10px;align-items:baseline}
+.mp2-tw::before{content:"";position:absolute;left:-22px;top:14px;width:9px;height:9px;border-radius:50%;background:var(--y);box-shadow:0 0 12px rgba(251,240,0,.55)}
+.mp2-tw .d{margin-left:auto;font-size:9px;color:#8B8E96;letter-spacing:.14em;flex-shrink:0}
+.mp2-tw .x{cursor:pointer;color:#8B8E96;flex-shrink:0}
+.mp2-tw.flash{animation:mp2flash 1.1s ease-out}
+@keyframes mp2flash{0%{background:rgba(251,240,0,.22);border-radius:8px}100%{background:transparent}}
+.mp2-addwin{margin-top:12px;display:inline-flex;gap:8px;align-items:center;background:var(--y);color:#0A0A0B;border:none;border-radius:11px;padding:9px 18px;font-family:inherit;font-weight:800;font-size:13px;cursor:pointer;box-shadow:0 0 24px rgba(251,240,0,.25)}
+.mp2-term{background:#0B0C0E;border:1px solid #242528;border-radius:12px;overflow:hidden}
+.mp2-term .bar{display:flex;gap:6px;align-items:center;background:#15161A;border-bottom:1px solid #242528;padding:8px 12px;font-size:9px;letter-spacing:.16em;color:#8B8E96}
+.mp2-term .bar s{width:7px;height:7px;border-radius:50%;background:#2E2F33;text-decoration:none;display:block}
+.mp2-term .bar s:first-child{background:var(--y)}
+.mp2-term textarea{width:100%;background:transparent;border:none;outline:none;resize:vertical;color:#E2E3E7;font-family:inherit;font-size:14.5px;line-height:1.95;padding:13px 15px;min-height:125px;caret-color:var(--y)}
+.mp2-plan-ro{padding:13px 15px;font-size:14px;line-height:1.9;color:#E2E3E7;white-space:pre-wrap}
+.mp2-one{display:flex;gap:10px;align-items:center;background:#0C0D0F;border:1px solid #242528;border-radius:10px;padding:9px 12px;margin-bottom:8px;font-size:13px;flex-wrap:wrap}
+.mp2-one .chk{width:19px;height:19px;border-radius:6px;border:1.5px solid #2E2F33;flex-shrink:0;cursor:pointer}
+.mp2-one .mk{font-size:8.5px;background:var(--y);color:#0A0A0B;border-radius:8px;padding:2px 9px;font-weight:800;letter-spacing:.06em;cursor:pointer;white-space:nowrap}
+.mp2-one .tg{font-size:8.5px;background:#242528;color:#C9CBD1;border-radius:8px;padding:2px 9px;font-weight:800;letter-spacing:.06em}
+.mp2-addrow{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
+.mp2-addrow input{flex:1;min-width:150px;background:#0B0C0E;border:1px solid #242528;border-radius:10px;color:#F4F4F6;font-family:inherit;font-size:13px;padding:10px 13px;outline:none}
+.mp2-addrow input:focus{border-color:rgba(251,240,0,.5);box-shadow:0 0 0 3px rgba(251,240,0,.08)}
+.mp2-addrow button{background:var(--y);border:none;border-radius:10px;color:#0A0A0B;font-family:inherit;font-weight:800;font-size:13px;padding:0 18px;cursor:pointer}
+.mp2-sop{display:inline-flex;gap:9px;align-items:center;background:#0C0D0F;border:1px solid #242528;border-radius:18px;padding:7px 13px;font-size:11.5px;font-weight:700;margin:0 7px 8px 0}
+.mp2-led{width:8px;height:8px;border-radius:50%;cursor:pointer}
+.mp2-foot{font-size:9px;color:#8B8E96;letter-spacing:.14em;margin-top:6px;text-align:center;text-transform:uppercase}
+.mp2-role{width:100%;margin-top:6px;background:#141416;border:1px solid #26272B;border-radius:8px;color:#C9CBD1;font-family:inherit;font-size:12px;padding:6px 10px;outline:none}
+.mp2-planblock{background:#0C0D0F;border:1px solid #242528;border-radius:9px;padding:9px 13px;margin-bottom:10px}
+.mp2-planblock .lb{font-size:8.5px;font-weight:800;letter-spacing:.14em;color:#8B8E96;margin-bottom:3px}
+.mp2-planblock .tx{font-size:13px;white-space:pre-wrap;line-height:1.7;color:#E2E3E7}
+.mp2 details summary{font-size:11px;font-weight:700;cursor:pointer;color:#8B8E96}
+@media(max-width:880px){.mp2-cols{grid-template-columns:1fr}.mp2-hero .big{margin-left:0;width:100%;justify-content:space-between;text-align:left}.mp2-hero .big .n{font-size:40px}}
 .okr-top{display:flex;align-items:center;gap:14px;padding:14px 22px;border-bottom:1px solid #26262b;flex-wrap:wrap}
 .okr-top .okr-brand{font-weight:800;letter-spacing:.5px;font-size:13px;color:var(--y)}
 .okr-phases{display:flex;gap:6px;flex-wrap:wrap;flex:1}
@@ -8896,30 +8972,58 @@ function mpStreak(d,from){
   while((((d.weeks||{})[k]||{}).ach||[]).length){ n++; k=wmYmdAddDays(k,-7); if(n>520) break; }
   return n;
 }
+function mpLoggedCount(){
+  const wk=mpWeekKey(); let n=0;
+  TASK_PEOPLE.forEach(x=>{ const w=((mpGet(x).weeks||{})[wk])||{}; if((w.ach||[]).length||Object.keys(w.vals||{}).length||String(w.plan||'').trim()) n++; });
+  return n;
+}
+function mpReviewCountdown(){
+  const t=wmLondonInstant(wmYmdAddDays(mpWeekKey(),7),'09:00').getTime()-Date.now();
+  if(t<=0) return 'REVIEW DAY';
+  const d=Math.floor(t/86400000), h=Math.floor((t%86400000)/3600000);
+  return 'REVIEW IN '+(d?d+'D ':'')+h+'H';
+}
+// How full is the week: each target metric counts, logging any win counts once.
+function mpWeekPct(d,wk){
+  const w=(d.weeks||{})[wk]||{};
+  const withT=(d.metrics||[]).filter(m=>m.target!=null);
+  const hit=withT.filter(m=>{ const v=(w.vals||{})[m.id]; return v!=null&&v>=m.target; }).length;
+  return Math.round(((hit+((w.ach||[]).length?1:0))/(withT.length+1))*100);
+}
+let __mpFlashId='';
 function mpDraw(){
   const el=document.getElementById('mypage-render'); if(!el) return;
   const p=mpWho(); const d=mpGet(p); const mine=mpIsMine();
   const col=USER_COLOURS[p]||'#888';
   const wk=mpWeekKey(); const w=(d.weeks||{})[wk]||{ach:[],vals:{}};
   const streak=mpStreak(d);
-  const switcher=mpCanSwitch()?`<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px">${TASK_PEOPLE.map(x=>`<button class="btn btn-sm ${p===x?'btn-k':'btn-ghost'}" onclick="mpPerson='${x}';mpDraw()"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${USER_COLOURS[x]};margin-right:6px"></span>${x}</button>`).join('')}</div>`:'';
-  const hero=`<div style="background:var(--k);color:var(--w);border-radius:16px;padding:22px 24px;margin-bottom:14px;display:flex;gap:16px;align-items:center;flex-wrap:wrap">
-    <div style="width:42px;height:42px;border-radius:50%;background:${col};display:flex;align-items:center;justify-content:center;font-weight:800;font-size:17px;flex-shrink:0">${p.slice(0,1)}</div>
-    <div style="flex:1;min-width:200px">
-      <div style="font-family:Montserrat,sans-serif;font-weight:800;font-size:21px">${p}</div>
-      <input style="width:100%;margin-top:4px;background:#141416;border:1px solid #26272B;border-radius:8px;color:#C9CBD1;font-family:inherit;font-size:12px;padding:6px 10px;outline:none" placeholder="${escAttr(mpRoleHint(p,mine))}" value="${escAttr(d.role||'')}"${mine?` onchange="mpRoleSave(this.value)"`:' disabled'}>
+  const pct=mpWeekPct(d,wk);
+  const lp=wmLondonParts();
+  const logged=mpLoggedCount();
+  const switcher=mpCanSwitch()?`<div style="display:flex;gap:6px;flex-wrap:wrap;padding:12px 0 0">${TASK_PEOPLE.map(x=>`<button class="btn btn-sm" style="background:${p===x?'var(--y)':'transparent'};color:${p===x?'#0A0A0B':'#F4F4F6'};border:1.5px solid ${p===x?'var(--y)':'#2E2F33'}" onclick="mpPerson='${x}';mpDraw()"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${USER_COLOURS[x]};margin-right:6px"></span>${x}</button>`).join('')}</div>`:'';
+  const ribbon=`<div class="mp2-ribbon"><span class="live"></span> TUF HQ <b>// MY PAGE</b> <span>${lp.wd.toUpperCase()} · W/C ${fmtShort(wk).toUpperCase()}</span>
+    <span class="mp2-pulse" title="Who has logged this week">${TASK_PEOPLE.map(x=>{ const on=(((mpGet(x).weeks||{})[wk])||{}); const lit=(on.ach||[]).length||Object.keys(on.vals||{}).length||String(on.plan||'').trim(); return `<i style="background:${lit?USER_COLOURS[x]:'#2E2F33'};${lit?'box-shadow:0 0 8px '+USER_COLOURS[x]:''}" title="${x}"></i>`; }).join('')}<b style="color:#8B8E96;font-weight:500;margin-left:3px">${logged}/5 LOGGED</b></span>
+    <span class="cd">${mpReviewCountdown()}</span></div>`;
+  const hero=`<div class="mp2-hero">
+    <div class="mp2-av" style="background:conic-gradient(var(--y) ${pct*3.6}deg,#26272B 0)"><i style="color:${col}">${p.slice(0,1)}</i></div>
+    <div style="flex:1;min-width:210px">
+      <h1>${p.toUpperCase()}</h1>
+      <input class="mp2-role" placeholder="${escAttr(mpRoleHint(p,mine))}" value="${escAttr(d.role||'')}"${mine?` onchange="mpRoleSave(this.value)"`:' disabled'}>
     </div>
-    <div style="text-align:right"><div style="font-family:Montserrat,sans-serif;font-size:32px;font-weight:800;color:var(--y);line-height:1">${(w.ach||[]).length}</div><div style="font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:#9BA0A8;margin-top:3px">wins this week</div></div>
-    <div style="text-align:right"><div style="font-family:Montserrat,sans-serif;font-size:32px;font-weight:800;color:var(--y);line-height:1">${streak}</div><div style="font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:#9BA0A8;margin-top:3px">week streak</div></div>
+    <div class="big">
+      <div><div class="n">${(w.ach||[]).length}</div><div class="l">Wins this week</div></div>
+      <div><div class="n alt">${streak}</div><div class="l">Week streak</div></div>
+    </div>
   </div>`;
-  const friday=wmLondonParts().wd==='Fri'?`<div style="font-size:12.5px;font-weight:700;background:var(--y);border-radius:10px;padding:9px 14px;margin-bottom:12px">It is Friday. Log this week’s wins and numbers below; Monday’s review reads straight from here.</div>`:'';
-  const twoCol=`${friday}<div style="display:grid;grid-template-columns:3fr 2fr;gap:12px;align-items:start" class="mp-cols">
+  const friday=lp.wd==='Fri'?`<div style="font-size:12.5px;font-weight:800;background:var(--y);color:#0A0A0B;border-radius:10px;padding:9px 14px;margin-bottom:13px;box-shadow:0 0 26px rgba(251,240,0,.2)">It is Friday. Log this week\u2019s wins and numbers; Monday\u2019s review reads straight from here.</div>`:'';
+  const cols=`<div class="mp2-cols">
     <div>${mpWeekCard(p,d,mine)}${mpPlanCard(p,d,mine)}</div>
     <div>${mpOneCard(p,mine)}${mpSopsCard(p,d,mine)}</div>
-  </div><style>@media(max-width:860px){.mp-cols{grid-template-columns:1fr !important}}</style>`;
-  el.innerHTML=switcher+hero+mpMetricsCard(p,d,mine)+twoCol;
+  </div>`;
+  el.innerHTML=`<div class="mp2">${ribbon}${switcher}${hero}${mpMetricsCard(p,d,mine)}${friday}${cols}</div>`;
   const ta=document.getElementById('topbar-actions');
   if(ta) ta.innerHTML=mine?`<button class="btn btn-k btn-sm" onclick="mpAchModal('')">+ Add a win</button>`:'';
+  __mpFlashId='';
 }
 function mpRoleSave(v){ if(!mpIsMine()) return; const p=mpWho(); const d=mpGet(p); d.role=String(v||'').trim(); mpSet(p,d); }
 // Placeholder suggestion from the capability map: top function by ownership.
@@ -8936,25 +9040,24 @@ function mpRoleHint(p,mine){
   }catch(e){}
   return mine?'Your role, one line':'No role written yet';
 }
-// ── This week's wins: a feed with yellow ticks and day stamps ──
+// ── This week's wins: timeline with a glowing spine (v119 hub skin) ──
 function mpWeekCard(p,d,mine){
   const wk=mpWeekKey();
   const w=(d.weeks||{})[wk]||{ach:[],vals:{}};
   const prevKeys=mpWeekKeys(9).slice(0,-1).reverse();
   const day=a=>{ try{ return new Date(a.at).toLocaleDateString('en-GB',{weekday:'short'}).toUpperCase(); }catch(e){ return ''; } };
-  const achRow=(a,ro)=>`<div style="display:flex;gap:11px;align-items:center;padding:9px 0;border-bottom:1px dashed var(--bdr);font-size:14.5px;font-weight:500">
-    <span style="width:24px;height:24px;border-radius:50%;background:var(--y);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:12px;flex-shrink:0">✓</span>
+  const achRow=(a,ro)=>`<div class="mp2-tw${a.id===__mpFlashId?' flash':''}">
     <span style="flex:1;${!ro&&mine?'cursor:pointer':''}"${!ro&&mine?` onclick="mpAchModal('${a.id}')" title="Edit"`:''}>${escHtml(a.text)}</span>
-    <span style="font-size:9.5px;font-weight:800;color:var(--mut)">${day(a)}</span>
-    ${!ro&&mine?`<span style="cursor:pointer;color:var(--mut)" onclick="mpAchDel('${a.id}')">✕</span>`:''}
+    <span class="d">${day(a)}</span>
+    ${!ro&&mine?`<span class="x" onclick="mpAchDel('${a.id}')">\u2715</span>`:''}
   </div>`;
-  return `<div class="card" style="margin-bottom:12px">
-    <div class="card-title" style="letter-spacing:.07em;text-transform:uppercase;font-size:11px;color:var(--mut)">This week's wins <span style="font-weight:500;text-transform:none;letter-spacing:0">· w/c ${fmtShort(wk)}, in ${mine?'your':p+"'s"} own words</span></div>
-    ${w.plan?`<div style="background:var(--bg);border-radius:9px;padding:9px 13px;margin-bottom:9px"><div style="font-size:9.5px;font-weight:800;letter-spacing:.07em;color:var(--mut);margin-bottom:3px">THE PLAN FOR THIS WEEK</div><div style="font-size:12.5px;white-space:pre-wrap;line-height:1.65">${escHtml(w.plan)}</div></div>`:''}
-    ${(w.ach||[]).length?(w.ach||[]).map(a=>achRow(a,false)).join(''):`<div style="font-size:12.5px;color:var(--mut);padding:6px 0">${mine?'Nothing logged yet. The streak is waiting.':'Nothing logged yet this week.'}</div>`}
-    ${mine?`<button class="btn btn-y btn-sm" style="margin-top:10px;font-weight:800" onclick="mpAchModal('')">+ Add a win</button>`:''}
-    <details style="margin-top:14px"><summary style="font-size:12px;font-weight:700;cursor:pointer;color:var(--mut)">Previous weeks</summary>
-      ${prevKeys.map(k=>{ const pw=(d.weeks||{})[k]; if(!pw||(!(pw.ach||[]).length&&!Object.keys(pw.vals||{}).length)) return ''; return `<div style="margin-top:10px"><div style="font-size:11px;font-weight:800;color:var(--mut)">w/c ${fmtShort(k)}</div>${(pw.ach||[]).map(a=>achRow(a,true)).join('')}${Object.keys(pw.vals||{}).length?`<div style="font-size:11.5px;color:var(--mut);margin-top:3px">${(d.metrics||[]).filter(mt=>pw.vals[mt.id]!==undefined).map(mt=>escHtml(mt.name)+': '+pw.vals[mt.id]).join(' · ')}</div>`:''}</div>`; }).join('')||'<div style="font-size:12px;color:var(--mut);padding:6px 0">Nothing before this week yet.</div>'}
+  return `<div class="mp2-pan">
+    <h3>This week\u2019s wins <span class="sub">w/c ${fmtShort(wk)} \u00b7 ${mine?'your':p+'\u2019s'} own words</span></h3>
+    ${w.plan?`<div class="mp2-planblock"><div class="lb">THE PLAN FOR THIS WEEK</div><div class="tx">${escHtml(w.plan)}</div></div>`:''}
+    ${(w.ach||[]).length?`<div class="mp2-tl">${(w.ach||[]).map(a=>achRow(a,false)).join('')}</div>`:`<div style="font-size:12.5px;color:#8B8E96;padding:4px 0">${mine?'Nothing logged yet. The streak is waiting.':'Nothing logged yet this week.'}</div>`}
+    ${mine?`<button class="mp2-addwin" onclick="mpAchModal('')">+ Add a win</button>`:''}
+    <details style="margin-top:14px"><summary>Previous weeks</summary>
+      ${prevKeys.map(k=>{ const pw=(d.weeks||{})[k]; if(!pw||(!(pw.ach||[]).length&&!Object.keys(pw.vals||{}).length)) return ''; return `<div style="margin-top:10px"><div style="font-size:10px;font-weight:800;color:#8B8E96;letter-spacing:.1em">W/C ${fmtShort(k).toUpperCase()}</div><div class="mp2-tl" style="margin-top:4px">${(pw.ach||[]).map(a=>achRow(a,true)).join('')}</div>${Object.keys(pw.vals||{}).length?`<div style="font-size:11px;color:#8B8E96;margin-top:3px">${(d.metrics||[]).filter(mt=>pw.vals[mt.id]!==undefined).map(mt=>escHtml(mt.name)+': '+pw.vals[mt.id]).join(' \u00b7 ')}</div>`:''}</div>`; }).join('')||'<div style="font-size:12px;color:#8B8E96;padding:6px 0">Nothing before this week yet.</div>'}
     </details>
   </div>`;
 }
@@ -8973,7 +9076,7 @@ function mpAchSave(id){
   const d=mpGet(p); const wk=mpWeekKey();
   d.weeks=d.weeks||{}; const w=d.weeks[wk]=d.weeks[wk]||{ach:[],vals:{}};
   const a=id?(w.ach||[]).find(x=>x.id===id):null;
-  if(a) a.text=t; else (w.ach=w.ach||[]).push({id:uid(),text:t,at:new Date().toISOString()});
+  if(a) a.text=t; else { const nid=uid(); (w.ach=w.ach||[]).push({id:nid,text:t,at:new Date().toISOString()}); __mpFlashId=nid; }
   mpSet(p,d); closeModal(); mpDraw();
 }
 function mpAchDel(id){
@@ -8991,30 +9094,39 @@ function mpValSave(mid,v){
   mpSet(p,d);
   mpDraw(); // change fires on blur, so the tile recolours without stealing focus
 }
-// ── Metric tiles: big number, target corner, six week mini chart, this week's
-// value typed straight into the tile. Green when target hit, amber when short.
+// ── Metric tiles (v119 hub skin): ring for this week against target, the
+// last six weeks as labelled bars, a change chip against last week, and the
+// value typed straight into the tile.
 function mpMetricsCard(p,d,mine){
   const keys=mpWeekKeys(6);
   const wk=mpWeekKey();
   const tile=mt=>{
-    const vNow=((((d.weeks||{})[wk]||{}).vals||{})[mt.id]);
+    const vals=keys.map(k=>((((d.weeks||{})[k]||{}).vals||{})[mt.id]));
+    const vNow=vals[5]; const vPrev=vals[4];
     const has=vNow!==undefined&&vNow!==null;
     const hit=mt.target!=null&&has&&vNow>=mt.target;
     const miss=mt.target!=null&&has&&vNow<mt.target;
-    const vals=keys.map(k=>((((d.weeks||{})[k]||{}).vals||{})[mt.id]));
     const mx=Math.max(mt.target||0,...vals.map(v=>(v==null?0:v)),1);
-    const spark=keys.map((k,i)=>{ const v=vals[i]; const h=v==null?6:Math.max(10,Math.round(v/mx*100)); const colr=v==null?'var(--bdr)':(mt.target!=null&&v>=mt.target)?'var(--grn)':'var(--y)'; return `<i title="w/c ${fmtShort(k)}${v==null?'':': '+v}" style="flex:1;display:block;border-radius:3px 3px 0 0;background:${colr};height:${h}%"></i>`; }).join('');
-    return `<div class="card" style="margin-bottom:0;position:relative;border-bottom:4px solid ${hit?'var(--grn)':miss?'var(--amb)':'var(--bdr)'}">
-      ${mt.target!=null?`<span style="position:absolute;top:10px;right:12px;font-size:10px;font-weight:800;color:var(--mut)">target ${mt.target}</span>`:''}
-      <div style="font-family:Montserrat,sans-serif;font-size:34px;font-weight:800;line-height:1;color:${hit?'var(--grn)':'var(--k)'}">${has?vNow:'·'}</div>
-      <div style="font-size:11px;font-weight:700;color:var(--mut);margin:5px 0 9px">${escHtml(mt.name)}${mine?` <span style="cursor:pointer;font-weight:400" title="Edit this metric" onclick="mpMetricModal('${mt.id}')">✎</span>`:''}</div>
-      <div style="display:flex;gap:3px;align-items:flex-end;height:34px">${spark}</div>
-      ${mine?`<input class="form-input" type="number" placeholder="this week" style="margin-top:9px;font-size:12px;padding:5px 9px" value="${has?escAttr(String(vNow)):''}" onchange="mpValSave('${mt.id}',this.value)">`:''}
+    const ringPct=has?(mt.target!=null?Math.min(1,vNow/mt.target):Math.min(1,vNow/mx)):0;
+    const ringCol=hit?'#3DD68C':miss?'#FFB224':'#3A3B40';
+    const delta=(has&&vPrev!=null)?(vNow-vPrev):null;
+    const bars=keys.map((k,i)=>{ const v=vals[i]; const h=v==null?6:Math.max(12,Math.round(v/mx*100)); const cls=v==null?'':(mt.target!=null&&v>=mt.target)?' class="g"':' class="y"'; return `<b${cls} style="height:${h}%" title="w/c ${fmtShort(k)}${v==null?'':': '+v}"></b>`; }).join('');
+    const vlabs=keys.map((k,i)=>{ const v=vals[i]; return `<span${i===5?' class="hot"':''}>${v==null?'\u00b7':v}</span>`; }).join('');
+    return `<div class="mp2-met">
+      <div class="row">
+        <div class="mp2-ring" style="background:conic-gradient(${ringCol} ${Math.round(ringPct*360)}deg,#232428 0)"><i>${has?vNow:'\u00b7'}</i></div>
+        <div style="min-width:0"><div class="nm">${escHtml(mt.name)}${mine?` <span style="cursor:pointer;font-weight:400;text-transform:none" title="Edit this metric" onclick="mpMetricModal('${mt.id}')">\u270e</span>`:''}</div>
+        <div class="st" style="color:${hit?'#3DD68C':miss?'#FFB224':'#8B8E96'}">${mt.target!=null?('target '+mt.target+(hit?' \u00b7 hit':miss?' \u00b7 '+(mt.target-vNow)+' short':'')):'no target'}${delta!=null?`<span class="mp2-delta ${delta>=0?'up':'dn'}">${delta>=0?'\u25b2 +'+delta:'\u25bc \u2212'+Math.abs(delta)}</span>`:''}</div></div>
+      </div>
+      <div class="mp2-bars">${bars}</div>
+      <div class="mp2-vals">${vlabs}</div>
+      <div class="mp2-histlab">LAST 6 WEEKS</div>
+      ${mine?`<input class="mp2-in" type="number" placeholder="this week" value="${has?escAttr(String(vNow)):''}" onchange="mpValSave('${mt.id}',this.value)">`:''}
     </div>`;
   };
-  return `<div style="margin-bottom:14px">
-    ${(d.metrics||[]).length?`<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px">${(d.metrics||[]).map(tile).join('')}${mine?`<div class="card" style="margin-bottom:0;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--mut);font-weight:700;font-size:12.5px;border-style:dashed" onclick="mpMetricModal('')">+ Add a metric</div>`:''}</div>`
-    :`<div class="card" style="margin-bottom:0"><div style="font-size:12.5px;color:var(--mut)">No metrics yet. ${mine?'Pick two or three numbers that prove your week worked, like calls booked or recaps sent.':'None defined by '+p+' yet.'}</div>${mine?`<button class="btn btn-ghost btn-sm" style="margin-top:8px" onclick="mpMetricModal('')">+ Add a metric</button>`:''}</div>`}
+  return `<div class="mp2-mets">
+    ${(d.metrics||[]).map(tile).join('')}
+    ${mine?`<div class="mp2-met add" onclick="mpMetricModal('')">+ Add a metric</div>`:((d.metrics||[]).length?'':'<div class="mp2-met add" style="cursor:default">No metrics defined yet</div>')}
   </div>`;
 }
 function mpMetricModal(id){
@@ -9047,41 +9159,40 @@ function mpMetricDel(id){
 }
 // ── 1:1 with Danny (wm tables, type one_to_one) ──
 function mpOneCard(p,mine){
-  if(!wmData.loaded) return `<div class="card" style="margin-bottom:12px"><div class="card-title">1:1 with Danny</div><div style="font-size:12px;color:var(--mut)">The meeting tables are not reachable right now. If adding an item fails, run mypage.sql in Supabase (two lines) and reload.</div></div>`;
+  if(!wmData.loaded) return `<div class="mp2-pan"><h3>1:1 with Danny</h3><div style="font-size:12px;color:#8B8E96">The meeting tables are not reachable right now. Reload, and if it persists tell James.</div></div>`;
   if(p==='Danny'){
     const rows=TASK_PEOPLE.filter(x=>x!=='Danny').map(x=>{
       const m=mpOneToOne(wmData.meetings,x);
       const n=m?wmItemsFor(m.id).filter(i=>i.status==='open').length:0;
-      return `<div style="display:flex;gap:10px;align-items:center;padding:6px 0;border-bottom:1px solid var(--bdr);font-size:13px">
-        <span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:${USER_COLOURS[x]}"></span>
+      return `<div class="mp2-one"><span style="width:9px;height:9px;border-radius:50%;background:${USER_COLOURS[x]};box-shadow:0 0 8px ${USER_COLOURS[x]}"></span>
         <span style="flex:1;font-weight:700">${x}</span>
-        <span style="font-size:11.5px;color:${n?'var(--amb)':'var(--mut)'}">${n?n+' item'+(n===1?'':'s')+' waiting':'nothing waiting'}</span>
-        ${mpCanSwitch()?`<button class="btn btn-ghost btn-sm" style="padding:1px 8px;font-size:10px" onclick="mpPerson='${x}';mpDraw()">Open</button>`:''}
+        <span style="font-size:10.5px;color:${n?'#FFB224':'#8B8E96'}">${n?n+' waiting':'clear'}</span>
+        ${mpCanSwitch()?`<span class="mk" onclick="mpPerson='${x}';mpDraw()">OPEN</span>`:''}
       </div>`;
     }).join('');
-    return `<div class="card" style="margin-bottom:12px"><div class="card-title">1:1 agendas waiting on you</div>${rows}</div>`;
+    return `<div class="mp2-pan"><h3>1:1 agendas waiting on you</h3>${rows}</div>`;
   }
   const m=mpOneToOne(wmData.meetings,p);
   const items=m?wmItemsFor(m.id):[];
   const open=items.filter(i=>i.status==='open');
   const covered=items.filter(i=>i.status!=='open');
   const canAct=mine||CURRENT_USER==='Danny';
-  const row=i=>`<div style="display:flex;gap:10px;align-items:center;background:var(--bg);border-radius:9px;padding:8px 11px;margin-bottom:7px;font-size:12.5px;font-weight:600;flex-wrap:wrap">
-    ${canAct?`<div class="chk-box" style="flex-shrink:0" title="Mark covered" onclick="mpOneDone('${i.id}')"></div>`:''}
-    <div style="flex:1;min-width:140px">${escHtml(i.title)}${i.note?`<div style="font-size:11px;color:var(--mut);font-weight:500;white-space:pre-wrap">${escHtml(i.note)}</div>`:''}</div>
-    ${canAct&&!i.action_task_id?`<span style="cursor:pointer;font-size:10px;background:var(--k);color:var(--y);border-radius:9px;padding:3px 9px;font-weight:800;white-space:nowrap" onclick="mpOneTask('${i.id}')">→ task</span>`:''}
-    ${i.action_task_id?'<span class="tag tag-b" style="font-size:9px">task made</span>':''}
-    ${(mine&&i.created_by===CURRENT_USER)||CURRENT_USER==='Danny'?`<span style="cursor:pointer;color:var(--mut)" onclick="mpOneDel('${i.id}')">✕</span>`:''}
+  const row=i=>`<div class="mp2-one">
+    ${canAct?`<span class="chk" title="Mark covered" onclick="mpOneDone('${i.id}')"></span>`:''}
+    <span style="flex:1;min-width:120px">${escHtml(i.title)}${i.note?`<div style="font-size:11px;color:#8B8E96;white-space:pre-wrap">${escHtml(i.note)}</div>`:''}</span>
+    ${canAct&&!i.action_task_id?`<span class="mk" onclick="mpOneTask('${i.id}')">\u2192 TASK</span>`:''}
+    ${i.action_task_id?'<span class="tg">TASK MADE</span>':''}
+    ${(mine&&i.created_by===CURRENT_USER)||CURRENT_USER==='Danny'?`<span style="cursor:pointer;color:#8B8E96" onclick="mpOneDel('${i.id}')">\u2715</span>`:''}
   </div>`;
-  return `<div class="card" style="margin-bottom:12px">
-    <div class="card-title" style="letter-spacing:.07em;text-transform:uppercase;font-size:11px;color:var(--mut)">For my 1:1 with Danny <span style="font-weight:500;text-transform:none;letter-spacing:0">· add it when you think of it, not in the meeting</span></div>
-    ${open.length?open.map(row).join(''):'<div style="font-size:12.5px;color:var(--mut);padding:4px 0">Nothing on the agenda.</div>'}
-    ${canAct?`<div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap">
-      <input class="form-input" id="mp-one-txt" placeholder="What to raise with Danny" style="flex:1;min-width:180px" onkeydown="if(event.key==='Enter')mpOneAdd()">
-      <button class="btn btn-k btn-sm" onclick="mpOneAdd()">Add</button>
-      ${m&&open.length?`<button class="btn btn-ghost btn-sm" onclick="mpOneClose('${m.id}')">Close this 1:1</button>`:''}
+  return `<div class="mp2-pan">
+    <h3>1:1 with Danny <span class="sub">add it when you think of it</span></h3>
+    ${open.length?open.map(row).join(''):'<div style="font-size:12.5px;color:#8B8E96;padding:4px 0">Nothing on the agenda.</div>'}
+    ${canAct?`<div class="mp2-addrow">
+      <input id="mp-one-txt" placeholder="What to raise with Danny" onkeydown="if(event.key==='Enter')mpOneAdd()">
+      <button onclick="mpOneAdd()">Add</button>
+      ${m&&open.length?`<button style="background:transparent;border:1.5px solid #2E2F33;color:#F4F4F6" onclick="mpOneClose('${m.id}')">Close this 1:1</button>`:''}
     </div>`:''}
-    ${covered.length?`<div style="font-size:11px;color:var(--mut);margin-top:8px">${covered.length} covered in this 1:1 so far.</div>`:''}
+    ${covered.length?`<div class="mp2-foot">${covered.length} covered in this 1:1 so far</div>`:''}
   </div>`;
 }
 async function mpOneAdd(){
@@ -9125,10 +9236,14 @@ async function mpOneClose(mid){
 function mpPlanCard(p,d,mine){
   const nextMon=wmYmdAddDays(mpWeekKey(),7);
   const plan=(((d.weeks||{})[nextMon])||{}).plan||'';
-  return `<div class="card" style="margin-bottom:12px;border-left:5px solid var(--grn)">
-    <div class="card-title" style="letter-spacing:.07em;text-transform:uppercase;font-size:11px;color:var(--mut)">Coming week <span style="font-weight:500;text-transform:none;letter-spacing:0">· w/c ${fmtShort(nextMon)}, in ${mine?'your':p+'\u2019s'} own words</span></div>
-    ${mine?`<textarea class="form-textarea" id="mp-plan" style="min-height:130px;font-size:14.5px;line-height:1.75" placeholder="What are you getting done next week? Write it however works for you." onchange="mpPlanSave(this.value)">${escHtml(plan)}</textarea><div style="font-size:10.5px;color:var(--mut);margin-top:5px">Saves on its own. Shows on Monday’s Weekly Review next to what you actually log.</div>`
-    :(plan?`<div style="white-space:pre-wrap;font-size:13.5px;line-height:1.7">${escHtml(plan)}</div>`:'<div style="font-size:12.5px;color:var(--mut)">Nothing written yet.</div>')}
+  return `<div class="mp2-pan">
+    <h3>Coming week <span class="sub">w/c ${fmtShort(nextMon)} \u00b7 ${mine?'plan it your way':p+'\u2019s plan'}</span></h3>
+    <div class="mp2-term">
+      <div class="bar"><s></s><s></s><s></s> NEXT_WEEK.TXT \u00b7 AUTOSAVES</div>
+      ${mine?`<textarea id="mp-plan" placeholder="> What are you getting done next week? Write it however works for you." onchange="mpPlanSave(this.value)">${escHtml(plan)}</textarea>`
+      :(plan?`<div class="mp2-plan-ro">${escHtml(plan)}</div>`:'<div class="mp2-plan-ro" style="color:#8B8E96">Nothing written yet.</div>')}
+    </div>
+    ${mine?`<div style="font-size:9.5px;color:#8B8E96;letter-spacing:.1em;margin-top:6px;text-transform:uppercase">Shows on Monday\u2019s review next to what you actually log</div>`:''}
   </div>`;
 }
 function mpPlanSave(v){
@@ -9157,17 +9272,17 @@ function taskResetOct30(){
 }
 // ── SOPs this person owns: traffic light pills ──
 function mpSopsCard(p,d,mine){
-  const dotCol=s=>s==='current'?'var(--grn)':s==='draft'?'var(--amb)':'var(--red)';
-  const pill=s=>`<span style="display:inline-flex;gap:7px;align-items:center;border:1.5px solid var(--bdr);border-radius:16px;padding:6px 12px;font-size:11.5px;font-weight:700;margin:0 6px 7px 0">
-    <span style="width:8px;height:8px;border-radius:50%;background:${dotCol(s.status)};flex-shrink:0;${mine?'cursor:pointer':''}" title="${mine?'Tap to cycle missing, draft, current':s.status}" ${mine?`onclick="mpSopCycle('${s.id}')"`:''}></span>
+  const dotCol=s=>s==='current'?'#3DD68C':s==='draft'?'#FFB224':'#FF5C5C';
+  const pill=s=>`<span class="mp2-sop">
+    <span class="mp2-led" style="background:${dotCol(s.status)};box-shadow:0 0 9px ${dotCol(s.status)};${mine?'':'cursor:default'}" title="${mine?'Tap to cycle missing, draft, current':s.status}" ${mine?`onclick="mpSopCycle('${s.id}')"`:''}></span>
     ${escHtml(s.name)}
-    ${mine?`<span style="cursor:pointer;color:var(--mut);font-weight:400" onclick="mpSopDel('${s.id}')">✕</span>`:''}
+    ${mine?`<span style="cursor:pointer;color:#8B8E96;font-weight:400" onclick="mpSopDel('${s.id}')">\u2715</span>`:''}
   </span>`;
-  return `<div class="card" style="margin-bottom:12px">
-    <div class="card-title" style="letter-spacing:.07em;text-transform:uppercase;font-size:11px;color:var(--mut)">SOPs ${mine?'I own':p+' owns'}</div>
-    <div style="font-size:10px;color:var(--mut);margin-bottom:8px"><span style="color:var(--grn)">●</span> current · <span style="color:var(--amb)">●</span> draft · <span style="color:var(--red)">●</span> missing${mine?' · tap a dot to change it':''}</div>
-    ${(d.sops||[]).length?(d.sops||[]).map(pill).join(''):'<div style="font-size:12.5px;color:var(--mut)">None listed yet.</div>'}
-    ${mine?`<div style="display:flex;gap:6px;margin-top:8px"><input class="form-input" id="mp-sop-txt" placeholder="Process name" style="flex:1;font-size:12px" onkeydown="if(event.key==='Enter')mpSopAdd()"><button class="btn btn-ghost btn-sm" onclick="mpSopAdd()">Add</button></div>`:''}
+  return `<div class="mp2-pan">
+    <h3>SOPs ${mine?'I own':p+' owns'}</h3>
+    ${(d.sops||[]).length?(d.sops||[]).map(pill).join(''):'<div style="font-size:12.5px;color:#8B8E96">None listed yet.</div>'}
+    ${mine?`<div class="mp2-addrow"><input id="mp-sop-txt" placeholder="Process name" onkeydown="if(event.key==='Enter')mpSopAdd()"><button onclick="mpSopAdd()">Add</button></div>`:''}
+    ${(d.sops||[]).length&&mine?'<div class="mp2-foot">Tap a light to change it \u00b7 green current \u00b7 amber draft \u00b7 red missing</div>':''}
   </div>`;
 }
 function mpSopCycle(id){
