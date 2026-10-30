@@ -504,9 +504,11 @@ details>summary::-webkit-details-marker{display:none}
          (aidump) and the four C Suite rows (csuite) were removed from the sidebar.
          Every store and page still exists; restore any of them by re-adding its
          sb-item row from git history. People were exported to GHL first. -->
+    <!-- ARCHIVED v116 (30 Oct 2026, hidden, data kept): the Tasks page (tasks)
+         left the sidebar; everyone manages their own tasks on My Page now, the
+         store tuf_tasks is unchanged and Team Overview still reads it. -->
     <div class="sb-section">Most used</div>
-    <div class="sb-item" data-page="mypage" onclick="nav('mypage',this)">My Page</div>
-    <div class="sb-item" data-page="tasks" onclick="nav('tasks',this)">Tasks <span class="sb-badge" id="sb-tasks" style="background:var(--amb);display:none">0</span></div>
+    <div class="sb-item" data-page="mypage" onclick="nav('mypage',this)">My Page <span class="sb-badge" id="sb-tasks" style="background:var(--amb);display:none">0</span></div>
     <div class="sb-item" data-page="dannycal" onclick="nav('dannycal',this)">Danny's Calendar</div>
     <div class="sb-item" data-page="coaching" onclick="nav('coaching',this)">Coaching</div>
     <div class="sb-item" data-page="prospecting" onclick="nav('prospecting',this)">Prospecting</div>
@@ -1488,14 +1490,11 @@ function initApp(user){
   } else if(CURRENT_USER==='Chloe'){
     const el=document.querySelector('[data-page=coaching]');
     if(el) nav('coaching', el);
-  } else if(CURRENT_USER==='James'){
-    // James works out of Tasks; his most used pages sit at the top of the sidebar.
-    const el=document.querySelector('[data-page=tasks]');
-    if(el) nav('tasks', el);
   } else {
-    // My Day is archived (v107): everyone else lands on the task board too.
-    const el=document.querySelector('[data-page=tasks]');
-    if(el) nav('tasks', el);
+    // v116: the Tasks page is archived; James, Joe and Jasper land on My Page,
+    // which now carries their own tasks and next week's plan.
+    const el=document.querySelector('[data-page=mypage]');
+    if(el) nav('mypage', el);
   }
   // A shared pre read link (#wm-preread-<meetingId>) overrides the landing page.
   try{
@@ -1790,7 +1789,13 @@ function nav(page, el){
 // Navigate to a page and highlight its sidebar item (for clickable dashboard tiles etc.)
 function goPage(page){ nav(page, document.querySelector('[data-page='+page+']')); }
 // Drill from a Team Overview card into that person's open tasks (By Person view, scrolled to them).
-function goPersonTasks(p){ taskViewMode='person'; taskStatusFilter='Open'; taskFocusPerson=p; goPage('tasks'); }
+function goPersonTasks(p){
+  // v116: tasks live on My Page. Danny and James can open anyone's page;
+  // everyone else lands on their own.
+  if(typeof mpCanSwitch==='function'&&mpCanSwitch()) mpPerson=p;
+  const el=document.querySelector('[data-page=mypage]');
+  if(el) nav('mypage', el); else goPage('mypage');
+}
 function renderPage(page){
   const fns = {
     home:renderHome, tasks:renderTasks, transcript:renderTranscript, wmeeting:renderWMeeting, mypage:renderMyPage,
@@ -8911,7 +8916,7 @@ function mpDraw(){
   </div>`;
   const friday=wmLondonParts().wd==='Fri'?`<div style="font-size:12.5px;font-weight:700;background:var(--y);border-radius:10px;padding:9px 14px;margin-bottom:12px">It is Friday. Log this week’s wins and numbers below; Monday’s review reads straight from here.</div>`:'';
   const twoCol=`${friday}<div style="display:grid;grid-template-columns:3fr 2fr;gap:12px;align-items:start" class="mp-cols">
-    <div>${mpWeekCard(p,d,mine)}</div>
+    <div>${mpWeekCard(p,d,mine)}${mpTasksCard(p,mine)}${mpNextCard(p,mine)}</div>
     <div>${mpOneCard(p,mine)}${(d.blocks||{}).sops!==false?mpSopsCard(p,d,mine):''}</div>
   </div><style>@media(max-width:860px){.mp-cols{grid-template-columns:1fr !important}}</style>`;
   el.innerHTML=switcher+hero+mpMetricsCard(p,d,mine)+twoCol+mpStrips(p,d);
@@ -9112,6 +9117,71 @@ async function mpOneClose(mid){
   if(!confirm('Close this 1:1? Open items stay visible under it until covered; a fresh agenda starts with the next item added.')) return;
   const m=wmData.meetings.find(x=>x.id===mid); if(!m) return;
   if(await coUpd('wm_meetings',mid,{status:'closed',ended_at:new Date().toISOString()})){ m.status='closed'; mpDraw(); }
+}
+// ── My tasks on My Page (v116): the Tasks page is archived; everyone manages
+// their own board tasks here. Same tuf_tasks store, so meeting actions,
+// podcast steps and Team Overview all keep working. Pure bucket fn for tests.
+function mpTaskBuckets(tasks,p,wk){
+  const nextMon=wmYmdAddDays(wk,7), nextEnd=wmYmdAddDays(wk,14);
+  const mine=(tasks||[]).filter(t=>(!t.scope||t.scope==='board')&&t.owner===p&&t.status!=='Done');
+  return {
+    now:mine.filter(t=>!t.dueDate||t.dueDate<nextMon),
+    next:mine.filter(t=>t.dueDate&&t.dueDate>=nextMon&&t.dueDate<nextEnd),
+    later:mine.filter(t=>t.dueDate&&t.dueDate>=nextEnd)
+  };
+}
+function mpTaskRow(t,mine,today){
+  const late=t.dueDate&&t.dueDate<today;
+  const src=t.linkedTo?String(t.linkedTo).split(':')[0]:'';
+  return `<div style="display:flex;gap:10px;align-items:center;padding:6px 0;border-bottom:1px dashed var(--bdr);font-size:13px">
+    ${mine?`<div class="chk-box" style="flex-shrink:0" title="Mark done" onclick="mpTaskTick('${t.id}')"></div>`:''}
+    <span style="flex:1;min-width:140px">${escHtml(t.title)}${src?` <span class="tag tag-b" style="font-size:8.5px">${escHtml(src==='wm'?'meeting':src)}</span>`:''}</span>
+    ${t.dueDate?`<span style="font-size:10px;font-weight:800;color:${late?'var(--red)':'var(--mut)'}">${fmtShort(t.dueDate)}</span>`:''}
+    ${mine&&!t.linkedTo?`<span style="cursor:pointer;color:var(--mut)" onclick="mpTaskDel('${t.id}')">✕</span>`:''}
+  </div>`;
+}
+function mpTaskAddBar(which,days){
+  return `<div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap">
+    <input class="form-input" id="mp-task-txt-${which}" placeholder="Add a task" style="flex:1;min-width:160px;font-size:12.5px" onkeydown="if(event.key==='Enter')mpTaskAdd('${which}')">
+    <select class="form-select" id="mp-task-day-${which}" style="width:auto;font-size:11.5px">${days.map(([v,l])=>`<option value="${v}">${l}</option>`).join('')}</select>
+    <button class="btn btn-ghost btn-sm" onclick="mpTaskAdd('${which}')">Add</button>
+  </div>`;
+}
+function mpTasksCard(p,mine){
+  const wk=mpWeekKey(); const today=new Date().toISOString().slice(0,10);
+  const b=mpTaskBuckets(ls.get('tuf_tasks',[])||[],p,wk);
+  const days=[['','No date']].concat([0,1,2,3,4].map(i=>{const d=wmYmdAddDays(wk,i);return [d,new Date(d+'T12:00:00').toLocaleDateString('en-GB',{weekday:'short'})+(d===today?' (today)':'')];}));
+  return `<div class="card" style="margin-bottom:12px">
+    <div class="card-title" style="letter-spacing:.07em;text-transform:uppercase;font-size:11px;color:var(--mut)">My tasks <span style="font-weight:500;text-transform:none;letter-spacing:0">· open now, meeting actions land here on their own</span></div>
+    ${b.now.length?b.now.map(t=>mpTaskRow(t,mine,today)).join(''):'<div style="font-size:12.5px;color:var(--mut);padding:4px 0">Nothing open. Add one or enjoy it.</div>'}
+    ${b.later.length?`<div style="font-size:10.5px;color:var(--mut);margin-top:6px">${b.later.length} more dated beyond next week.</div>`:''}
+    ${mine?mpTaskAddBar('now',days):''}
+  </div>`;
+}
+function mpNextCard(p,mine){
+  const wk=mpWeekKey(); const today=new Date().toISOString().slice(0,10);
+  const b=mpTaskBuckets(ls.get('tuf_tasks',[])||[],p,wk);
+  const days=[0,1,2,3,4].map(i=>{const d=wmYmdAddDays(wk,7+i);return [d,new Date(d+'T12:00:00').toLocaleDateString('en-GB',{weekday:'short'})+' '+fmtShort(d)];});
+  return `<div class="card" style="margin-bottom:12px;border-left:5px solid var(--grn)">
+    <div class="card-title" style="letter-spacing:.07em;text-transform:uppercase;font-size:11px;color:var(--mut)">Next week <span style="font-weight:500;text-transform:none;letter-spacing:0">· plan it on Friday, w/c ${fmtShort(wmYmdAddDays(wk,7))}</span></div>
+    ${b.next.length?b.next.map(t=>mpTaskRow(t,mine,today)).join(''):'<div style="font-size:12.5px;color:var(--mut);padding:4px 0">Nothing planned for next week yet.</div>'}
+    ${mine?mpTaskAddBar('next',days):''}
+  </div>`;
+}
+async function mpTaskAdd(which){
+  const p=mpWho(); if(p!==CURRENT_USER) return;
+  const inp=document.getElementById('mp-task-txt-'+which);
+  const title=inp?.value.trim(); if(!title) return;
+  const due=document.getElementById('mp-task-day-'+which)?.value||'';
+  const id=uid();
+  await commitTasks(arr=>{ arr.push({id:id,title:title,owner:p,priority:'Medium',dueDate:due,status:'To Do',linkedTo:'',notes:'',section:'',createdBy:CURRENT_USER,createdAt:new Date().toISOString(),completedAt:null}); });
+  updateTaskBadge(); mpDraw();
+}
+async function mpTaskTick(id){ await quickCompleteTask(id); mpDraw(); }
+async function mpTaskDel(id){
+  if(!confirm('Delete this task?')) return;
+  await commitTasks(arr=>{ const i=arr.findIndex(t=>t.id===id); if(i>=0) arr.splice(i,1); });
+  updateTaskBadge(); mpDraw();
 }
 // ── SOPs this person owns: traffic light pills ──
 function mpSopsCard(p,d,mine){
