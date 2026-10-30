@@ -591,11 +591,13 @@ details>summary::-webkit-details-marker{display:none}
 
     <!-- ARCHIVED v107 (19 Oct 2026, hidden, data kept): My Day (myday) and Team
          Tasks (teamtasks) removed per James; everyone now works from Tasks. -->
+    <!-- REMOVED v120 (30 Oct 2026) per James: Morning Brief (home), Weekly
+         Meeting (wmeeting) and Team Overview (teamoverview). The wm_* tables
+         stay live underneath: the 1:1s on My Page, the Monday meeting row and
+         the agent digest all use them; the Weekly Review is the Monday page
+         now and carries the Upsells card that lived on Team Overview. -->
     <div class="sb-section">Overview</div>
-    <div class="sb-item active" data-page="home" onclick="nav('home',this)">Morning Brief</div>
-    <div class="sb-item" data-page="wmeeting" onclick="nav('wmeeting',this)">Weekly Meeting</div>
     <div class="sb-item" data-page="reviews" onclick="nav('reviews',this)">Weekly Review</div>
-    <div class="sb-item" data-page="teamoverview" onclick="nav('teamoverview',this)">Team Overview</div>
     <div class="sb-item" data-page="transcript" onclick="nav('transcript',this)">Meeting Notes</div>
 
     <div class="sb-section">Clients & Delivery</div>
@@ -648,26 +650,7 @@ details>summary::-webkit-details-marker{display:none}
 
     <!-- ═══ HOME / MORNING BRIEF ═══ -->
     <div class="page" id="page-myday"><div id="myday-render"></div></div>
-    <div class="page active" id="page-home">
-      <div class="ns-row" id="ns-strip"></div>
-      <div id="daily-control" style="margin-bottom:14px"></div>
-      <div class="sec-hdr">Tasks <span style="font-size:11px;font-weight:400;color:var(--mut)" id="brief-task-user"></span></div>
-      <div id="brief-tasks" style="margin-bottom:16px"></div>
-
-
-      <div class="grid-2">
-        <div>
-          <div class="sec-hdr">Your Priorities</div>
-          <div id="brief-items"></div>
-        </div>
-        <div>
-          <div class="sec-hdr" style="margin-top:16px">Daily Note</div>
-          <textarea class="form-textarea" id="daily-note" placeholder="Wins, blockers, focus for today…" oninput="saveNote()" style="margin-bottom:6px"></textarea>
-        </div>
-      </div>
-    </div>
-
-    <!-- ═══ CLIENT ANALYSIS ═══ -->
+    <!-- page-home removed v120 -->
     <div class="page" id="page-clientanalysis">
       <div style="display:grid;grid-template-columns:260px 1fr;gap:16px;height:calc(100vh - 110px);overflow:hidden">
         <!-- Left: client list -->
@@ -845,7 +828,7 @@ details>summary::-webkit-details-marker{display:none}
 
     <!-- ═══ COACHING SESSIONS ═══ -->
     <div class="page" id="page-coaching"><div id="coaching-content"></div></div>
-    <div class="page" id="page-wmeeting"><div id="wmeeting-render"></div></div>
+    <!-- page-wmeeting removed v120 -->
     <div class="page" id="page-mypage"><div id="mypage-render"></div></div>
 
     <!-- ═══ GROWTH PLAN ═══ -->
@@ -924,10 +907,7 @@ details>summary::-webkit-details-marker{display:none}
       <div id="dannycal-render"></div>
     </div>
 
-    <div class="page" id="page-teamoverview">
-      <div id="teamoverview-render"></div>
-    </div>
-
+    <!-- page-teamoverview removed v120 -->
     <div class="page" id="page-teamtasks"><div id="teamtasks-render"></div></div>
 
     <div class="page" id="page-daily">
@@ -1558,13 +1538,9 @@ function initApp(user){
   renderNotifBadge();
   updateTaskBadge();
   subscribeToChanges();
-  // Danny lands on the Team Overview ("what everyone has on"); Chloe lands on
-  // Coaching, because sending the session summaries is her job and she was
-  // having to find it among the whole sidebar first; everyone else on My Day.
-  if(CURRENT_USER==='Danny'){
-    const el=document.querySelector('[data-page=teamoverview]');
-    if(el) nav('teamoverview', el);
-  } else if(CURRENT_USER==='Chloe'){
+  // v120: Team Overview is gone, so Danny lands on My Page like the rest
+  // (his page carries the 1:1 queue). Chloe still lands on Coaching.
+  if(CURRENT_USER==='Chloe'){
     const el=document.querySelector('[data-page=coaching]');
     if(el) nav('coaching', el);
   } else {
@@ -1573,15 +1549,6 @@ function initApp(user){
     const el=document.querySelector('[data-page=mypage]');
     if(el) nav('mypage', el);
   }
-  // A shared pre read link (#wm-preread-<meetingId>) overrides the landing page.
-  try{
-    const pre='#wm-preread-';
-    if(location.hash&&location.hash.indexOf(pre)===0){
-      wmView='preread'; wmSelMeetingId=location.hash.slice(pre.length);
-      const el=document.querySelector('[data-page=wmeeting]');
-      if(el) nav('wmeeting', el);
-    }
-  }catch(e){}
   // Next Monday's meeting exists as soon as anyone opens the app this week.
   wmLoad().then(r=>{ if(r.ok) wmEnsureMeeting(); }).catch(()=>{});
 }
@@ -1832,7 +1799,7 @@ function seedDefaultData(){
 // ═══ NAVIGATION ══════════════════════════════════════════════════════════════
 const PAGE_TITLES = {
   myday:'My Day',
-  home:'Morning Brief',teamoverview:'Team Overview',transcript:'Meeting Notes → Tasks',wmeeting:'Weekly Meeting',mypage:'My Page',
+  transcript:'Meeting Notes → Tasks',mypage:'My Page',
   people:'Network',members:'Boardroom Members',pipeline:'Sales Pipeline',inbound:'Inbound Leads',dannycal:"Danny's Calendar",
   boardroom:'Boardroom',crmhub:'CRM',crmclean:'CRM Cleanup',content:'Content Calendar',social:'Social Media',kpis:'KPIs',aidump:'AI Tool (Dump)',buildreq:'Build Requests',clientanalysis:'Client Analysis',emaillist:'Email List',watemplates:'WhatsApp Templates',
   testimonials:'Testimonials',
@@ -1875,7 +1842,7 @@ function goPersonTasks(p){
 }
 function renderPage(page){
   const fns = {
-    home:renderHome, transcript:renderTranscript, wmeeting:renderWMeeting, mypage:renderMyPage,
+    transcript:renderTranscript, mypage:renderMyPage,
     people:renderPeople, members:renderMembers, pipeline:renderPipeline, inbound:renderInbound, dannycal:renderDannyCal,
     boardroom:renderBoardroom, crmhub:renderCRMHub, crmclean:renderCleanup, content:renderContent, social:renderSocial, kpis:renderKPIs, aidump:renderAIDump, buildreq:renderBuildRequests, clientanalysis:renderClientAnalysis, emaillist:renderEmailList, watemplates:renderWATemplates,
     testimonials:renderTestimonials,
@@ -1883,7 +1850,7 @@ function renderPage(page){
     podcast:renderPodcast, coaching:renderCoaching, growthplan:renderGrowthPlan, ip:renderIP, files:renderFiles,
     capmap:renderCapMap2, goals:renderGoals, market:renderMarket, prospecting:renderProspecting, fourbox:renderFourBox, budget:renderBudget,
     teamtasks:renderTeamTasks, roles:renderRoles, reviews:renderWeeklyReview2, notifs:renderNotifs,
-    csuite:renderCSuite, holidays:renderHolidays, daily:renderDaily, teamoverview:renderTeamOverview, myday:renderMyDay,
+    csuite:renderCSuite, holidays:renderHolidays, daily:renderDaily, myday:renderMyDay,
   };
   if(fns[page]) fns[page]();
 }
@@ -2518,6 +2485,7 @@ const TASK_PEOPLE = ['Danny','Joe','Jasper','James','Chloe'];
 function setBriefWho(w){ briefWho=w; renderBriefTasks(); }
 function setBriefScope(s){ briefScope=s; renderBriefTasks(); }
 function renderBriefTasks(){
+  if(!document.getElementById('brief-tasks')) return; // Morning Brief removed v120
   const today = new Date().toISOString().slice(0,10);
   let tasks = ls.get('tuf_tasks',[]).filter(utIsBoard);
   // Defaults are seeded once at login (seedTasksOnce); never auto-rebuild here.
@@ -4395,7 +4363,7 @@ function renderDailyControl(){
     cells.push(cell(notConfirmed,'Not confirmed',notConfirmed?'var(--amb)':'var(--grn)',"nav('padel',document.querySelector('[data-page=padel]'))"));
   }
   if(briefShow('pipeline')){
-    cells.push(cell(followUps,'Follow-ups due',followUps?'var(--red)':'var(--grn)',"nav('teamoverview',document.querySelector('[data-page=teamoverview]'))"));
+    cells.push(cell(followUps,'Follow-ups due',followUps?'var(--red)':'var(--grn)',"nav('reviews',document.querySelector('[data-page=reviews]'))"));
     cells.push(cell(pending,'Payments pending',pending?'var(--amb)':'var(--grn)',"nav('boardroom',document.querySelector('[data-page=boardroom]'))"));
   }
   if(briefShow('clients')) cells.push(cell(risks,'Key risks',risks?'var(--red)':'var(--grn)',"nav('members',document.querySelector('[data-page=members]'))"));
@@ -5558,8 +5526,8 @@ function upsellModal(id){
 // hidden Sales Pipeline page still renders it harmlessly).
 function upsellRedraw(){
   const pg=document.querySelector('.page.active')?.id?.replace('page-','')||'';
-  if(pg==='pipeline') renderPipeline(); else if(pg==='crmhub') renderCRMHub(); else renderTeamOverview();
-  // crmhub and pipeline are archived (v104) but still render if reached; Team Overview is the card's home.
+  if(pg==='reviews') wrv2Draw(); else if(pg==='pipeline') renderPipeline(); else if(pg==='crmhub') renderCRMHub();
+  // v120: the card's home is the Weekly Review.
 }
 function upsellSave(id){
   const g=x=>document.getElementById(x)?.value||'';
@@ -9403,7 +9371,7 @@ function wrv2Draw(){
   const teamCard=`<div class="card" style="margin-bottom:12px">
     <div class="card-title" style="letter-spacing:.07em;text-transform:uppercase;font-size:11px;color:var(--mut)">The team week</div>
     <div style="font-size:12.5px;line-height:2">
-      ${mUp?`Today’s meeting: <b>${fmtShort(mUp.meeting_date)}</b> · ${wmItemsFor(mUp.id).filter(i=>i.status==='open'&&i.type!=='update').length} items on the agenda · ${wmIsLocked(mUp,wmSettings())?'locked':'still open'} · <span style="cursor:pointer;text-decoration:underline" onclick="nav('wmeeting',document.querySelector('[data-page=wmeeting]'))">open the Weekly Meeting</span>`:'No upcoming meeting found.'}<br>
+      ${mUp?`Today’s meeting: <b>${fmtShort(mUp.meeting_date)}</b> · ${wmItemsFor(mUp.id).filter(i=>i.status==='open'&&i.type!=='update').length} items on the agenda · ${wmIsLocked(mUp,wmSettings())?'locked':'still open'}`:'No upcoming meeting found.'}<br>
       ${lastClosed?`Last Monday (${fmtShort(lastClosed.meeting_date)}): <b>${lcDecisions.length}</b> decision${lcDecisions.length===1?'':'s'}, <b>${lcActions.length}</b> action${lcActions.length===1?'':'s'} — ${(()=>{const t=ls.get('tuf_tasks',[])||[];const done=lcActions.filter(a=>{const k=t.find(x=>x.id===a.action_task_id);return k&&k.status==='Done';}).length;return done+' of '+lcActions.length+' actions done';})()}`:'No closed meeting yet.'}<br>
       Open upsells: <b>${openUpsells}</b>
     </div>
@@ -9426,7 +9394,7 @@ function wrv2Draw(){
       `:`<div style="font-size:12.5px;color:var(--mut)">Nothing logged for this week. That is the first question for the room.</div>`}
     </div>`;
   };
-  el.innerHTML=hero+digestCard+teamCard+rows.map(personCard).join('')+
+  el.innerHTML=hero+digestCard+teamCard+upsellCard()+rows.map(personCard).join('')+
     `<div style="font-size:10.5px;color:var(--mut);margin-top:4px">Compiled from each person’s My Page (filled on Fridays), the task board, the 1:1 agendas, the capability map and the Monday meeting record. Nothing on this page is typed here.</div>`;
   const ta=document.getElementById('topbar-actions'); if(ta) ta.innerHTML='';
 }
