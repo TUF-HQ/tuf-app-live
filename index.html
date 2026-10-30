@@ -508,7 +508,7 @@ details>summary::-webkit-details-marker{display:none}
          left the sidebar; everyone manages their own tasks on My Page now, the
          store tuf_tasks is unchanged and Team Overview still reads it. -->
     <div class="sb-section">Most used</div>
-    <div class="sb-item" data-page="mypage" onclick="nav('mypage',this)">My Page <span class="sb-badge" id="sb-tasks" style="background:var(--amb);display:none">0</span></div>
+    <div class="sb-item" data-page="mypage" onclick="nav('mypage',this)">My Page</div>
     <div class="sb-item" data-page="dannycal" onclick="nav('dannycal',this)">Danny's Calendar</div>
     <div class="sb-item" data-page="coaching" onclick="nav('coaching',this)">Coaching</div>
     <div class="sb-item" data-page="prospecting" onclick="nav('prospecting',this)">Prospecting</div>
@@ -698,12 +698,12 @@ details>summary::-webkit-details-marker{display:none}
       </div>
     </div>
 
-    <!-- ═══ TASKS ═══ -->
-    <div class="page" id="page-tasks">
-      <div class="grid-4" id="aq-stats" style="margin-bottom:12px"></div>
-      <div class="aq-filter" id="aq-filter" style="margin-bottom:12px"></div>
-      <div id="action-list"></div>
-    </div>
+    <!-- TASKS page REMOVED v117 (30 Oct 2026) per James: nobody used it. The
+         tuf_tasks store remains (meeting actions still write to it and Team
+         Overview and the Morning Brief still read it); the board was wiped
+         with a full archive. People plan their week in their own words on
+         My Page instead. -->
+
 
     <!-- ═══ MEMBERS CRM ═══ -->
     <div class="page" id="page-people"><div id="people-render"></div></div>
@@ -1472,6 +1472,7 @@ function initApp(user){
   upsellSeed();
   taskResetOct19();
   taskSeedW1910();
+  taskResetOct30();
   cap2Seed();
   updateFollowupBadge();
   setTimeout(()=>{ try{ csuiteAutoRun(); }catch(e){} },8000);
@@ -1755,7 +1756,7 @@ function seedDefaultData(){
 // ═══ NAVIGATION ══════════════════════════════════════════════════════════════
 const PAGE_TITLES = {
   myday:'My Day',
-  home:'Morning Brief',teamoverview:'Team Overview',tasks:'Tasks',transcript:'Meeting Notes → Tasks',wmeeting:'Weekly Meeting',mypage:'My Page',
+  home:'Morning Brief',teamoverview:'Team Overview',transcript:'Meeting Notes → Tasks',wmeeting:'Weekly Meeting',mypage:'My Page',
   people:'Network',members:'Boardroom Members',pipeline:'Sales Pipeline',inbound:'Inbound Leads',dannycal:"Danny's Calendar",
   boardroom:'Boardroom',crmhub:'CRM',crmclean:'CRM Cleanup',content:'Content Calendar',social:'Social Media',kpis:'KPIs',aidump:'AI Tool (Dump)',buildreq:'Build Requests',clientanalysis:'Client Analysis',emaillist:'Email List',watemplates:'WhatsApp Templates',
   testimonials:'Testimonials',
@@ -1798,7 +1799,7 @@ function goPersonTasks(p){
 }
 function renderPage(page){
   const fns = {
-    home:renderHome, tasks:renderTasks, transcript:renderTranscript, wmeeting:renderWMeeting, mypage:renderMyPage,
+    home:renderHome, transcript:renderTranscript, wmeeting:renderWMeeting, mypage:renderMyPage,
     people:renderPeople, members:renderMembers, pipeline:renderPipeline, inbound:renderInbound, dannycal:renderDannyCal,
     boardroom:renderBoardroom, crmhub:renderCRMHub, crmclean:renderCleanup, content:renderContent, social:renderSocial, kpis:renderKPIs, aidump:renderAIDump, buildreq:renderBuildRequests, clientanalysis:renderClientAnalysis, emaillist:renderEmailList, watemplates:renderWATemplates,
     testimonials:renderTestimonials,
@@ -1889,7 +1890,6 @@ function renderMyDay(){
     <div class="card" style="margin-top:14px">
       <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:6px">
         <div class="card-title" style="margin:0">My tasks ${tOverdue?`<span class="tag tag-r" style="font-size:10px">${tOverdue} overdue</span>`:''}</div>
-        <button class="btn btn-ghost btn-sm" onclick="nav('tasks',document.querySelector('[data-page=tasks]'))">Open task board</button>
       </div>
       <div style="font-size:11px;color:var(--mut);margin-bottom:10px">Your open items from the team task board. Tap the box to advance status.</div>
       ${myTasks.length?`<div style="border-radius:8px;overflow:hidden;border:1px solid var(--bdr);border-top:none">${renderTaskRows(myTasks,today)}</div>`:'<div class="empty" style="padding:18px">No open tasks assigned to you.</div>'}
@@ -4285,7 +4285,6 @@ function renderHome(){
   const dn=document.getElementById('daily-note');
   if(dn) dn.value=ls.str('tuf_note_'+new Date().toISOString().slice(0,10),'');
   document.getElementById('topbar-actions').innerHTML=`
-    <button class="btn btn-k btn-sm" onclick="nav('tasks',document.querySelector('[data-page=tasks]'))">+ Add Task</button>
     <button class="btn btn-ghost btn-sm" onclick="briefPrefsModal()">Customise my brief</button>`;
   renderDailyControl();
   renderBriefTasks();
@@ -8916,7 +8915,7 @@ function mpDraw(){
   </div>`;
   const friday=wmLondonParts().wd==='Fri'?`<div style="font-size:12.5px;font-weight:700;background:var(--y);border-radius:10px;padding:9px 14px;margin-bottom:12px">It is Friday. Log this week’s wins and numbers below; Monday’s review reads straight from here.</div>`:'';
   const twoCol=`${friday}<div style="display:grid;grid-template-columns:3fr 2fr;gap:12px;align-items:start" class="mp-cols">
-    <div>${mpWeekCard(p,d,mine)}${mpTasksCard(p,mine)}${mpNextCard(p,mine)}</div>
+    <div>${mpWeekCard(p,d,mine)}${mpPlanCard(p,d,mine)}</div>
     <div>${mpOneCard(p,mine)}${(d.blocks||{}).sops!==false?mpSopsCard(p,d,mine):''}</div>
   </div><style>@media(max-width:860px){.mp-cols{grid-template-columns:1fr !important}}</style>`;
   el.innerHTML=switcher+hero+mpMetricsCard(p,d,mine)+twoCol+mpStrips(p,d);
@@ -8952,6 +8951,7 @@ function mpWeekCard(p,d,mine){
   </div>`;
   return `<div class="card" style="margin-bottom:12px">
     <div class="card-title" style="letter-spacing:.07em;text-transform:uppercase;font-size:11px;color:var(--mut)">This week's wins <span style="font-weight:500;text-transform:none;letter-spacing:0">· w/c ${fmtShort(wk)}, in ${mine?'your':p+"'s"} own words</span></div>
+    ${w.plan?`<div style="background:var(--bg);border-radius:9px;padding:9px 13px;margin-bottom:9px"><div style="font-size:9.5px;font-weight:800;letter-spacing:.07em;color:var(--mut);margin-bottom:3px">THE PLAN FOR THIS WEEK</div><div style="font-size:12.5px;white-space:pre-wrap;line-height:1.65">${escHtml(w.plan)}</div></div>`:''}
     ${(w.ach||[]).length?(w.ach||[]).map(a=>achRow(a,false)).join(''):`<div style="font-size:12.5px;color:var(--mut);padding:6px 0">${mine?'Nothing logged yet. The streak is waiting.':'Nothing logged yet this week.'}</div>`}
     ${mine?`<button class="btn btn-y btn-sm" style="margin-top:10px;font-weight:800" onclick="mpAchModal('')">+ Add a win</button>`:''}
     <details style="margin-top:14px"><summary style="font-size:12px;font-weight:700;cursor:pointer;color:var(--mut)">Previous weeks</summary>
@@ -9118,70 +9118,43 @@ async function mpOneClose(mid){
   const m=wmData.meetings.find(x=>x.id===mid); if(!m) return;
   if(await coUpd('wm_meetings',mid,{status:'closed',ended_at:new Date().toISOString()})){ m.status='closed'; mpDraw(); }
 }
-// ── My tasks on My Page (v116): the Tasks page is archived; everyone manages
-// their own board tasks here. Same tuf_tasks store, so meeting actions,
-// podcast steps and Team Overview all keep working. Pure bucket fn for tests.
-function mpTaskBuckets(tasks,p,wk){
-  const nextMon=wmYmdAddDays(wk,7), nextEnd=wmYmdAddDays(wk,14);
-  const mine=(tasks||[]).filter(t=>(!t.scope||t.scope==='board')&&t.owner===p&&t.status!=='Done');
-  return {
-    now:mine.filter(t=>!t.dueDate||t.dueDate<nextMon),
-    next:mine.filter(t=>t.dueDate&&t.dueDate>=nextMon&&t.dueDate<nextEnd),
-    later:mine.filter(t=>t.dueDate&&t.dueDate>=nextEnd)
-  };
-}
-function mpTaskRow(t,mine,today){
-  const late=t.dueDate&&t.dueDate<today;
-  const src=t.linkedTo?String(t.linkedTo).split(':')[0]:'';
-  return `<div style="display:flex;gap:10px;align-items:center;padding:6px 0;border-bottom:1px dashed var(--bdr);font-size:13px">
-    ${mine?`<div class="chk-box" style="flex-shrink:0" title="Mark done" onclick="mpTaskTick('${t.id}')"></div>`:''}
-    <span style="flex:1;min-width:140px">${escHtml(t.title)}${src?` <span class="tag tag-b" style="font-size:8.5px">${escHtml(src==='wm'?'meeting':src)}</span>`:''}</span>
-    ${t.dueDate?`<span style="font-size:10px;font-weight:800;color:${late?'var(--red)':'var(--mut)'}">${fmtShort(t.dueDate)}</span>`:''}
-    ${mine&&!t.linkedTo?`<span style="cursor:pointer;color:var(--mut)" onclick="mpTaskDel('${t.id}')">✕</span>`:''}
-  </div>`;
-}
-function mpTaskAddBar(which,days){
-  return `<div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap">
-    <input class="form-input" id="mp-task-txt-${which}" placeholder="Add a task" style="flex:1;min-width:160px;font-size:12.5px" onkeydown="if(event.key==='Enter')mpTaskAdd('${which}')">
-    <select class="form-select" id="mp-task-day-${which}" style="width:auto;font-size:11.5px">${days.map(([v,l])=>`<option value="${v}">${l}</option>`).join('')}</select>
-    <button class="btn btn-ghost btn-sm" onclick="mpTaskAdd('${which}')">Add</button>
-  </div>`;
-}
-function mpTasksCard(p,mine){
-  const wk=mpWeekKey(); const today=new Date().toISOString().slice(0,10);
-  const b=mpTaskBuckets(ls.get('tuf_tasks',[])||[],p,wk);
-  const days=[['','No date']].concat([0,1,2,3,4].map(i=>{const d=wmYmdAddDays(wk,i);return [d,new Date(d+'T12:00:00').toLocaleDateString('en-GB',{weekday:'short'})+(d===today?' (today)':'')];}));
-  return `<div class="card" style="margin-bottom:12px">
-    <div class="card-title" style="letter-spacing:.07em;text-transform:uppercase;font-size:11px;color:var(--mut)">My tasks <span style="font-weight:500;text-transform:none;letter-spacing:0">· open now, meeting actions land here on their own</span></div>
-    ${b.now.length?b.now.map(t=>mpTaskRow(t,mine,today)).join(''):'<div style="font-size:12.5px;color:var(--mut);padding:4px 0">Nothing open. Add one or enjoy it.</div>'}
-    ${b.later.length?`<div style="font-size:10.5px;color:var(--mut);margin-top:6px">${b.later.length} more dated beyond next week.</div>`:''}
-    ${mine?mpTaskAddBar('now',days):''}
-  </div>`;
-}
-function mpNextCard(p,mine){
-  const wk=mpWeekKey(); const today=new Date().toISOString().slice(0,10);
-  const b=mpTaskBuckets(ls.get('tuf_tasks',[])||[],p,wk);
-  const days=[0,1,2,3,4].map(i=>{const d=wmYmdAddDays(wk,7+i);return [d,new Date(d+'T12:00:00').toLocaleDateString('en-GB',{weekday:'short'})+' '+fmtShort(d)];});
+// ── Coming week (v117): each person writes next week's plan in their own
+// words. Free text, no task objects — James: "we choose our own text for the
+// coming week". Saved onto the coming Monday's week entry, so when that week
+// arrives it shows at the top of This week as the plan to beat, and the
+// Weekly Review shows it against what actually got logged.
+function mpPlanCard(p,d,mine){
+  const nextMon=wmYmdAddDays(mpWeekKey(),7);
+  const plan=(((d.weeks||{})[nextMon])||{}).plan||'';
   return `<div class="card" style="margin-bottom:12px;border-left:5px solid var(--grn)">
-    <div class="card-title" style="letter-spacing:.07em;text-transform:uppercase;font-size:11px;color:var(--mut)">Next week <span style="font-weight:500;text-transform:none;letter-spacing:0">· plan it on Friday, w/c ${fmtShort(wmYmdAddDays(wk,7))}</span></div>
-    ${b.next.length?b.next.map(t=>mpTaskRow(t,mine,today)).join(''):'<div style="font-size:12.5px;color:var(--mut);padding:4px 0">Nothing planned for next week yet.</div>'}
-    ${mine?mpTaskAddBar('next',days):''}
+    <div class="card-title" style="letter-spacing:.07em;text-transform:uppercase;font-size:11px;color:var(--mut)">Coming week <span style="font-weight:500;text-transform:none;letter-spacing:0">· w/c ${fmtShort(nextMon)}, in ${mine?'your':p+'\u2019s'} own words</span></div>
+    ${mine?`<textarea class="form-textarea" id="mp-plan" style="min-height:110px;font-size:13.5px;line-height:1.7" placeholder="What are you getting done next week? Write it however works for you." onchange="mpPlanSave(this.value)">${escHtml(plan)}</textarea><div style="font-size:10.5px;color:var(--mut);margin-top:5px">Saves on its own. Shows on Monday’s Weekly Review next to what you actually log.</div>`
+    :(plan?`<div style="white-space:pre-wrap;font-size:13.5px;line-height:1.7">${escHtml(plan)}</div>`:'<div style="font-size:12.5px;color:var(--mut)">Nothing written yet.</div>')}
   </div>`;
 }
-async function mpTaskAdd(which){
+function mpPlanSave(v){
   const p=mpWho(); if(p!==CURRENT_USER) return;
-  const inp=document.getElementById('mp-task-txt-'+which);
-  const title=inp?.value.trim(); if(!title) return;
-  const due=document.getElementById('mp-task-day-'+which)?.value||'';
-  const id=uid();
-  await commitTasks(arr=>{ arr.push({id:id,title:title,owner:p,priority:'Medium',dueDate:due,status:'To Do',linkedTo:'',notes:'',section:'',createdBy:CURRENT_USER,createdAt:new Date().toISOString(),completedAt:null}); });
-  updateTaskBadge(); mpDraw();
+  const d=mpGet(p); const nextMon=wmYmdAddDays(mpWeekKey(),7);
+  d.weeks=d.weeks||{}; const w=d.weeks[nextMon]=d.weeks[nextMon]||{ach:[],vals:{}};
+  w.plan=String(v||'');
+  mpSet(p,d);
 }
-async function mpTaskTick(id){ await quickCompleteTask(id); mpDraw(); }
-async function mpTaskDel(id){
-  if(!confirm('Delete this task?')) return;
-  await commitTasks(arr=>{ const i=arr.findIndex(t=>t.id===id); if(i>=0) arr.splice(i,1); });
-  updateTaskBadge(); mpDraw();
+// One shot (30 Oct 2026, James): the task board is retired — nobody used it.
+// All 21 remaining tasks archived whole (tuf_tasks_archive_20261030 + a local
+// JSON backup) and the board emptied. tuf_tasks itself remains so meeting
+// actions still have somewhere to land for Team Overview and the Review.
+function taskResetOct30(){
+  try{
+    if(!sbLoadOK) return;
+    if(ls.get('tuf_tasks_reset_3010',null)) return;
+    const cur=ls.get('tuf_tasks',[])||[];
+    if(cur.length){
+      ls.set('tuf_tasks_archive_20261030',cur);
+      ls.set('tuf_tasks',[]);
+    }
+    ls.set('tuf_tasks_reset_3010',{at:new Date().toISOString(),by:CURRENT_USER,archived:cur.length});
+    updateTaskBadge();
+  }catch(e){ console.warn('taskResetOct30 failed',e); }
 }
 // ── SOPs this person owns: traffic light pills ──
 function mpSopsCard(p,d,mine){
@@ -9434,8 +9407,8 @@ function wrv2PersonData(p,wk,st){
   const m=(st.wmMeetings||[]).filter(mm=>mm.type==='one_to_one'&&mm.status==='open'&&mm.with_person===p)[0];
   const oneOpen=m?(st.wmItems||[]).filter(i=>i.meeting_id===m.id&&i.status==='open').length:0;
   const reds=(st.capmap||[]).filter(c=>String(c.owner||'').toLowerCase().indexOf(p.toLowerCase())>=0&&c.rag==='R').length;
-  const filled=(w.ach||[]).length>0||mets.some(x=>x.val!=null);
-  return {person:p,role:d.role||'',wins:(w.ach||[]).map(a=>a.text),metrics:mets,doneWk:doneWk,overdue:overdue,oneOpen:oneOpen,reds:reds,filled:filled};
+  const filled=(w.ach||[]).length>0||mets.some(x=>x.val!=null)||!!(w.plan||'').trim();
+  return {person:p,role:d.role||'',wins:(w.ach||[]).map(a=>a.text),plan:(w.plan||'').trim(),metrics:mets,doneWk:doneWk,overdue:overdue,oneOpen:oneOpen,reds:reds,filled:filled};
 }
 function wrv2Stores(){
   const mypage={}; TASK_PEOPLE.forEach(p=>{ mypage[p]=mpGet(p); });
@@ -9502,6 +9475,7 @@ function wrv2Draw(){
         <span style="font-size:10.5px;color:var(--mut)">${r.doneWk} done · ${r.overdue?`<b style="color:var(--red)">${r.overdue} overdue</b>`:'0 overdue'}${r.oneOpen?` · ${r.oneOpen} for the 1:1`:''}${r.reds?` · <b style="color:var(--red)">${r.reds} red capabilit${r.reds===1?'y':'ies'}</b>`:''}</span>
       </div>
       ${r.filled?`
+        ${r.plan?`<div style="background:var(--bg);border-radius:9px;padding:8px 12px;margin-bottom:7px"><div style="font-size:9.5px;font-weight:800;letter-spacing:.07em;color:var(--mut);margin-bottom:2px">THE PLAN THEY SET</div><div style="font-size:12px;white-space:pre-wrap;line-height:1.6">${escHtml(r.plan)}</div></div>`:''}
         ${r.wins.length?r.wins.map(t=>`<div style="display:flex;gap:9px;align-items:center;padding:4px 0;font-size:13px"><span style="width:20px;height:20px;border-radius:50%;background:var(--y);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:10px;flex-shrink:0">✓</span>${escHtml(t)}</div>`).join(''):'<div style="font-size:12px;color:var(--mut)">No wins written, numbers only.</div>'}
         ${r.metrics.filter(m=>m.val!=null||m.target!=null).length?`<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">${r.metrics.map(m=>`<span style="font-size:11px;font-weight:700;border:1.5px solid ${m.val==null?'var(--bdr)':m.hit?'var(--grn)':m.target!=null?'var(--amb)':'var(--bdr)'};border-radius:14px;padding:4px 11px">${escHtml(m.name)}: <b>${m.val==null?'not logged':m.val}</b>${m.target!=null?' / '+m.target:''}</span>`).join('')}</div>`:''}
       `:`<div style="font-size:12.5px;color:var(--mut)">Nothing logged for this week. That is the first question for the room.</div>`}
