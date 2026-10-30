@@ -5536,8 +5536,8 @@ function upsellModal(id){
 // hidden Sales Pipeline page still renders it harmlessly).
 function upsellRedraw(){
   const pg=document.querySelector('.page.active')?.id?.replace('page-','')||'';
-  if(pg==='reviews') wrv2Draw(); else if(pg==='pipeline') renderPipeline(); else if(pg==='crmhub') renderCRMHub();
-  // v120: the card's home is the Weekly Review.
+  if(pg==='pipeline') renderPipeline(); else if(pg==='crmhub') renderCRMHub();
+  // v124: the upsells card has no page home; the store and functions remain.
 }
 function upsellSave(id){
   const g=x=>document.getElementById(x)?.value||'';
@@ -9520,7 +9520,7 @@ function wrv2Draw(){
       `:`<div style="font-size:12.5px;color:var(--mut)">Nothing logged for this week. That is the first question for the room.</div>`}
     </div>`;
   };
-  el.innerHTML=hero+digestCard+teamCard+upsellCard()+rows.map(personCard).join('')+
+  el.innerHTML=hero+digestCard+teamCard+rows.map(personCard).join('')+
     `<div style="font-size:10.5px;color:var(--mut);margin-top:4px">Compiled from each person’s My Page (filled on Fridays), the task board, the 1:1 agendas, the capability map and the Monday meeting record. Nothing on this page is typed here.</div>`;
   const ta=document.getElementById('topbar-actions'); if(ta) ta.innerHTML='';
 }
