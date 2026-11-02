@@ -8607,12 +8607,25 @@ function wmAgendaView(){
       <div style="display:flex;gap:16px;margin-top:8px;font-size:9.5px;letter-spacing:.12em;color:#8B8E96;flex-wrap:wrap"><span><i style="display:inline-block;width:8px;height:8px;background:var(--y);border-radius:2px"></i> ITEMS</span><span><i style="display:inline-block;width:8px;height:8px;background:#2E8B6E;border-radius:2px"></i> FIXED SLOTS</span><span style="margin-left:auto;font-weight:800;color:${over?'#FF5C5C':'#3DD68C'}">${calc.used} OF ${len} MINUTES${over?' \u00b7 OVER, GREYED ITEMS ROLL':''}</span></div>
     </div>
     <div style="font-size:13px;font-weight:800;background:var(--y);color:#0A0A0B;border-radius:10px;padding:10px 16px;margin-bottom:14px">NOT ON THE AGENDA? IT GOES IN THE PARKING LOT.</div>
-    ${items.length?`
+    ${calc.updates.length?`<div class="mp2-pan" style="border-color:rgba(251,240,0,.35)"><h3>This week in meetings <span class="sub">written before the room, read it, do not present it</span></h3>${calc.updates.map(u=>`<div style="padding:8px 0;border-bottom:1px solid #1C1D21"><div style="font-size:13.5px;font-weight:800">${escHtml(u.title)} <span style="color:#8B8E96;font-weight:500;font-size:10.5px">\u00b7 ${escHtml(u.owner||'')}</span>${wmCanEdit(u,m)?` <span style="cursor:pointer;color:#8B8E96;font-size:10px;text-decoration:underline" onclick="wmItemModal('${u.id}')">edit</span>`:''}</div><div style="margin-top:3px">${u.note?wmNoteHtml(u.note):'<span style="font-size:12px;color:#8B8E96">No update written yet.</span>'}</div></div>`).join('')}</div>`:''}
+    ${(()=>{
+      const ones=(wmData.meetings||[]).filter(x=>x.type==='one_to_one'&&x.status==='open');
+      const rows=TASK_PEOPLE.map(p=>{
+        const mm=ones.filter(x=>x.with_person===p)[0]; if(!mm) return '';
+        const its=(wmData.items||[]).filter(i=>i.meeting_id===mm.id&&i.status==='open');
+        if(!its.length) return '';
+        return `<div style="padding:9px 0;border-bottom:1px solid #1C1D21">
+          <div style="display:flex;gap:8px;align-items:center;font-size:11px;font-weight:800;letter-spacing:.1em;color:#8B8E96;margin-bottom:4px"><i style="width:8px;height:8px;border-radius:50%;background:${USER_COLOURS[p]||'#8B8E96'};display:inline-block"></i>${p.toUpperCase()}</div>
+          ${its.map(i=>`<div style="display:flex;gap:10px;align-items:center;padding:4px 0;font-size:13.5px"><span style="flex:1">${escHtml(i.title)}</span>${(CURRENT_USER===p||wmIsChair())?`<span style="cursor:pointer;font-size:9px;background:var(--y);color:#0A0A0B;border-radius:8px;padding:2px 9px;font-weight:800;white-space:nowrap" onclick="wmOneToMonday('${i.id}')">\u2192 MONDAY</span>`:''}</div>`).join('')}
+        </div>`;
+      }).join('');
+      return rows?`<div class="mp2-pan"><h3>From the 1:1 lists <span class="sub">raised for Danny one to one, pull it into the room if it belongs here</span></h3>${rows}</div>`:'';
+    })()}
+    ${calc.rows.length?`
       ${group('decision','Decision needed')}
       ${group('help','Help needed')}
-      <div class="mp2-pan" style="padding:13px 20px"><div style="display:flex;gap:20px;flex-wrap:wrap;font-size:12.5px;color:#C9CBD1"><span><b style="color:#F4F4F6">Questions on updates</b> \u00b7 ${s.questions_slot_min} min</span><span><b style="color:#F4F4F6">Parking lot review</b> \u00b7 ${s.parking_review_min} min \u00b7 ${wmParkingFor(m.id).length} parked so far</span></div></div>
-      ${calc.updates.length?`<div class="mp2-pan"><h3>Written updates <span class="sub">read before the meeting, never presented in it</span></h3>${calc.updates.map(u=>`<div style="padding:8px 0;border-bottom:1px solid #1C1D21"><div style="font-size:13.5px;font-weight:800">${escHtml(u.title)} <span style="color:#8B8E96;font-weight:500;font-size:10.5px">\u00b7 ${escHtml(u.owner||'')}</span>${wmCanEdit(u,m)?` <span style="cursor:pointer;color:#8B8E96;font-size:10px;text-decoration:underline" onclick="wmItemModal('${u.id}')">edit</span>`:''}</div><div style="margin-top:3px">${u.note?wmNoteHtml(u.note):'<span style="font-size:12px;color:#8B8E96">No update written yet.</span>'}</div></div>`).join('')}</div>`:''}
-    `:`<div class="mp2-pan"><div style="font-size:14.5px;line-height:1.7;color:#C9CBD1">Nothing needs the room this week. Shorten the meeting or skip it; an empty hour is not a target.</div></div>`}
+    `:`<div class="mp2-pan"><div style="font-size:14.5px;line-height:1.7;color:#C9CBD1">No timed items on the agenda yet. Add one with + Add item, or pull something in from the 1:1 lists above.</div></div>`}
+    <div class="mp2-pan" style="padding:13px 20px"><div style="display:flex;gap:20px;flex-wrap:wrap;font-size:12.5px;color:#C9CBD1"><span><b style="color:#F4F4F6">Questions on updates</b> \u00b7 ${s.questions_slot_min} min</span><span><b style="color:#F4F4F6">Parking lot review</b> \u00b7 ${s.parking_review_min} min \u00b7 ${wmParkingFor(m.id).length} parked so far</span></div></div>
   `;
 }
 async function wmLockNow(id){
@@ -8686,6 +8699,13 @@ async function wmItemSave(id){
 async function wmItemDelete(id){
   if(!confirm('Take this item off the agenda?')) return;
   if(await coDel('wm_items',id)){ wmData.items=wmData.items.filter(x=>x.id!==id); wmDraw(); }
+}
+// Move an item from someone's 1:1 list onto the Monday agenda (v125).
+async function wmOneToMonday(itemId){
+  const it=wmData.items.find(x=>x.id===itemId); if(!it) return;
+  const m=wmUpcoming(); if(!m){ alert('No upcoming team meeting to move it to.'); return; }
+  const patch={meeting_id:m.id,type:it.type==='update'?'help':it.type,minutes:it.minutes||5};
+  if(await coUpd('wm_items',itemId,patch,true)){ Object.assign(it,patch); addNotif('Moved onto the Monday agenda'); wmDraw(); }
 }
 // ── Pre read ──
 function wmPrereadView(){
