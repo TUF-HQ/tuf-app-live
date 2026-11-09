@@ -596,7 +596,8 @@ details>summary::-webkit-details-marker{display:none}
          stay live underneath: the 1:1s on My Page, the Monday meeting row and
          the agent digest all use them; the Weekly Review is the Monday page
          now and carries the Upsells card that lived on Team Overview. -->
-    <div class="sb-section">Overview</div>
+    <div class="sb-section">Operating Rhythm</div>
+    <div class="sb-item" data-page="rhythm" onclick="nav('rhythm',this)">Operating Rhythm</div>
     <div class="sb-item" data-page="wmeeting" onclick="nav('wmeeting',this)">Weekly Meeting</div>
     <div class="sb-item" data-page="reviews" onclick="nav('reviews',this)">Weekly Review</div>
     <div class="sb-item" data-page="transcript" onclick="nav('transcript',this)">Meeting Notes</div>
@@ -611,15 +612,20 @@ details>summary::-webkit-details-marker{display:none}
     <div class="sb-section">Marketing</div>
     <div class="sb-item" data-page="studio" onclick="nav('studio',this)">Studio</div>
     <div class="sb-item" data-page="podcast" onclick="nav('podcast',this)">Podcast</div>
+    <div class="sb-item" data-page="contentplan" onclick="nav('contentplan',this)">Content Plan</div>
     <div class="sb-item" data-page="growthplan" onclick="nav('growthplan',this)">Growth Plan</div>
     <div class="sb-item" data-page="files" onclick="nav('files',this)">Documents</div>
-    <div class="sb-item" data-page="ip" onclick="nav('ip',this)">IP Register</div>
 
+    <!-- REMOVED v129 (9 Nov 2026) per Joe's repurpose brief: Goals & OKRs
+         (goals) is gone from the nav and the route map; tuf_goals and tuf_okrs
+         stay untouched in Supabase, and the vision plus annual goal were
+         rescued into the Operating Rhythm playbook seed. IP Register moved
+         from Marketing to Intelligence per the same brief. -->
     <div class="sb-section">Intelligence</div>
     <div class="sb-item" data-page="capmap" onclick="nav('capmap',this)">Capability Map <span class="sb-badge" id="sb-red" style="display:none">—</span></div>
-    <div class="sb-item" data-page="goals" onclick="nav('goals',this)">Goals & OKRs</div>
     <div class="sb-item" data-page="market" onclick="nav('market',this)">Market Intel</div>
     <div class="sb-item" data-page="kpis" onclick="nav('kpis',this)">KPIs</div>
+    <div class="sb-item" data-page="ip" onclick="nav('ip',this)">IP Register</div>
 
     <div class="sb-section">Team</div>
     <div class="sb-item" data-page="roles" onclick="nav('roles',this)">Roles & Responsibilities</div>
@@ -705,6 +711,16 @@ details>summary::-webkit-details-marker{display:none}
     <!-- ═══ KPIS ═══ -->
     <div class="page" id="page-kpis">
       <div id="kpis-render"></div>
+    </div>
+
+    <!-- ═══ OPERATING RHYTHM (v129) ═══ -->
+    <div class="page" id="page-rhythm">
+      <div id="rhythm-render"></div>
+    </div>
+
+    <!-- ═══ CONTENT PLAN (v129) ═══ -->
+    <div class="page" id="page-contentplan">
+      <div id="contentplan-render"></div>
     </div>
 
     <!-- ═══ AI TOOL DUMP ═══ -->
@@ -1533,6 +1549,7 @@ function initApp(user){
   taskSeedW1910();
   taskResetOct30();
   cap2Seed();
+  gpSeedOutsourcing();
   updateFollowupBadge();
   setTimeout(()=>{ try{ csuiteAutoRun(); }catch(e){} },8000);
   updateInboundBadge();
@@ -1820,7 +1837,7 @@ function seedDefaultData(){
 // ═══ NAVIGATION ══════════════════════════════════════════════════════════════
 const PAGE_TITLES = {
   myday:'My Day',
-  wmeeting:'Weekly Meeting',transcript:'Meeting Notes → Tasks',mypage:'My Page',
+  wmeeting:'Weekly Meeting',transcript:'Meeting Notes → Tasks',mypage:'My Page',rhythm:'Operating Rhythm',contentplan:'Content Plan',
   people:'Network',members:'Boardroom Members',pipeline:'Sales Pipeline',inbound:'Inbound Leads',dannycal:"Danny's Calendar",
   boardroom:'Boardroom',crmhub:'CRM',crmclean:'CRM Cleanup',content:'Content Calendar',social:'Social Media',kpis:'KPIs',aidump:'AI Tool (Dump)',buildreq:'Build Requests',clientanalysis:'Client Analysis',emaillist:'Email List',watemplates:'WhatsApp Templates',
   testimonials:'Testimonials',
@@ -1865,11 +1882,13 @@ function renderPage(page){
   const fns = {
     transcript:renderTranscript, wmeeting:renderWMeeting, mypage:renderMyPage, studio:renderStudio,
     people:renderPeople, members:renderMembers, pipeline:renderPipeline, inbound:renderInbound, dannycal:renderDannyCal,
-    boardroom:renderBoardroom, crmhub:renderCRMHub, crmclean:renderCleanup, content:renderContent, social:renderSocial, kpis:renderKPIs, aidump:renderAIDump, buildreq:renderBuildRequests, clientanalysis:renderClientAnalysis, emaillist:renderEmailList, watemplates:renderWATemplates,
+    boardroom:renderBoardroom, crmhub:renderCRMHub, crmclean:renderCleanup, content:renderContent, social:renderSocial, kpis:renderKPIs2, aidump:renderAIDump, buildreq:renderBuildRequests, clientanalysis:renderClientAnalysis, emaillist:renderEmailList, watemplates:renderWATemplates,
     testimonials:renderTestimonials,
     onboarding:renderOnboarding, sessions:renderSessions, padel:renderPadel,
     podcast:renderPodcast, coaching:renderCoaching, growthplan:renderGrowthPlan, ip:renderIP, files:renderFiles,
-    capmap:renderCapMap2, goals:renderGoals, market:renderMarket, prospecting:renderProspecting, fourbox:renderFourBox, budget:renderBudget,
+    rhythm:renderRhythm, contentplan:renderContentPlan,
+    // v129: goals unrouted per Joe's brief (renderGoals archived in place; tuf_goals untouched); kpis now renderKPIs2 (old renderKPIs archived).
+    capmap:renderCapMap2, market:renderMarket, prospecting:renderProspecting, fourbox:renderFourBox, budget:renderBudget,
     teamtasks:renderTeamTasks, roles:renderRoles, reviews:renderWeeklyReview2, notifs:renderNotifs,
     csuite:renderCSuite, holidays:renderHolidays, daily:renderDaily, myday:renderMyDay,
   };
@@ -9014,16 +9033,18 @@ function mpDraw(){
     <div style="flex:1;min-width:210px">
       <h1>${p.toUpperCase()}</h1>
       <input class="mp2-role" placeholder="${escAttr(mpRoleHint(p,mine))}" value="${escAttr(d.role||'')}"${mine?` onchange="mpRoleSave(this.value)"`:' disabled'}>
+      ${(()=>{ const k=kpiFor(p); if(!(k.label||'').trim()) return ''; return `<div style="display:inline-flex;gap:8px;align-items:baseline;margin-top:8px;border:1.5px solid #2E2F33;border-radius:12px;padding:5px 12px;font-size:11px;color:#8B8E96">${escHtml(k.label)} <b style="font-family:Montserrat,sans-serif;font-size:16px;color:var(--y)">${k.value!=null?escHtml(String(k.value)):'·'}</b></div>`; })()}
+      ${p!=='Danny'?`<div style="margin-top:8px;font-size:17px;letter-spacing:3px;${CURRENT_USER==='Danny'?'cursor:pointer;':''}color:var(--y)" title="Danny’s ranking of the week, set in the 1:1">${[1,2,3,4,5].map(n=>`<span${CURRENT_USER==='Danny'?` onclick="mpRankSet(${n})"`:''} style="${n<=(w.rank||0)?'':'opacity:.25'}">★</span>`).join('')}<span style="font-size:9px;letter-spacing:.12em;color:#8B8E96;margin-left:9px">${w.rank?'DANNY’S RANK OF THE WEEK':(CURRENT_USER==='Danny'?'TAP TO RANK THE WEEK':'NOT RANKED YET')}</span></div>`:''}
     </div>
     <div class="big">
-      <div><div class="n">${(w.ach||[]).length}</div><div class="l">Wins this week</div></div>
+      <div><div class="n">${(w.ach||[]).length}<span style="font-size:15px;color:#8B8E96;font-weight:700"> of 3</span></div><div class="l">Wins this week</div></div>
       <div><div class="n alt">${streak}</div><div class="l">Week streak</div></div>
     </div>
   </div>`;
   const friday=lp.wd==='Fri'?`<div style="font-size:12.5px;font-weight:800;background:var(--y);color:#0A0A0A;border-radius:10px;padding:9px 14px;margin-bottom:13px;box-shadow:0 0 26px rgba(251,240,0,.2)">It is Friday. Log this week\u2019s wins and numbers; Monday\u2019s review reads straight from here.</div>`:'';
   const cols=`<div class="mp2-cols">
     <div>${mpWeekCard(p,d,mine)}${mpPlanCard(p,d,mine)}</div>
-    <div>${mpOneCard(p,mine)}${mpSopsCard(p,d,mine)}</div>
+    <div>${mpOneCard(p,mine)}${mpOneNotesCard(p,d,mine)}${mpSopsCard(p,d,mine)}</div>
   </div>`;
   el.innerHTML=`<div class="mp2">${ribbon}${switcher}${hero}${mpMetricsCard(p,d,mine)}${friday}${cols}</div>`;
   const ta=document.getElementById('topbar-actions');
@@ -9061,6 +9082,9 @@ function mpWeekCard(p,d,mine){
     ${w.plan?`<div class="mp2-planblock"><div class="lb">THE PLAN FOR THIS WEEK</div><div class="tx">${escHtml(w.plan)}</div></div>`:''}
     ${(w.ach||[]).length?`<div class="mp2-tl">${(w.ach||[]).map(a=>achRow(a,false)).join('')}</div>`:`<div style="font-size:12.5px;color:#8B8E96;padding:4px 0">${mine?'Nothing logged yet. The streak is waiting.':'Nothing logged yet this week.'}</div>`}
     ${mine?`<button class="mp2-addwin" onclick="mpAchModal('')">+ Add a win</button>`:''}
+    <div style="font-size:10px;font-weight:800;letter-spacing:.14em;color:#8B8E96;margin-top:16px">LESSONS · ${(w.lessons||[]).length} of 3</div>
+    ${(w.lessons||[]).length?`<div class="mp2-tl" style="margin-top:4px">${(w.lessons||[]).map(a=>`<div class="mp2-tw"><span style="flex:1;${mine?'cursor:pointer':''}"${mine?` onclick="mpLesModal('${a.id}')" title="Edit"`:''}>${escHtml(a.text)}</span><span class="d">${day(a)}</span>${mine?`<span class="x" onclick="mpLesDel('${a.id}')">✕</span>`:''}</div>`).join('')}</div>`:`<div style="font-size:12px;color:#8B8E96;padding:4px 0">${mine?'What did the week teach you? Three is the target.':'No lessons written this week.'}</div>`}
+    ${mine?`<button class="mp2-addwin" onclick="mpLesModal('')">+ Add a lesson</button>`:''}
     <details style="margin-top:14px"><summary>Previous weeks</summary>
       ${prevKeys.map(k=>{ const pw=(d.weeks||{})[k]; if(!pw||(!(pw.ach||[]).length&&!Object.keys(pw.vals||{}).length)) return ''; return `<div style="margin-top:10px"><div style="font-size:10px;font-weight:800;color:#8B8E96;letter-spacing:.1em">W/C ${fmtShort(k).toUpperCase()}</div><div class="mp2-tl" style="margin-top:4px">${(pw.ach||[]).map(a=>achRow(a,true)).join('')}</div>${Object.keys(pw.vals||{}).length?`<div style="font-size:11px;color:#8B8E96;margin-top:3px">${(d.metrics||[]).filter(mt=>pw.vals[mt.id]!==undefined).map(mt=>escHtml(mt.name)+': '+pw.vals[mt.id]).join(' \u00b7 ')}</div>`:''}</div>`; }).join('')||'<div style="font-size:12px;color:#8B8E96;padding:6px 0">Nothing before this week yet.</div>'}
     </details>
@@ -9477,12 +9501,14 @@ function wrv2PersonData(p,wk,st){
   const m=(st.wmMeetings||[]).filter(mm=>mm.type==='one_to_one'&&mm.status==='open'&&mm.with_person===p)[0];
   const oneOpen=m?(st.wmItems||[]).filter(i=>i.meeting_id===m.id&&i.status==='open').length:0;
   const reds=(st.capmap||[]).filter(c=>String(c.owner||'').toLowerCase().indexOf(p.toLowerCase())>=0&&c.rag==='R').length;
-  const filled=(w.ach||[]).length>0||mets.some(x=>x.val!=null)||!!(w.plan||'').trim();
-  return {person:p,role:d.role||'',wins:(w.ach||[]).map(a=>a.text),plan:(w.plan||'').trim(),metrics:mets,doneWk:doneWk,overdue:overdue,oneOpen:oneOpen,reds:reds,filled:filled};
+  const filled=(w.ach||[]).length>0||mets.some(x=>x.val!=null)||!!(w.plan||'').trim()||(w.lessons||[]).length>0;
+  const kp=(st.kpis&&st.kpis[p])||null;
+  return {person:p,role:d.role||'',wins:(w.ach||[]).map(a=>a.text),lessons:(w.lessons||[]).map(a=>a.text),rank:w.rank||null,kpi:kp,plan:(w.plan||'').trim(),metrics:mets,doneWk:doneWk,overdue:overdue,oneOpen:oneOpen,reds:reds,filled:filled};
 }
 function wrv2Stores(){
   const mypage={}; TASK_PEOPLE.forEach(p=>{ mypage[p]=mpGet(p); });
-  return {mypage:mypage,tasks:ls.get('tuf_tasks',[])||[],capmap:cap2All(),wmMeetings:wmData.meetings||[],wmItems:wmData.items||[]};
+  const kpis={}; TASK_PEOPLE.forEach(p=>{ const k=kpiFor(p); if((k.label||'').trim()) kpis[p]=k; });
+  return {mypage:mypage,tasks:ls.get('tuf_tasks',[])||[],capmap:cap2All(),wmMeetings:wmData.meetings||[],wmItems:wmData.items||[],kpis:kpis};
 }
 function wrv2Digest(){
   const m=wmUpcoming(); if(!m) return [];
@@ -9530,7 +9556,8 @@ function wrv2Draw(){
     <div style="font-size:12.5px;line-height:2">
       ${mUp?`Today’s meeting: <b>${fmtShort(mUp.meeting_date)}</b> · ${wmItemsFor(mUp.id).filter(i=>i.status==='open'&&i.type!=='update').length} items on the agenda · ${wmIsLocked(mUp,wmSettings())?'locked':'still open'} \u00b7 <span style="cursor:pointer;text-decoration:underline" onclick="nav('wmeeting',document.querySelector('[data-page=wmeeting]'))">open the Weekly Meeting</span>`:'No upcoming meeting found.'}<br>
       ${lastClosed?`Last Monday (${fmtShort(lastClosed.meeting_date)}): <b>${lcDecisions.length}</b> decision${lcDecisions.length===1?'':'s'}, <b>${lcActions.length}</b> action${lcActions.length===1?'':'s'} — ${(()=>{const t=ls.get('tuf_tasks',[])||[];const done=lcActions.filter(a=>{const k=t.find(x=>x.id===a.action_task_id);return k&&k.status==='Done';}).length;return done+' of '+lcActions.length+' actions done';})()}`:'No closed meeting yet.'}<br>
-      Open upsells: <b>${openUpsells}</b>
+      Open upsells: <b>${openUpsells}</b><br>
+      Content plan: ${(cplWeek(mpWeekKey()).text||'').trim()?`<b style="color:var(--grn)">written</b> for this week · <span style="cursor:pointer;text-decoration:underline" onclick="nav('contentplan',document.querySelector('[data-page=contentplan]'))">open it</span>`:`<b style="color:var(--amb)">not written</b> · Jasper presents it on Monday`}
     </div>
     ${lcDecisions.length?`<div style="font-size:11px;color:var(--mut);margin-top:4px">${lcDecisions.map(d=>'· '+escHtml(d.outcome_text||d.title)).join('<br>')}</div>`:''}
   </div>`;
@@ -9541,12 +9568,15 @@ function wrv2Draw(){
         <span style="width:11px;height:11px;border-radius:50%;background:${col}"></span>
         <b style="font-family:Montserrat,sans-serif;font-size:15px">${r.person}</b>
         <span style="font-size:11px;color:var(--mut)">${escHtml(r.role||'')}</span>
+        ${r.rank?`<span style="font-size:13px;letter-spacing:2px;color:var(--k)" title="Danny’s ranking of the week">${'★'.repeat(r.rank)}<span style="opacity:.2">${'★'.repeat(5-r.rank)}</span></span>`:''}
+        ${r.kpi?`<span style="font-size:10.5px;font-weight:700;border:1.5px solid var(--bdr);border-radius:12px;padding:3px 10px">${escHtml(r.kpi.label)}: <b>${r.kpi.value!=null?escHtml(String(r.kpi.value)):'·'}</b></span>`:''}
         <span style="flex:1"></span>
         <span style="font-size:10.5px;color:var(--mut)">${r.doneWk} done · ${r.overdue?`<b style="color:var(--red)">${r.overdue} overdue</b>`:'0 overdue'}${r.oneOpen?` · ${r.oneOpen} for the 1:1`:''}${r.reds?` · <b style="color:var(--red)">${r.reds} red capabilit${r.reds===1?'y':'ies'}</b>`:''}</span>
       </div>
       ${r.filled?`
         ${r.plan?`<div style="background:var(--bg);border-radius:9px;padding:8px 12px;margin-bottom:7px"><div style="font-size:9.5px;font-weight:800;letter-spacing:.07em;color:var(--mut);margin-bottom:2px">THE PLAN THEY SET</div><div style="font-size:12px;white-space:pre-wrap;line-height:1.6">${escHtml(r.plan)}</div></div>`:''}
         ${r.wins.length?r.wins.map(t=>`<div style="display:flex;gap:9px;align-items:center;padding:4px 0;font-size:13px"><span style="width:20px;height:20px;border-radius:50%;background:var(--y);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:10px;flex-shrink:0">✓</span>${escHtml(t)}</div>`).join(''):'<div style="font-size:12px;color:var(--mut)">No wins written, numbers only.</div>'}
+        ${r.lessons.length?`<div style="font-size:9.5px;font-weight:800;letter-spacing:.07em;color:var(--mut);margin-top:7px">LESSONS</div>${r.lessons.map(t=>`<div style="display:flex;gap:9px;align-items:center;padding:3px 0;font-size:12.5px"><span style="width:20px;height:20px;border-radius:50%;border:1.5px solid var(--bdr);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:10px;flex-shrink:0">✱</span>${escHtml(t)}</div>`).join('')}`:''}
         ${r.metrics.filter(m=>m.val!=null||m.target!=null).length?`<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">${r.metrics.map(m=>`<span style="font-size:11px;font-weight:700;border:1.5px solid ${m.val==null?'var(--bdr)':m.hit?'var(--grn)':m.target!=null?'var(--amb)':'var(--bdr)'};border-radius:14px;padding:4px 11px">${escHtml(m.name)}: <b>${m.val==null?'not logged':m.val}</b>${m.target!=null?' / '+m.target:''}</span>`).join('')}</div>`:''}
       `:`<div style="font-size:12.5px;color:var(--mut)">Nothing logged for this week. That is the first question for the room.</div>`}
     </div>`;
@@ -9561,10 +9591,12 @@ function wrv2Copy(){
   const lines=['TUF WEEKLY REVIEW · w/c '+fmtShort(wk),''];
   TASK_PEOPLE.forEach(p=>{
     const r=wrv2PersonData(p,wk,st);
-    lines.push(p.toUpperCase()+(r.role?' · '+r.role:''));
+    lines.push(p.toUpperCase()+(r.role?' · '+r.role:'')+(r.rank?' · ranked '+r.rank+' of 5':''));
+    if(r.kpi) lines.push('· KPI '+r.kpi.label+': '+(r.kpi.value!=null?r.kpi.value:'not logged'));
     if(!r.filled){ lines.push('· Nothing logged this week'); }
     else{
       r.wins.forEach(t=>lines.push('· '+t));
+      r.lessons.forEach(t=>lines.push('· Lesson: '+t));
       r.metrics.filter(m=>m.val!=null).forEach(m=>lines.push('· '+m.name+': '+m.val+(m.target!=null?' / '+m.target:'')+(m.hit?' HIT':'')));
     }
     lines.push('· Tasks: '+r.doneWk+' done, '+r.overdue+' overdue'+(r.oneOpen?' · '+r.oneOpen+' for the 1:1':''));
@@ -9805,6 +9837,218 @@ function stPollMgmt(){
   const active=(stData.jobs||[]).some(j=>j.status==='queued'||j.status==='running');
   if(active&&!__stPoll) __stPoll=setInterval(stPollTick,5000);
   if(!active&&__stPoll){ clearInterval(__stPoll); __stPoll=null; }
+}
+
+// ═══ OPERATING RHYTHM + ROLE KPIS + CONTENT PLAN (v129, Joe's repurpose brief) ═
+// HQ is the internal operating hub: the playbook, the Monday rhythm and per
+// person performance. GoHighLevel owns client data; the KPI cards are typed by
+// hand until the GHL feed is scoped, and the stores are shaped so a future
+// sync just writes the same keys.
+// ── Playbook ──
+const PB_SEED_TEXT='OUR VISION\n- Build a highly profitable business with a small team that changes the lives of founders.\n\nTHE ANNUAL GOAL\n- 20 paying Boardroom members generating £20,000 per month by the end of 2026.\n\nTHE PLAYBOOK\n- Waiting on Joe’s full playbook. Press edit, paste it in and save.';
+function pbGet(){ return ls.get('tuf_playbook',null)||{text:PB_SEED_TEXT,updatedBy:'',updatedAt:''}; }
+let pbEditing=false;
+function pbSave(){
+  const t=document.getElementById('pb-text')?.value||'';
+  ls.set('tuf_playbook',{text:t,updatedBy:CURRENT_USER,updatedAt:new Date().toISOString()});
+  pbEditing=false; renderRhythm();
+}
+// ── Role KPIs (headline, one per person) ──
+const KPI_DEFAULTS={
+  Jasper:{label:'People in the pipeline'},
+  Joe:{label:'NPS score'},
+  James:{label:'Build turnaround, days from ask to live',proposal:true},
+  Danny:{label:''},
+  Chloe:{label:''}
+};
+function kpiAll(){ return ls.get('tuf_kpis',{})||{}; }
+function kpiFor(p){ const d=(kpiAll()[p])||{}; return {...(KPI_DEFAULTS[p]||{label:''}),...d}; }
+function kpiCanEdit(p){ return CURRENT_USER===p||CURRENT_USER==='James'; }
+function kpiSaveVal(p,v){
+  if(!kpiCanEdit(p)) return;
+  const all=kpiAll(); const cur=all[p]||{};
+  if(String(v).trim()===''){ delete cur.value; } else { cur.value=String(v).trim(); }
+  cur.updatedAt=new Date().toISOString(); cur.updatedBy=CURRENT_USER;
+  all[p]=cur; ls.set('tuf_kpis',all);
+}
+function kpiSaveLabel(p,l){
+  if(!kpiCanEdit(p)) return;
+  const all=kpiAll(); const cur=all[p]||{};
+  cur.label=String(l||'').trim(); cur.updatedAt=new Date().toISOString(); cur.updatedBy=CURRENT_USER;
+  all[p]=cur; ls.set('tuf_kpis',all);
+}
+function renderKPIs2(){
+  const host=document.getElementById('kpi-render')||document.getElementById('kpis-render'); if(!host) return;
+  const card=p=>{
+    const k=kpiFor(p); const col=USER_COLOURS[p]||'#888'; const can=kpiCanEdit(p);
+    const tbc=!(k.label||'').trim();
+    return `<div class="card" style="margin-bottom:0;border-top:4px solid ${col}">
+      <div style="display:flex;gap:8px;align-items:center"><span style="width:9px;height:9px;border-radius:50%;background:${col}"></span><b style="font-size:13px">${p}</b></div>
+      ${tbc?`<div style="font-size:12.5px;color:var(--mut);margin:10px 0">No headline KPI agreed yet. Agree it in the rhythm${can?' and type it here':''}.</div>${can?`<input class="form-input" placeholder="The one metric that matters for ${p}" style="font-size:12px" onchange="kpiSaveLabel('${p}',this.value);renderKPIs2()">`:''}`
+      :`<div style="font-size:11px;font-weight:700;color:var(--mut);margin-top:8px">${escHtml(k.label)}${k.proposal?' <span class="tag tag-a" style="font-size:8.5px">proposal, confirm with the team</span>':''}${can?` <span style="cursor:pointer;font-weight:400" title="Change the KPI" onclick="(function(){const v=prompt('The one metric that matters for ${p}:','${escAttr(k.label)}'); if(v!==null){kpiSaveLabel('${p}',v);renderKPIs2();}})()">✎</span>`:''}</div>
+      <div style="display:flex;gap:10px;align-items:baseline;margin-top:6px">
+        ${can?`<input class="form-input" style="font-family:Montserrat,sans-serif;font-size:30px;font-weight:800;max-width:140px;padding:4px 10px" value="${k.value!=null?escAttr(String(k.value)):''}" placeholder="·" onchange="kpiSaveVal('${p}',this.value);renderKPIs2()">`
+        :`<span style="font-family:Montserrat,sans-serif;font-size:34px;font-weight:800">${k.value!=null?escHtml(String(k.value)):'·'}</span>`}
+        ${k.updatedAt?`<span style="font-size:10px;color:var(--mut)">updated ${fmtShort(String(k.updatedAt).slice(0,10))} by ${escHtml(k.updatedBy||'')}</span>`:''}
+      </div>`}
+    </div>`;
+  };
+  host.innerHTML=`
+    <div style="font-size:12.5px;color:var(--mut);margin-bottom:12px">One headline KPI per person, used in Danny’s Monday 1:1s and shown on each My Page. Typed by hand for now. GoHighLevel feeds these automatically once the connection is scoped.</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px">${TASK_PEOPLE.map(card).join('')}</div>`;
+  const ta=document.getElementById('topbar-actions'); if(ta) ta.innerHTML='';
+}
+// ── Content Plan (Jasper's weekly digital marketing plan) ──
+function cplGet(){ return ls.get('tuf_contentplan',null)||{weeks:{}}; }
+function cplWeek(wk){ return ((cplGet().weeks||{})[wk])||{text:''}; }
+function cplSave(v){
+  const d=cplGet(); const wk=mpWeekKey();
+  d.weeks=d.weeks||{}; d.weeks[wk]={text:String(v||''),updatedBy:CURRENT_USER,updatedAt:new Date().toISOString()};
+  ls.set('tuf_contentplan',d);
+}
+function renderContentPlan(){
+  const host=document.getElementById('contentplan-render'); if(!host) return;
+  const wk=mpWeekKey(); const w=cplWeek(wk);
+  const prev=mpWeekKeys(9).slice(0,-1).reverse().map(k=>{ const pw=cplWeek(k); if(!(pw.text||'').trim()) return ''; return `<div style="margin-top:12px"><div style="font-size:11px;font-weight:800;color:var(--mut)">W/C ${fmtShort(k).toUpperCase()}</div><div style="margin-top:4px">${wmNoteHtml(pw.text)}</div></div>`; }).join('');
+  host.innerHTML=`
+    <div class="card" style="margin-bottom:12px">
+      <div class="card-title">This week’s plan <span style="font-weight:500;color:var(--mut);font-size:11px">w/c ${fmtShort(wk)} · Jasper presents it on Monday · bullets with a dash render cleanly</span></div>
+      <textarea class="form-textarea" id="cpl-text" style="min-height:160px;font-size:13.5px;line-height:1.8" placeholder="- Monday: reel from the Boardroom clip
+- Wednesday: carousel on letting go
+- LinkedIn: Danny post, Joe drafts" onchange="cplSave(this.value);addNotif('Content plan saved')">${escHtml(w.text||'')}</textarea>
+      ${w.updatedAt?`<div style="font-size:10.5px;color:var(--mut);margin-top:5px">Saved ${fmtShort(String(w.updatedAt).slice(0,10))} by ${escHtml(w.updatedBy||'')}</div>`:''}
+    </div>
+    ${(w.text||'').trim()?`<div class="card" style="margin-bottom:12px"><div class="card-title">How it reads</div>${wmNoteHtml(w.text)}</div>`:''}
+    <details><summary style="font-size:12px;font-weight:700;cursor:pointer;color:var(--mut)">Previous weeks</summary>${prev||'<div style="font-size:12px;color:var(--mut);padding:6px 0">Nothing before this week.</div>'}</details>`;
+  const ta=document.getElementById('topbar-actions'); if(ta) ta.innerHTML='';
+}
+// ── Growth Plan: outsourcing initiatives (one shot, Joe's brief) ──
+function gpSeedOutsourcing(){
+  try{
+    if(!sbLoadOK) return;
+    if(ls.get('tuf_gp_outsourcing',null)) return;
+    const gp=gpGet(); if(!gp||!gp.sections) return;
+    if(!gp.sections.some(s=>s.title==='Outsourcing')){
+      gp.sections.push({id:uid(),title:'Outsourcing',note:'Operational growth initiatives from the HQ repurpose brief. Owner, status and target date get reviewed in the rhythm.',owner:'Joe',items:[
+        {id:uid(),text:'Outsource content production',done:false,owner:'Joe',due:'',taskId:''},
+        {id:uid(),text:'Outsource editing, podcast and video',done:false,owner:'James',due:'',taskId:''}
+      ]});
+      gpSave(gp);
+    }
+    ls.set('tuf_gp_outsourcing',{at:new Date().toISOString(),by:CURRENT_USER});
+  }catch(e){ console.warn('gpSeedOutsourcing failed',e); }
+}
+// ── Operating Rhythm page: the Monday front door ──
+function renderRhythm(){
+  const el=document.getElementById('rhythm-render'); if(!el) return;
+  el.innerHTML='<div class="empty">Loading the rhythm…</div>';
+  wmLoad().then(()=>rhDraw()).catch(()=>rhDraw());
+}
+function rhDraw(){
+  const el=document.getElementById('rhythm-render'); if(!el) return;
+  const lp=wmLondonParts(); const wk=mpWeekKey();
+  const pb=pbGet();
+  const m=(typeof wmUpcoming==='function')?wmUpcoming():null;
+  const rvWk=wrv2DefaultWeek();
+  const st=wrv2Stores();
+  const rows=TASK_PEOPLE.map(p=>wrv2PersonData(p,rvWk,st));
+  const filled=rows.filter(r=>r.filled).length;
+  const cpl=cplWeek(wk);
+  const tracker=p=>{
+    const d=mpGet(p); const w=(d.weeks||{})[wk]||{};
+    const col=USER_COLOURS[p]||'#888';
+    const rank=w.rank?('★'.repeat(w.rank)+'☆'.repeat(5-w.rank)):'';
+    return `<div class="mp2-pan" style="margin-bottom:0;cursor:pointer" onclick="if(typeof mpCanSwitch==='function'&&mpCanSwitch())mpPerson='${p}';nav('mypage',document.querySelector('[data-page=mypage]'))">
+      <div style="display:flex;gap:9px;align-items:center"><span style="width:10px;height:10px;border-radius:50%;background:${col};box-shadow:0 0 9px ${col}"></span><b style="font-size:14px">${p}</b>${rank?`<span style="margin-left:auto;color:var(--y);font-size:12px" title="Danny’s ranking of the week">${rank}</span>`:''}</div>
+      <div style="font-size:11px;color:#8B8E96;margin-top:7px">${(w.ach||[]).length} of 3 wins · ${(w.lessons||[]).length} of 3 lessons${w.rank?'':' · not ranked yet'}</div>
+    </div>`;
+  };
+  el.innerHTML=`<div class="mp2">
+    <div class="mp2-ribbon"><span class="live"></span> OPERATING RHYTHM <b>// HOW TUF RUNS</b> <span>${lp.wd.toUpperCase()} · W/C ${fmtShort(wk).toUpperCase()}</span><span class="cd">${mpReviewCountdown()}</span></div>
+    <div class="mp2-pan" style="margin-top:14px">
+      <h3>Operating playbook <span class="sub">${pb.updatedAt?('updated '+fmtShort(String(pb.updatedAt).slice(0,10))+' by '+escHtml(pb.updatedBy)):'waiting on Joe’s playbook'}${pbEditing?'':' · <span style=\"cursor:pointer;text-decoration:underline\" onclick=\"pbEditing=true;rhDraw()\">edit</span>'}</span></h3>
+      ${pbEditing?`<textarea class="form-textarea" id="pb-text" style="min-height:220px;font-size:13.5px;line-height:1.8;background:#0B0C0E;border-color:#242528;color:#E2E3E7">${escHtml(pb.text||'')}</textarea>
+        <div style="display:flex;gap:8px;margin-top:8px"><button class="btn btn-k btn-sm" onclick="pbSave()">Save</button><button class="btn btn-ghost btn-sm" style="color:#F4F4F6;border-color:#2E2F33" onclick="pbEditing=false;rhDraw()">Cancel</button></div>`
+      :(pb.text?wmNoteHtml(pb.text):'<div style="font-size:13px;color:#8B8E96">The playbook Joe built goes here: principles, structure, accountabilities, decision rights, rhythm, SOP index. Press edit and paste it in.</div>')}
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px;margin-bottom:14px">
+      <div class="mp2-pan" style="margin-bottom:0;cursor:pointer" onclick="nav('wmeeting',document.querySelector('[data-page=wmeeting]'))">
+        <h3>Weekly meeting</h3>
+        <div style="font-size:13.5px;line-height:1.8">${m?`<b>${fmtDate(m.meeting_date)}</b> · ${wmItemsFor(m.id).filter(i=>i.status==='open'&&i.type!=='update').length} items · ${wmIsLocked(m,wmSettings())?'locked':'agenda open'}`:'No meeting found yet'}</div>
+        <div style="font-size:10px;color:#8B8E96;margin-top:5px;letter-spacing:.1em">DANNY’S PREP ARTIFACTS LAND HERE WHEN HE SHARES THEM</div>
+      </div>
+      <div class="mp2-pan" style="margin-bottom:0;cursor:pointer" onclick="nav('reviews',document.querySelector('[data-page=reviews]'))">
+        <h3>Weekly review</h3>
+        <div style="font-size:13.5px;line-height:1.8"><b>${filled} of 5</b> filled in for w/c ${fmtShort(rvWk)} · ${rows.reduce((n,r)=>n+r.wins.length,0)} wins logged</div>
+      </div>
+      <div class="mp2-pan" style="margin-bottom:0;cursor:pointer" onclick="nav('contentplan',document.querySelector('[data-page=contentplan]'))">
+        <h3>Content plan</h3>
+        <div style="font-size:13.5px;line-height:1.8">${(cpl.text||'').trim()?`<b style="color:var(--grn)">Written</b> for this week${cpl.updatedBy?' by '+escHtml(cpl.updatedBy):''}`:'<b style="color:var(--amb)">Not written yet</b> · Jasper presents it Monday'}</div>
+      </div>
+    </div>
+    <div class="mp2-pan" style="background:transparent;border:none;padding:0 2px"><h3>Performance this week</h3></div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px">${TASK_PEOPLE.map(tracker).join('')}</div>
+  </div>`;
+  const ta=document.getElementById('topbar-actions'); if(ta) ta.innerHTML='';
+}
+// ── My Page extensions: lessons, notes from both sides, Danny's ranking ──
+// Danny's note and the rank are the ONE exception to the own-page-only rule:
+// they write into the SUBJECT's store, guarded to CURRENT_USER === 'Danny'.
+function mpLesModal(id){
+  if(!mpIsMine()) return;
+  const p=mpWho(); const d=mpGet(p); const wk=mpWeekKey();
+  const a=id?((((d.weeks||{})[wk])||{}).lessons||[]).find(x=>x.id===id):null;
+  showModal(a?'Edit lesson':'What did you learn?',`
+    <div class="form-row"><label class="form-label">One line, in your own words</label><input class="form-input" id="mp-les-txt" value="${escAttr(a?a.text:'')}" onkeydown="if(event.key==='Enter')mpLesSave('${id||''}')"></div>
+  `,`<button class="btn btn-ghost" onclick="closeModal()">Cancel</button><button class="btn btn-k" onclick="mpLesSave('${id||''}')">Save</button>`);
+  setTimeout(()=>document.getElementById('mp-les-txt')?.focus(),50);
+}
+function mpLesSave(id){
+  const t=document.getElementById('mp-les-txt')?.value.trim(); if(!t) return;
+  const p=mpWho(); if(p!==CURRENT_USER) return;
+  const d=mpGet(p); const wk=mpWeekKey();
+  d.weeks=d.weeks||{}; const w=d.weeks[wk]=d.weeks[wk]||{ach:[],vals:{}};
+  w.lessons=w.lessons||[];
+  const a=id?w.lessons.find(x=>x.id===id):null;
+  if(a) a.text=t; else w.lessons.push({id:uid(),text:t,at:new Date().toISOString()});
+  mpSet(p,d); closeModal(); mpDraw();
+}
+function mpLesDel(id){
+  const p=mpWho(); if(p!==CURRENT_USER) return;
+  const d=mpGet(p); const wk=mpWeekKey(); const w=(d.weeks||{})[wk]; if(!w) return;
+  w.lessons=(w.lessons||[]).filter(x=>x.id!==id);
+  mpSet(p,d); mpDraw();
+}
+function mpNoteSave(which,v){
+  const p=mpWho();
+  if(which==='self'&&p!==CURRENT_USER) return;
+  if(which==='danny'&&CURRENT_USER!=='Danny') return;
+  const d=mpGet(p); const wk=mpWeekKey();
+  d.weeks=d.weeks||{}; const w=d.weeks[wk]=d.weeks[wk]||{ach:[],vals:{}};
+  if(which==='self') w.noteSelf=String(v||''); else w.noteDanny=String(v||'');
+  mpSet(p,d);
+}
+function mpRankSet(n){
+  if(CURRENT_USER!=='Danny') return;
+  const p=mpWho(); if(p==='Danny') return;
+  const d=mpGet(p); const wk=mpWeekKey();
+  d.weeks=d.weeks||{}; const w=d.weeks[wk]=d.weeks[wk]||{ach:[],vals:{}};
+  w.rank=(w.rank===n)?null:n;
+  mpSet(p,d); mpDraw();
+}
+function mpOneNotesCard(p,d,mine){
+  if(p==='Danny') return '';
+  const wk=mpWeekKey(); const w=(d.weeks||{})[wk]||{};
+  const danny=CURRENT_USER==='Danny';
+  return `<div class="mp2-pan">
+    <h3>1:1 notes <span class="sub">both sides, w/c ${fmtShort(wk)}</span></h3>
+    <div style="font-size:9.5px;letter-spacing:.16em;color:#8B8E96;margin-bottom:4px">${mine?'MY NOTES ON THE WEEK':(p+'’S NOTES').toUpperCase()}</div>
+    ${mine?`<textarea class="form-textarea" style="min-height:70px;font-size:13px;background:#0B0C0E;border-color:#242528;color:#E2E3E7" placeholder="Last week honestly, and the week ahead" onchange="mpNoteSave('self',this.value)">${escHtml(w.noteSelf||'')}</textarea>`
+    :`<div style="font-size:13px;white-space:pre-wrap;line-height:1.7;color:#E2E3E7">${escHtml(w.noteSelf||'')||'<span style=\"color:#8B8E96\">Nothing written yet.</span>'}</div>`}
+    <div style="font-size:9.5px;letter-spacing:.16em;color:#8B8E96;margin:12px 0 4px">DANNY’S NOTES</div>
+    ${danny?`<textarea class="form-textarea" style="min-height:70px;font-size:13px;background:#0B0C0E;border-color:#242528;color:#E2E3E7" placeholder="Your read on ${p}’s week, and the steer for next" onchange="mpNoteSave('danny',this.value)">${escHtml(w.noteDanny||'')}</textarea>`
+    :`<div style="font-size:13px;white-space:pre-wrap;line-height:1.7;color:#E2E3E7">${escHtml(w.noteDanny||'')||'<span style=\"color:#8B8E96\">Nothing from Danny yet.</span>'}</div>`}
+  </div>`;
 }
 
 // ═══ IP REGISTER ═════════════════════════════════════════════════════════════
