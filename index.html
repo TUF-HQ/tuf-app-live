@@ -9471,7 +9471,12 @@ function wmNoteHtml(note){
     if(!l) return '<div style="height:9px"></div>';
     if(/^[-·•*]\s*/.test(l)){
       let body=l.replace(/^[-·•*]\s*/,'');
-      const ci=body.indexOf(':');
+      // Bold the lead in before the first colon that is not inside a time
+      // such as 9:00 (a colon between digits never ends the lead in).
+      let ci=-1;
+      for(let k=0;k<body.length;k++){
+        if(body[k]===':'&&!(/\d/.test(body[k-1]||'')&&/\d/.test(body[k+1]||''))){ ci=k; break; }
+      }
       if(ci>0&&ci<=26) body='<b>'+escHtml(body.slice(0,ci))+':</b>'+escHtml(body.slice(ci+1));
       else body=escHtml(body);
       return '<div style="display:flex;gap:10px;align-items:flex-start;padding:3px 0;font-size:13.5px;line-height:1.65"><span style="width:7px;height:7px;border-radius:2px;background:var(--y);flex-shrink:0;margin-top:8px"></span><span>'+body+'</span></div>';
