@@ -6,7 +6,7 @@
 <title>TUF — Business Operating System</title>
 <!-- PWA: installable app (manifest/icons/SW are served from the hosted site; inert on file://) -->
 <link rel="manifest" href="manifest.webmanifest">
-<meta name="theme-color" content="#0A0A0A">
+<meta name="theme-color" content="#070708">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -21,27 +21,33 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
-:root{color-scheme:light;--ease-out:cubic-bezier(.23,1,.32,1);
-  --k:#0A0A0A;--y:#FBFF00;--w:#fff;--bg:#EFEDE6;--bg-2:#E6E2D6;
-  --red:#C0392B;--amb:#E67E22;--grn:#27AE60;--blu:#2471A3;--pur:#8E44AD;
-  --rbg:#FDECEA;--abg:#FEF9EC;--gbg:#E8F5E9;--bbg:#EBF5FB;--pbg:#F5EEF8;
-  --txt:#141414;--mut:#8A8578;--bdr:#DEDACE;--bdr-2:#E7E4DA;--card:#fff;
+:root{color-scheme:dark;--ease-out:cubic-bezier(.23,1,.32,1);
+  /* v134 AURORA GLASS: dark glass hub per James, drafts file tuf-hub-drafts.html option C */
+  --k:#0A0A0A;--y:#FBFF00;--w:#fff;--bg:#0B0C0F;--bg-2:#15161C;
+  --red:#FF6B5C;--amb:#FFB02E;--grn:#3DD68C;--blu:#5CA8FF;--pur:#B07CE8;
+  --rbg:rgba(255,107,92,.13);--abg:rgba(255,176,46,.13);--gbg:rgba(61,214,140,.13);--bbg:rgba(92,168,255,.13);--pbg:rgba(176,124,232,.15);
+  --txt:#ECEDEF;--mut:#9A9DA6;--bdr:rgba(255,255,255,.11);--bdr-2:rgba(255,255,255,.07);--card:rgba(18,19,24,.72);
+  --glass:rgba(18,19,24,.55);--solid:#15161B;
   --side:#0C0D10;--side-w:230px;
-  --danny:#8E44AD;--joe:#2471A3;--jasper:#16A085;--james:#E67E22;
+  --danny:#B07CE8;--joe:#5CA8FF;--jasper:#2ED9A3;--james:#FF9F43;
   --font-display:'Montserrat',sans-serif;
   --ring:0 0 0 3px rgba(251,255,0,.22);
-  /* elevation */
-  --sh-sm:0 1px 2px rgba(28,22,10,.05),0 1px 1px rgba(28,22,10,.04);
-  --sh-md:0 2px 8px rgba(28,22,10,.05),0 10px 26px rgba(28,22,10,.07);
-  --sh-lg:0 12px 30px rgba(28,22,10,.10),0 28px 64px rgba(28,22,10,.13);
+  /* elevation: dark depth */
+  --sh-sm:0 1px 3px rgba(0,0,0,.35);
+  --sh-md:0 8px 22px rgba(0,0,0,.4);
+  --sh-lg:0 18px 50px rgba(0,0,0,.55);
   /* radius */
-  --r-sm:8px;--r-md:13px;--r-lg:16px;--r-xl:20px;
+  --r-sm:10px;--r-md:16px;--r-lg:18px;--r-xl:22px;
   /* spacing */
   --sp-1:4px;--sp-2:8px;--sp-3:12px;--sp-4:16px;--sp-5:24px;--sp-6:32px}
 *{box-sizing:border-box;margin:0;padding:0}
-body{font-family:'Montserrat',sans-serif;background:var(--bg);color:var(--txt);font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+body{font-family:'Montserrat',sans-serif;background:
+  radial-gradient(1000px 520px at 85% -15%, rgba(251,255,0,.11), transparent 55%),
+  radial-gradient(800px 600px at -15% 50%, rgba(251,255,0,.045), transparent 50%),
+  radial-gradient(900px 700px at 55% 125%, rgba(255,255,255,.045), transparent 55%),
+  #070708;background-attachment:fixed;color:var(--txt);font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
 ::selection{background:var(--y);color:var(--k)}
-.page::-webkit-scrollbar{width:10px;height:10px}.page::-webkit-scrollbar-thumb{background:#C9C5B6;border-radius:8px;border:3px solid var(--bg)}.page::-webkit-scrollbar-thumb:hover{background:#B5B0A0}.page{scrollbar-width:thin;scrollbar-color:#C9C5B6 transparent}
+.page::-webkit-scrollbar{width:10px;height:10px}.page::-webkit-scrollbar-thumb{background:#2a2c33;border-radius:8px;border:3px solid transparent;background-clip:padding-box}.page::-webkit-scrollbar-thumb:hover{background:#3a3d46}.page{scrollbar-width:thin;scrollbar-color:#2a2c33 transparent}
 /* ── AUTH ── */
 #auth{position:fixed;inset:0;background:radial-gradient(1200px 600px at 50% -10%,#1a1b20 0%,#0A0A0A 55%,#000 100%);display:flex;align-items:center;justify-content:center;z-index:1000}
 .auth-box{background:linear-gradient(180deg,#161719 0%,#0E0F11 100%);border:1px solid rgba(255,255,255,.08);border-radius:var(--r-lg);padding:44px 40px;width:360px;text-align:center;box-shadow:0 24px 70px rgba(0,0,0,.6),0 0 0 1px rgba(251,255,0,.04)}
@@ -71,7 +77,7 @@ body{font-family:'Montserrat',sans-serif;background:var(--bg);color:var(--txt);f
 #app{display:none;height:100vh;height:100dvh;overflow:hidden;flex-direction:row}
 #app.show{display:flex}
 /* ── SIDEBAR ── */
-#sidebar{width:var(--side-w);background:linear-gradient(180deg,#101114 0%,var(--side) 60%,#08090B 100%);height:100vh;height:100dvh;overflow-y:auto;flex-shrink:0;display:flex;flex-direction:column;padding:8px;scrollbar-width:thin;scrollbar-color:#2a2c33 transparent}
+#sidebar{width:var(--side-w);background:rgba(10,10,12,.5);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);border-right:1px solid rgba(255,255,255,.06);height:100vh;height:100dvh;overflow-y:auto;flex-shrink:0;display:flex;flex-direction:column;padding:8px;scrollbar-width:thin;scrollbar-color:#2a2c33 transparent}
 #sidebar::-webkit-scrollbar{width:7px}#sidebar::-webkit-scrollbar-thumb{background:#26282f;border-radius:4px}
 .sb-brand{padding:12px 12px 14px;border-bottom:1px solid rgba(255,255,255,.07);margin-bottom:4px}
 .sb-brand-name{font-family:'Montserrat',sans-serif;font-size:14px;font-weight:800;color:var(--y);letter-spacing:.4px}
@@ -83,7 +89,7 @@ body{font-family:'Montserrat',sans-serif;background:var(--bg);color:var(--txt);f
 .sb-section{font-size:9px;font-weight:800;letter-spacing:1.6px;color:#7C7F46;padding:16px 12px 6px;text-transform:uppercase}
 .sb-item{display:flex;align-items:center;gap:10px;padding:9px 12px;cursor:pointer;color:#B4B7BE;font-size:12.5px;font-weight:600;border-radius:var(--r-sm);margin:1px 0;position:relative;transition:color .12s,background .12s;user-select:none}
 .sb-item:hover{color:var(--w);background:rgba(255,255,255,.05)}
-.sb-item.active{color:var(--w);background:rgba(251,255,0,.10)}
+.sb-item.active{color:var(--y);background:rgba(251,255,0,.13);box-shadow:inset 0 0 0 1px rgba(251,255,0,.25),0 0 20px rgba(251,255,0,.06)}
 .sb-item.active::before{content:'';position:absolute;left:0;top:50%;transform:translateY(-50%);width:3px;height:18px;background:var(--y);border-radius:0 3px 3px 0}
 .sb-item .ico{font-size:14px;width:18px;text-align:center;flex-shrink:0}
 .sb-badge{background:var(--red);color:var(--w);border-radius:20px;font-size:9px;font-weight:800;padding:1px 6px;margin-left:auto;box-shadow:0 1px 3px rgba(192,57,43,.4)}
@@ -96,7 +102,7 @@ body{font-family:'Montserrat',sans-serif;background:var(--bg);color:var(--txt);f
 .sb-footer{margin-top:auto;padding:14px 12px;border-top:1px solid rgba(255,255,255,.06);font-size:10px;color:#4B4E57}
 /* ── MAIN CONTENT ── */
 #main{flex:1;overflow:hidden;display:flex;flex-direction:column}
-.topbar{background:var(--k);color:var(--w);border-bottom:1px solid rgba(255,255,255,.07);padding:0 24px;height:52px;display:flex;align-items:center;gap:12px;flex-shrink:0}
+.topbar{background:rgba(7,7,8,.45);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);color:var(--w);border-bottom:1px solid rgba(255,255,255,.06);padding:0 24px;height:52px;display:flex;align-items:center;gap:12px;flex-shrink:0}
 .topbar .btn-k{background:var(--y);color:var(--k);box-shadow:none}.topbar .btn-k:hover{background:#E3E800;transform:translateY(-1px)}
 .topbar .btn-ghost{background:transparent;border:1px solid rgba(255,255,255,.28);color:var(--w);box-shadow:none}.topbar .btn-ghost:hover{background:rgba(255,255,255,.12);border-color:rgba(255,255,255,.5)}
 .topbar .form-input,.topbar .form-select{background:#1b1c20;color:var(--w);border-color:rgba(255,255,255,.2)}
@@ -110,7 +116,7 @@ body{font-family:'Montserrat',sans-serif;background:var(--bg);color:var(--txt);f
 .sec-hdr{font-family:'Montserrat',sans-serif;font-size:13px;font-weight:800;text-transform:uppercase;letter-spacing:.8px;color:var(--txt);margin-bottom:14px;display:flex;align-items:center;gap:12px}
 .sec-hdr::before{content:'';width:4px;height:15px;background:var(--y);border-radius:3px;flex-shrink:0}
 .sec-hdr::after{content:'';flex:1;height:1px;background:var(--bdr)}
-.card{background:var(--card);border:1px solid var(--bdr);border-radius:var(--r-md);padding:20px 22px;margin-bottom:14px;box-shadow:var(--sh-sm)}
+.card{background:var(--card);border:1px solid rgba(255,255,255,.08);border-radius:var(--r-md);padding:20px 22px;margin-bottom:14px;box-shadow:var(--sh-md)}
 .card-title{font-family:var(--font-display);font-size:16px;font-weight:700;margin-bottom:11px;letter-spacing:-.1px}
 .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
 .grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px}
@@ -128,13 +134,13 @@ body{font-family:'Montserrat',sans-serif;background:var(--bg);color:var(--txt);f
 .btn:focus-visible{outline:2px solid var(--y);outline-offset:2px}
 .btn-k{background:linear-gradient(180deg,#1b1c20,#0b0c0f);color:var(--w);box-shadow:var(--sh-sm)}.btn-k:hover{background:linear-gradient(180deg,#27282d,#141519);box-shadow:var(--sh-md);transform:translateY(-1px)}
 .btn-y{background:var(--y);color:var(--k);box-shadow:0 1px 3px rgba(251,255,0,.5)}.btn-y:hover{background:#E3E800;box-shadow:0 4px 14px rgba(251,255,0,.55);transform:translateY(-1px)}
-.btn-ghost{background:var(--w);border:1px solid var(--bdr);color:var(--txt);box-shadow:var(--sh-sm)}.btn-ghost:hover{background:var(--bg-2);border-color:var(--mut)}
+.btn-ghost{background:rgba(255,255,255,.04);border:1px solid var(--bdr);color:var(--txt);box-shadow:none}.btn-ghost:hover{background:var(--bg-2);border-color:var(--mut)}
 .btn-red{background:var(--rbg);color:var(--red);border:1px solid #f3c4c0}.btn-red:hover{background:#f9d3cf}
 .btn-sm{padding:5px 11px;font-size:11px}
 /* forms */
 .form-row{margin-bottom:12px}
 .form-label{font-size:10px;font-weight:700;color:var(--mut);text-transform:uppercase;letter-spacing:.6px;margin-bottom:5px;display:block}
-.form-input,.form-select,.form-textarea{width:100%;border:1px solid var(--bdr);border-radius:var(--r-sm);padding:10px 12px;font-size:13px;font-family:inherit;color:var(--txt);background:var(--w);transition:border-color .15s,box-shadow .15s}
+.form-input,.form-select,.form-textarea{width:100%;border:1px solid var(--bdr);border-radius:var(--r-sm);padding:10px 12px;font-size:13px;font-family:inherit;color:var(--txt);background:rgba(0,0,0,.32);transition:border-color .15s,box-shadow .15s}
 .form-input:focus,.form-select:focus,.form-textarea:focus{outline:none;border-color:#D6C800;box-shadow:var(--ring)}
 .form-textarea{resize:vertical;min-height:76px}
 /* tags / badges */
@@ -142,9 +148,9 @@ body{font-family:'Montserrat',sans-serif;background:var(--bg);color:var(--txt);f
 .tag-k{background:var(--k);color:var(--w)}.tag-y{background:var(--y);color:var(--k)}.tag-r{background:var(--rbg);color:var(--red)}.tag-a{background:var(--abg);color:var(--amb)}.tag-g{background:var(--gbg);color:var(--grn)}.tag-b{background:var(--bbg);color:var(--blu)}.tag-p{background:var(--pbg);color:var(--pur)}
 .tag-danny{background:#F3E5FF;color:var(--danny)}.tag-joe{background:var(--bbg);color:var(--joe)}.tag-jasper{background:#E8F8F5;color:var(--jasper)}.tag-james{background:var(--abg);color:var(--james)}.tag-chloe{background:#FCE4EC;color:#C2185B}.tag-team{background:#EEE;color:#555}
 /* modal */
-.modal-overlay{position:fixed;inset:0;background:rgba(10,12,18,.55);backdrop-filter:blur(4px);z-index:500;display:flex;align-items:center;justify-content:center;padding:20px;animation:modalfade .18s ease}
+.modal-overlay{position:fixed;inset:0;background:rgba(3,3,5,.66);backdrop-filter:blur(4px);z-index:500;display:flex;align-items:center;justify-content:center;padding:20px;animation:modalfade .18s ease}
 @keyframes modalfade{from{opacity:0}to{opacity:1}}
-.modal{background:var(--w);border-radius:var(--r-lg);padding:26px;width:100%;max-width:520px;max-height:90vh;overflow-y:auto;box-shadow:var(--sh-lg);animation:modalpop .2s var(--ease-out)}
+.modal{background:var(--solid);border:1px solid rgba(255,255,255,.1);border-radius:var(--r-lg);padding:26px;width:100%;max-width:520px;max-height:90vh;overflow-y:auto;box-shadow:var(--sh-lg);animation:modalpop .2s var(--ease-out)}
 @keyframes modalpop{from{opacity:0;transform:translateY(10px) scale(.98)}to{opacity:1;transform:none}}
 .modal-title{font-family:var(--font-display);font-size:19px;font-weight:700;margin-bottom:18px;display:flex;align-items:center;justify-content:space-between;letter-spacing:-.2px}
 .modal-close{background:var(--bg);border:none;font-size:16px;cursor:pointer;color:var(--mut);width:30px;height:30px;border-radius:8px;line-height:1;transition:background .15s,color .15s}
@@ -157,7 +163,7 @@ body{font-family:'Montserrat',sans-serif;background:var(--bg);color:var(--txt);f
 .tbl tr:hover td{background:var(--bg)}
 .tbl tr:last-child td{border-bottom:none}
 /* checklist */
-.chk-row{display:flex;align-items:center;gap:11px;padding:10px 14px;background:var(--w);border:1px solid var(--bdr-2);border-radius:var(--r-sm);margin-bottom:7px;cursor:pointer;user-select:none;box-shadow:var(--sh-sm);transition:border-color .15s,box-shadow .15s}
+.chk-row{display:flex;align-items:center;gap:11px;padding:10px 14px;background:rgba(255,255,255,.03);border:1px solid var(--bdr-2);border-radius:var(--r-sm);margin-bottom:7px;cursor:pointer;user-select:none;box-shadow:var(--sh-sm);transition:border-color .15s,box-shadow .15s}
 .chk-row:hover{border-color:var(--bdr)}
 .chk-row.done{background:var(--gbg);border-color:#C8E6C9;box-shadow:none}
 .chk-box{width:18px;height:18px;border-radius:5px;border:2px solid var(--bdr);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:11px;transition:background .15s,border-color .15s,color .15s}
@@ -199,18 +205,18 @@ details>summary::-webkit-details-marker{display:none}
 /* values bar */
 html,body{overscroll-behavior-y:none}
 button,a,input,select,textarea,[onclick]{-webkit-tap-highlight-color:transparent}
-.values-bar{display:flex;background:var(--k);overflow:hidden;flex-shrink:0;border-bottom:1px solid #1E1F23}
-.val-item{flex:1;text-align:center;padding:8px 5px;font-family:'Montserrat',sans-serif;font-size:9.5px;font-weight:800;color:var(--y);letter-spacing:1px;text-transform:uppercase;border-right:1px solid rgba(255,255,255,.07)}
+.values-bar{display:flex;background:rgba(7,7,8,.4);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);overflow:hidden;flex-shrink:0;border-bottom:1px solid rgba(255,255,255,.05)}
+.val-item{flex:1;text-align:center;padding:7px 5px;font-family:'Montserrat',sans-serif;font-size:9px;font-weight:800;color:rgba(251,255,0,.7);letter-spacing:1.4px;text-transform:uppercase;border-right:1px solid rgba(255,255,255,.05)}
 .val-item:last-child{border-right:none}
 /* v133: the dark hub pages paint their whole scroll area, so they never float as black cards on grey */
-#page-mypage,#page-rhythm,#page-wmeeting{background:#0A0A0A}
+#page-mypage,#page-rhythm,#page-wmeeting{background:transparent}
 #page-mypage::-webkit-scrollbar-thumb,#page-rhythm::-webkit-scrollbar-thumb,#page-wmeeting::-webkit-scrollbar-thumb{background:#2a2c33;border-color:#0A0A0A}
 #page-mypage,#page-rhythm,#page-wmeeting{scrollbar-color:#2a2c33 transparent}
 /* v133: hover styles only where a real pointer hovers; on touch, taps were leaving buttons stuck in their hover state */
 @media (hover:none){
   .btn-k:hover{transform:none;box-shadow:var(--sh-sm);background:linear-gradient(180deg,#1b1c20,#0b0c0f)}
   .btn-y:hover{transform:none;box-shadow:0 1px 3px rgba(251,255,0,.5);background:var(--y)}
-  .btn-ghost:hover{background:var(--w);border-color:var(--bdr)}
+  .btn-ghost:hover{background:rgba(255,255,255,.04);border-color:var(--bdr)}
   .sb-item:hover{background:transparent;color:#B4B7BE}
   .sb-item.active:hover{background:var(--y);color:#0A0A0A}
   .stage-pill:hover{border-color:var(--bdr);color:var(--mut)}
@@ -264,7 +270,7 @@ button,a,input,select,textarea,[onclick]{-webkit-tap-highlight-color:transparent
 .kanban{display:grid;gap:12px;overflow-x:auto;padding-bottom:4px}
 .k-col{background:var(--bg-2);border:1px solid var(--bdr-2);border-radius:var(--r-md);padding:12px;min-width:170px}
 .k-col-hdr{font-size:10px;font-weight:800;margin-bottom:10px;color:var(--mut);text-transform:uppercase;letter-spacing:.7px;display:flex;justify-content:space-between;align-items:center}
-.k-card{background:var(--w);border:1px solid var(--bdr-2);border-radius:var(--r-sm);padding:11px 12px;margin-bottom:8px;cursor:pointer;box-shadow:var(--sh-sm);transition:box-shadow .15s,transform .15s}
+.k-card{background:var(--card);border:1px solid var(--bdr-2);border-radius:var(--r-sm);padding:11px 12px;margin-bottom:8px;cursor:pointer;box-shadow:var(--sh-sm);transition:box-shadow .15s,transform .15s}
 .k-card:hover{box-shadow:var(--sh-md);transform:translateY(-1px)}
 .k-name{font-weight:700;font-size:12.5px;margin-bottom:2px}
 .k-co{font-size:10px;color:var(--mut)}
@@ -364,7 +370,7 @@ button,a,input,select,textarea,[onclick]{-webkit-tap-highlight-color:transparent
 .mp2-in:focus{border-color:rgba(251,240,0,.5);box-shadow:0 0 0 3px rgba(251,240,0,.08)}
 .mp2-met.add{display:flex;align-items:center;justify-content:center;border-style:dashed;color:#8B8E96;font-weight:700;font-size:12px;cursor:pointer;min-height:110px}
 .mp2-cols{display:grid;grid-template-columns:3fr 2fr;gap:14px;align-items:start}
-.mp2-pan{background:#101114;border:1px solid #242528;border-radius:16px;padding:18px 20px;margin-bottom:14px}
+.mp2-pan{background:var(--glass);border:1px solid rgba(255,255,255,.08);border-radius:18px;padding:18px 20px;margin-bottom:14px;box-shadow:0 14px 40px rgba(0,0,0,.35)}
 .mp2-pan h3{font-size:9.5px;letter-spacing:.2em;text-transform:uppercase;color:#8B8E96;margin-bottom:13px;display:flex;gap:9px;align-items:center}
 .mp2-pan h3::before{content:"";width:7px;height:7px;background:var(--y);border-radius:2px;box-shadow:0 0 10px rgba(251,240,0,.55);flex-shrink:0}
 .mp2-pan h3 .sub{text-transform:none;letter-spacing:.02em;font-weight:500;margin-left:auto;font-size:10px}
@@ -1410,7 +1416,7 @@ const STRATEGY_IDEAS = [
   {title:"What collective momentum looked like at UF this month",platform:"Instagram",desc:"UF · Ultimate Founder Movement · Collective momentum recap."},
 ];
 
-const USER_COLOURS = {Danny:"#8E44AD",Joe:"#2471A3",Jasper:"#16A085",James:"#E67E22",Chloe:"#C2185B"};
+const USER_COLOURS = {Danny:"#B07CE8",Joe:"#5CA8FF",Jasper:"#2ED9A3",James:"#FF9F43",Chloe:"#FF5C8A"};
 const TEAM_EMAIL_DEFAULTS = {Danny:'danny@businesschangegroup.com',Joe:'joe@businesschangegroup.com',Jasper:'jasper@businesschangegroup.com',James:'james@businesschangegroup.com',Chloe:'chloe@businesschangegroup.com'};
 
 // ═══ AUTH ════════════════════════════════════════════════════════════════════
@@ -9590,7 +9596,7 @@ function wrv2Draw(){
         <span style="width:11px;height:11px;border-radius:50%;background:${col}"></span>
         <b style="font-family:Montserrat,sans-serif;font-size:15px">${r.person}</b>
         <span style="font-size:11px;color:var(--mut)">${escHtml(r.role||'')}</span>
-        ${r.rank?`<span style="font-size:13px;letter-spacing:2px;color:var(--k)" title="Danny’s ranking of the week">${'★'.repeat(r.rank)}<span style="opacity:.2">${'★'.repeat(5-r.rank)}</span></span>`:''}
+        ${r.rank?`<span style="font-size:13px;letter-spacing:2px;color:var(--y)" title="Danny’s ranking of the week">${'★'.repeat(r.rank)}<span style="opacity:.2">${'★'.repeat(5-r.rank)}</span></span>`:''}
         ${r.kpi?`<span style="font-size:10.5px;font-weight:700;border:1.5px solid var(--bdr);border-radius:12px;padding:3px 10px">${escHtml(r.kpi.label)}: <b>${r.kpi.value!=null?escHtml(String(r.kpi.value)):'·'}</b></span>`:''}
         <span style="flex:1"></span>
         <span style="font-size:10.5px;color:var(--mut)">${r.doneWk} done · ${r.overdue?`<b style="color:var(--red)">${r.overdue} overdue</b>`:'0 overdue'}${r.oneOpen?` · ${r.oneOpen} for the 1:1`:''}${r.reds?` · <b style="color:var(--red)">${r.reds} red capabilit${r.reds===1?'y':'ies'}</b>`:''}</span>
