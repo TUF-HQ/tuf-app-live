@@ -132,7 +132,7 @@ body{font-family:'Montserrat',sans-serif;background:
 .btn{padding:8px 16px;border-radius:var(--r-sm);border:none;cursor:pointer;font-size:12px;font-weight:700;font-family:inherit;transition:transform .16s var(--ease-out),box-shadow .15s,background .15s;letter-spacing:.2px;-webkit-tap-highlight-color:transparent}
 .btn:active{transform:scale(.97)}
 .btn:focus-visible{outline:2px solid var(--y);outline-offset:2px}
-.btn-k{background:linear-gradient(180deg,#1b1c20,#0b0c0f);color:var(--w);box-shadow:var(--sh-sm)}.btn-k:hover{background:linear-gradient(180deg,#27282d,#141519);box-shadow:var(--sh-md);transform:translateY(-1px)}
+.btn-k{background:linear-gradient(180deg,#2A2B32,#17181D);color:var(--w);border:1px solid rgba(255,255,255,.16);box-shadow:0 1px 3px rgba(0,0,0,.4)}.btn-k:hover{background:linear-gradient(180deg,#34353D,#1D1E24);border-color:rgba(255,255,255,.24);transform:translateY(-1px)}
 .btn-y{background:var(--y);color:var(--k);box-shadow:0 1px 3px rgba(251,255,0,.5)}.btn-y:hover{background:#E3E800;box-shadow:0 4px 14px rgba(251,255,0,.55);transform:translateY(-1px)}
 .btn-ghost{background:rgba(255,255,255,.04);border:1px solid var(--bdr);color:var(--txt);box-shadow:none}.btn-ghost:hover{background:var(--bg-2);border-color:var(--mut)}
 .btn-red{background:var(--rbg);color:var(--red);border:1px solid #f3c4c0}.btn-red:hover{background:#f9d3cf}
@@ -214,7 +214,7 @@ button,a,input,select,textarea,[onclick]{-webkit-tap-highlight-color:transparent
 #page-mypage,#page-rhythm,#page-wmeeting{scrollbar-color:#2a2c33 transparent}
 /* v133: hover styles only where a real pointer hovers; on touch, taps were leaving buttons stuck in their hover state */
 @media (hover:none){
-  .btn-k:hover{transform:none;box-shadow:var(--sh-sm);background:linear-gradient(180deg,#1b1c20,#0b0c0f)}
+  .btn-k:hover{transform:none;background:linear-gradient(180deg,#2A2B32,#17181D);border-color:rgba(255,255,255,.16)}
   .btn-y:hover{transform:none;box-shadow:0 1px 3px rgba(251,255,0,.5);background:var(--y)}
   .btn-ghost:hover{background:rgba(255,255,255,.04);border-color:var(--bdr)}
   .sb-item:hover{background:transparent;color:#B4B7BE}
